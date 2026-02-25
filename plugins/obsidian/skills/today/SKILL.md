@@ -17,7 +17,10 @@ disable-model-invocation: true
 2. **Close the previous day's note:**
    - Using parallel sub-agents, do the following:
      - Read the previous day's note, then update all tasks in Todoist accordingly.
-     - Check the linked meeting files associated with the daily note (if there are any) and find any new open or closed tasks in those files. Add these to Todoist as well.
+       - Any Todos that have been closed in the daily note should be closed in Todoist
+       - Any notes written for todos should be taken into account (e.g. closing, moving, updating dates/notes/names/etc.)
+     - Look for meeting notes for that day and add any that does not already exist to the Meetings table. Link the meeting name in the table to the note.
+     - Check the linked meeting files associated with the daily note (if there are any) and find any new open tasks in those files. Add these to Todoist as well.
      - Update client and project memory based on the daily note and any meeting notes from that day:
        1. Follow the writing rules in `llm-context/memory-system.md` when working through the below instructions.
        2. For each client/project referenced in the daily note or its linked meetings, read the relevant ABOUT.md.

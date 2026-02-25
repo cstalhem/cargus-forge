@@ -21,6 +21,7 @@ The arguments may be relative paths or @ mentions. First, resolve them to absolu
 ## Step 2: Process the transcript (REQUIRED)
 
 **You MUST run this script to get the transcript content. Do NOT use Read on the transcript file.**
+
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/skills/process-meeting/scripts/process-transcript-outline.sh" "/absolute/path/to/transcript"
 ```
@@ -48,6 +49,7 @@ Transform the script output into a structured meeting note:
 
 - Write or merge the result to the resolved absolute path of argument 2.
 - Create the file if it doesn't exist.
+- Check for a daily note with the same date as the meeting transcript. If one exists, link the meeting name in the meetings table.
 
 ## Step 6: Update memory
 
