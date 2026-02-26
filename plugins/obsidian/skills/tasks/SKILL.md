@@ -11,10 +11,12 @@ The Todoist MCP is the single source of truth for task organization and status. 
 ## Project Organization
 
 Tasks are organized into two main projects:
+
 - **Personal**: Personal tasks and individual work
 - **B3**: Business-related tasks
 
 Tasks are categorized using **Labels** in Todoist that correspond to:
+
 - Client names
 - Project names
 - Other relevant topics
@@ -33,29 +35,34 @@ When creating or updating tasks:
 When writing tasks in Obsidian, follow these formats:
 
 ### Simple task (no due date)
+
 ```markdown
-- [ ] Simple and straightforward task
+- [ ] Simple and straightforward task [#TodoistTaskId]
 ```
 
 ### Task with due date
+
 ```markdown
-- [ ] (@YYYY-MM-DD) Task with a deadline
+- [ ] (@YYYY-MM-DD) Task with a deadline [#TodoistTaskId]
 ```
 
 ### Task for someone else
+
 ```markdown
-- [ ] Name: A task Name should do
+- [ ] Name: A task Name should do [#TodoistTaskId]
 ```
 
 ## Syncing Workflow
 
 ### From Todoist to Obsidian
+
 1. Query Todoist MCP for tasks using available filters (due date, project, labels)
 2. Transform task data into Obsidian format
 3. Include due dates in `(@YYYY-MM-DD)` format when present
 4. Prefix with person's name if task is assigned to someone else
 
 ### From Obsidian to Todoist
+
 1. Parse task format from Obsidian notes
 2. Extract due dates from `(@YYYY-MM-DD)` pattern
 3. Identify task owner from name prefix
@@ -64,3 +71,4 @@ When writing tasks in Obsidian, follow these formats:
    - Labels based on context
    - Due dates when specified or inferred
    - Task content following the strong verb convention
+5. Do not create duplicate tasks
