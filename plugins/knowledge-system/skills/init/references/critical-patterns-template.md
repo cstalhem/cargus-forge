@@ -1,6 +1,6 @@
 ---
 description: "High-impact WRONG/CORRECT patterns — mistakes that break builds, cause data loss, or create security issues"
-globs: ["**"]
+paths: ["**"]
 ---
 
 # Critical Patterns
