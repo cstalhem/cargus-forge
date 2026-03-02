@@ -12,7 +12,7 @@ Bootstrap a three-tier knowledge system for any project. Produces:
 - **L1 (Orientation):** AGENTS.md or CLAUDE.md with project overview, commands, design assumptions, and the Knowledge System section
 - **L2 (Rules):** `.claude/rules/*.md` with path-scoped one-line rules
 - **L3 (Skills):** `.claude/skills/*/SKILL.md` with deep reference material
-- **Staging area:** `.claude/staging.md` for unvalidated learnings (replaces native MEMORY.md)
+- **Staging area:** Project-specific `MEMORY.md` for unvalidated learnings
 
 ---
 
@@ -72,7 +72,7 @@ The project already has a three-tier system. Offer to **audit** instead:
 
 - Check rules for staleness or redundancy
 - Check skills for outdated patterns
-- Check `.claude/staging.md` for entries ready to promote
+- Check `MEMORY.md` for staging entries ready to promote
 - Suggest additions based on the project scan
 
 Ask the user if they want the audit or want to reinitialize from scratch.
@@ -89,14 +89,13 @@ Analyze the foreign config files (.cursorrules, copilot-instructions.md, etc.):
 
 ### Staging Area Analysis
 
-If an existing `.claude/staging.md` or native `MEMORY.md` is found during the scan:
+If the project's `MEMORY.md` has existing content:
 
 - Read its contents
 - Identify entries that should be promoted to rules (validated patterns, gotchas)
 - Identify entries that should become skills (detailed patterns with examples)
 - Identify entries that should stay as staging (unvalidated, session-specific)
 - Include promotion recommendations in the gap analysis
-- If entries were found in the native `MEMORY.md`, plan to migrate them to `.claude/staging.md`
 
 ### Monorepo Handling
 
@@ -258,47 +257,29 @@ If the L1 file doesn't exist yet, create it with the full project overview conte
 
 ### Step 5: Staging area
 
-Create `.claude/staging.md` as the project's staging area for unvalidated learnings:
+Ensure the project's `MEMORY.md` (at `.claude/projects/<project-hash>/MEMORY.md`) is set up as the staging area for unvalidated learnings. Do NOT create a separate `.claude/staging.md` file.
 
-```markdown
-# Staging Area
+Read the staging area template from this skill's references directory:
+`~/.claude/skills/knowledge-system-init/references/memory-staging-template.md`
 
-Temporary holding area for learnings discovered during work. Entries here are **unvalidated** — they may turn out to be wrong, situational, or already covered elsewhere.
+If `MEMORY.md` already has content, append the staging section structure. If it is empty or does not exist yet, write it fresh using the template content.
 
-## How to use this file
+### Step 6: Critical patterns file
 
-**When to add entries:**
-- You noticed a gotcha or sharp edge but aren't sure it generalizes
-- A workaround was needed and you want to verify it's the right long-term approach
-- A pattern emerged that might deserve a rule or skill, but needs a second occurrence to confirm
+Create `.claude/rules/critical-patterns.md` for high-impact WRONG/CORRECT patterns. Read the template from this skill's references directory:
+`~/.claude/skills/knowledge-system-init/references/critical-patterns-template.md`
 
-**Entry format:**
-- One entry per heading: `### <short description>`
-- Include date, context, and what you observed
-- Tag with the area it relates to (e.g., `[testing]`, `[api]`, `[build]`)
+Write the template content to `.claude/rules/critical-patterns.md`. This file starts with HTML comments documenting the format — actual entries are added as mistakes are discovered during work.
 
-**When to promote:**
-- The pattern has recurred across 2+ sessions → promote to a rule in `.claude/rules/`
-- The entry has grown with examples and edge cases → promote to a skill in `.claude/skills/`
-- After promotion, **delete the entry** from this file
-
-**When to discard:**
-- The entry turned out to be wrong or situational → delete it
-- The entry duplicates an existing rule or skill → delete it
-```
-
-If an existing native `MEMORY.md` has entries, migrate unpromoted entries into `.claude/staging.md` and leave the native `MEMORY.md` empty.
-
-**Important:** Do NOT use the native `MEMORY.md` (auto memory) for knowledge system staging. All staging entries belong in `.claude/staging.md` so they are version-controlled and visible within the project.
-
-### Step 6: Summary
+### Step 7: Summary
 
 Present what was created:
 
 - Number of rules files and total rules count
 - Number of skills created (if any)
 - L1 file location and sections
-- Staging area status (`.claude/staging.md`)
-- Any migration notes (foreign config preserved, native MEMORY.md entries migrated)
+- Staging area status (`MEMORY.md`)
+- Critical patterns file (`.claude/rules/critical-patterns.md`)
+- Any migration notes (foreign config preserved, existing MEMORY.md content retained)
 
 Suggest the user review each file and adjust as needed — the system is designed to evolve through use.
