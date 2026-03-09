@@ -7,7 +7,7 @@ disable-model-invocation: true
 
 - When asked by the user, close the previous day's note and open a new one for today according to the workflow below.
 - The new note should follow the Daily Note template.
-- Check the Tasks skill for how to work with tasks.
+- Use the **task-manager** agent for all task operations (syncing, closing, pulling, creating).
 - Check `llm-context/memory-system.md` for how the memory system works.
 - Ask questions with the askUserQuestions tool to get clarifications when needed.
 
@@ -16,11 +16,9 @@ disable-model-invocation: true
 1. Check today's date and time.
 2. **Close the previous day's note:**
    - Using parallel sub-agents, do the following:
-     - Read the previous day's note, then update all tasks in Todoist accordingly.
-       - Any Todos that have been closed in the daily note should be closed in Todoist
-       - Any notes written for todos should be taken into account (e.g. closing, moving, updating dates/notes/names/etc.)
+     - **task-manager agent**: "Close/sync tasks from yesterday's daily note at {path}. Close completed tasks in Todoist, process any notes/annotations on tasks (closing, moving, updating dates/notes/names/etc.)."
+     - **task-manager agent**: "Check the linked meeting files associated with yesterday's daily note at {path} and create any new open tasks found in those files in Todoist."
      - Look for meeting notes for that day and add any that does not already exist to the Meetings table. Link the meeting name in the table to the note.
-     - Check the linked meeting files associated with the daily note (if there are any) and find any new open tasks in those files. Add these to Todoist as well.
      - Update client and project memory based on the daily note and any meeting notes from that day:
        1. Follow the writing rules in `llm-context/memory-system.md` when working through the below instructions.
        2. For each client/project referenced in the daily note or its linked meetings, read the relevant ABOUT.md.
@@ -31,7 +29,7 @@ disable-model-invocation: true
        7. Update `memory/INDEX.md` if new files were created.
 3. **Open note for today:**
    - Wait for the sub-agents to complete, then:
-     - Look at the open tasks in Todoist and pull tasks that are overdue, due today, and a couple without due dates that are relevant to get to.
+     - **task-manager agent**: "Pull tasks for today's daily note. Include overdue, due today, and a couple of undated relevant tasks. Format in Obsidian task format."
      - Check for access to a calendar. If you have it, check what is on the agenda today and include today's meetings in the daily note.
      - Set up the relevant meeting note files according to the meeting note template.
 
