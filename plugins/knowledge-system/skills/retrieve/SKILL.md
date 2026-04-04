@@ -35,12 +35,19 @@ Glob `.claude/skills/*/SKILL.md` and read only the frontmatter `description` fie
 
 Do NOT read full skill content — only surface which skills exist and what they cover.
 
-### 4. Return summary
+### 4. Check staging entries
+
+Scan `MEMORY.md` for index lines containing `- [staging:` that match the task keywords. If any exist, note them — they may contain unvalidated gotchas relevant to the current work.
+
+Do NOT read the full staging files — just surface their one-line descriptions from the index.
+
+### 5. Return summary
 
 Output a brief summary of relevant findings:
 
 - **Applicable rules:** List each relevant rule (one line each)
 - **Applicable critical patterns:** List any WRONG/CORRECT patterns that apply
 - **Relevant skills:** List skill names and descriptions that the model should load if needed
+- **Staging entries:** List any matching staging descriptions (flag as unvalidated)
 
 If nothing relevant is found, say so and proceed — do not force matches.

@@ -50,12 +50,22 @@ Flag a rule or skill for healing when:
 
 ### 3b. Handle minor issues
 
-1. Stage the correction in `MEMORY.md` with these tags:
-   - `[type:gotcha]`
-   - `[area:<relevant-area>]`
-   - `[promotion-candidate]`
-2. Include in the staging entry:
-   - Which rule or skill is affected
-   - What's wrong and what the correct behavior should be
-   - Context for when this was discovered
+Stage the correction as an individual memory file:
+
+1. Create `staging_<slugified-description>.md` in the project's memory directory (same directory as `MEMORY.md`) with this format:
+   ```markdown
+   ---
+   name: <short description>
+   description: "[staging] [type:gotcha] [area:<relevant-area>] <one-line summary>"
+   type: project
+   ---
+
+   <Which rule or skill is affected>
+   <What's wrong and what the correct behavior should be>
+   <Context for when this was discovered>
+   ```
+2. Add an index line to `MEMORY.md`:
+   ```
+   - [staging: <short description>](staging_<slug>.md) — [gotcha] [area:<relevant-area>] <one-line summary>
+   ```
 3. The promote skill will pick this up at end-of-session for proper resolution

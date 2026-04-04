@@ -258,12 +258,12 @@ If the L1 file doesn't exist yet, create it with the full project overview conte
 
 ### Step 5: Staging area
 
-Ensure the project's `MEMORY.md` (at `.claude/projects/<project-hash>/MEMORY.md`) is set up as the staging area for unvalidated learnings. Do NOT create a separate `.claude/staging.md` file.
+The staging area uses individual `staging_*.md` files in the project's memory directory (the same directory as `MEMORY.md`), with index lines in `MEMORY.md`. This integrates with the auto-memory system rather than conflicting with it.
 
-Read the staging area template from this skill's references directory:
+Read the staging convention reference from this skill's references directory:
 `${CLAUDE_SKILL_DIR}/references/memory-staging-template.md`
 
-If `MEMORY.md` already has content, append the staging section structure. If it is empty or does not exist yet, write it fresh using the template content.
+No files need to be created at init time — staging files are created on demand by the heal skill when minor issues are discovered during work. The convention reference is for your understanding of the format.
 
 ### Step 6: Critical patterns file
 

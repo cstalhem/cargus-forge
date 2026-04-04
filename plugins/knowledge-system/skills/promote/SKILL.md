@@ -8,18 +8,22 @@ allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 
 # Promote Staging Entries
 
-Review the project's `MEMORY.md` staging area and promote validated entries to their permanent tier. Run this at **end-of-session or natural stopping points**.
+Review the project's staging entries and promote validated ones to their permanent tier. Run this at **end-of-session or natural stopping points**.
 
 ## Steps
 
-### 1. Read staging entries
+### 1. Find staging entries
 
-Read the project's `MEMORY.md` and identify entries under the `# Staging Area` section. For each entry, note:
-- Its structured metadata tags (`[type:...]`, `[area:...]`, `[promotion-candidate]`)
-- How many sessions it has appeared in (check dates if available)
-- Whether it has grown with examples or edge cases
+Read `MEMORY.md` and scan for index lines containing `- [staging:`. For each match, note the referenced filename.
 
-### 2. Identify promotion candidates
+If no staging entries exist, report that and stop — nothing to promote.
+
+### 2. Read and evaluate candidates
+
+Read each `staging_*.md` file referenced from the index. For each entry, note:
+- Its metadata tags in the `description` field (`[type:...]`, `[area:...]`, `[promotion-candidate]`)
+- The date it was created and whether similar entries have appeared before
+- Whether it has enough detail to be actionable
 
 An entry is ready for promotion if any of these apply:
 - Tagged with `[promotion-candidate]`
@@ -33,8 +37,8 @@ For each promotion candidate, use AskUserQuestion to present the options:
 - **Promote to rule** → Add a one-line rule to the appropriate `.claude/rules/*.md` file
 - **Promote to skill** → Create or update a skill in `.claude/skills/`
 - **Promote to critical pattern** → Add a WRONG/CORRECT entry to `.claude/rules/critical-patterns.md`
-- **Keep in staging** → Leave it in `MEMORY.md` for further validation
-- **Discard** → Delete it from `MEMORY.md`
+- **Keep in staging** → Leave for further validation
+- **Discard** → Delete
 
 Include the entry content and your recommendation in the question.
 
@@ -58,4 +62,8 @@ For each approved promotion:
 
 ### 5. Clean up
 
-After all promotions are executed, delete the promoted entries from `MEMORY.md`. Keep entries that the user chose to retain or discard (delete discarded ones too).
+For promoted and discarded entries:
+1. Delete the `staging_*.md` file
+2. Remove its index line from `MEMORY.md`
+
+Keep entries the user chose to retain in staging — no changes needed for those.
