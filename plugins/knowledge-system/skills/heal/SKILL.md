@@ -1,6 +1,7 @@
 ---
 name: heal-knowledge
 description: "Fix incorrect or outdated rules and skills — critical issues get direct fixes, minor issues get staged"
+argument-hint: "<description of what's wrong>"
 model: sonnet
 allowed-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
