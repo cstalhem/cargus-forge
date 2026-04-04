@@ -1,6 +1,7 @@
 ---
 name: init-memory
-description: "Bootstrap a three-tier knowledge system (AGENTS.md + rules + skills) for any project with guided research and adaptive questioning"
+description: "Bootstrap a project knowledge system with guided research and adaptive questioning"
+model: opus
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, WebFetch, AskUserQuestion
 ---
