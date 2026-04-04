@@ -249,7 +249,7 @@ Tables or flowcharts for common decisions (when applicable).
 ### Step 4: Add Knowledge System section to L1
 
 Read the template from this skill's references directory:
-`~/.claude/skills/knowledge-system-init/references/knowledge-system-template.md`
+`${CLAUDE_SKILL_DIR}/references/knowledge-system-template.md`
 
 Insert it into the project's L1 file (AGENTS.md or CLAUDE.md), replacing `{L1_FILE}` with the actual filename. Place it after the main project content but before any MCP/tools section if one exists.
 
@@ -260,14 +260,14 @@ If the L1 file doesn't exist yet, create it with the full project overview conte
 Ensure the project's `MEMORY.md` (at `.claude/projects/<project-hash>/MEMORY.md`) is set up as the staging area for unvalidated learnings. Do NOT create a separate `.claude/staging.md` file.
 
 Read the staging area template from this skill's references directory:
-`~/.claude/skills/knowledge-system-init/references/memory-staging-template.md`
+`${CLAUDE_SKILL_DIR}/references/memory-staging-template.md`
 
 If `MEMORY.md` already has content, append the staging section structure. If it is empty or does not exist yet, write it fresh using the template content.
 
 ### Step 6: Critical patterns file
 
 Create `.claude/rules/critical-patterns.md` for high-impact WRONG/CORRECT patterns. Read the template from this skill's references directory:
-`~/.claude/skills/knowledge-system-init/references/critical-patterns-template.md`
+`${CLAUDE_SKILL_DIR}/references/critical-patterns-template.md`
 
 Write the template content to `.claude/rules/critical-patterns.md`. This file starts with HTML comments documenting the format — actual entries are added as mistakes are discovered during work.
 
