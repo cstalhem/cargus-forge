@@ -1,7 +1,7 @@
 {
   "name": "knowledge-system",
   "description": "Bootstrap and maintain a three-tier knowledge system (AGENTS.md, rules, skills) with retrieval, promotion, and self-healing.",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "author": {
     "name": "Carl Stålhem",
     "url": "https://github.com/cstalhem"

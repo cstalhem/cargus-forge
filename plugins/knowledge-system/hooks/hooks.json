@@ -1,0 +1,28 @@
+{
+  "description": "Auto-trigger knowledge system skills at lifecycle events",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/retrieve-on-start.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "If you have not yet consulted the knowledge system for rules and skills relevant to the files being edited, run the retrieve-knowledge skill now before proceeding."
+          }
+        ]
+      }
+    ]
+  }
+}
