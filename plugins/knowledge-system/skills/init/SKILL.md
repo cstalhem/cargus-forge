@@ -2,8 +2,10 @@
 name: init-memory
 description: "Bootstrap a project knowledge system with guided research and adaptive questioning"
 model: opus
+context: fork
+agent: general-purpose
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, WebSearch, WebFetch, AskUserQuestion
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, TaskCreate, TaskUpdate, WebSearch, WebFetch, AskUserQuestion
 ---
 
 # Knowledge System Init
