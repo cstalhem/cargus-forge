@@ -5,12 +5,24 @@ description: >
   Use when syncing tasks between systems, closing/completing
   tasks, pulling tasks for daily notes, or creating new
   tasks from meeting notes or user requests.
-tools: Read, Write, Edit, Glob, Grep, AskUserQuestion
-mcpServers: [todoist]
+tools: >
+  Read, Write, Edit, Glob, Grep, AskUserQuestion,
+  mcp__todoist__find-tasks,
+  mcp__todoist__find-tasks-by-date,
+  mcp__todoist__fetch-object,
+  mcp__todoist__find-projects,
+  mcp__todoist__find-labels,
+  mcp__todoist__user-info,
+  mcp__todoist__add-tasks,
+  mcp__todoist__complete-tasks,
+  mcp__todoist__uncomplete-tasks,
+  mcp__todoist__update-tasks,
+  mcp__todoist__reschedule-tasks,
+  mcp__todoist__manage-assignments,
+  mcp__todoist__find-completed-tasks
 model: sonnet
 skills: [task-conventions]
 ---
-
 # Task Manager Agent
 
 You bridge Todoist and Obsidian for task management.
