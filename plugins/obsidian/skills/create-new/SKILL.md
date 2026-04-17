@@ -9,9 +9,9 @@ argument-hint: <type> <client and/or project name>
 Arguments provided: $ARGUMENTS
 
 The arguments should specify the type and name. Examples:
-- `/new-client client Acme Corp` — create a new client
-- `/new-client project Internal Dashboard` — create a new B3 project
-- `/new-client project Acme Corp/Internal Dashboard` — a new project for client Acme Corp
+- `/create-new client Acme Corp` — create a new client
+- `/create-new project Internal Dashboard` — create a new B3 project
+- `/create-new project Acme Corp/Internal Dashboard` — a new project for client Acme Corp
 
 ## Step 1: Read reference
 Read `llm-context/memory-system.md` to understand the memory architecture.
