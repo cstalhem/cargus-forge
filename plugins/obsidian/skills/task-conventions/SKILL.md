@@ -5,6 +5,7 @@ description: >
   project organization, and sync rules. Referenced
   by the task-manager agent and other skills that
   work with tasks.
+user-invocable: false
 ---
 
 # Task Conventions

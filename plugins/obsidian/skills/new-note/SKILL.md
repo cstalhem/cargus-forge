@@ -1,4 +1,5 @@
 ---
+name: new-note
 description: Create a new note in Obsidian
 ---
 
