@@ -7,11 +7,20 @@ This plugin defines the command and skill prompts used to automate tasks inside 
 ## Skills
 
 
-| Skill             | Description                                                                                  |
-| ----------------- | -------------------------------------------------------------------------------------------- |
-| `today`           | Generates a daily summary note in `dailies/` with meetings, tasks, and daily notes sections. |
-| `new-note`        | Creates a new note from the vault templates.                                                 |
-| `process-meeting` | Process a meeting transcript into structured notes with summary, tasks, and decisions.       |
+| Skill               | Description                                                                                                                 |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `today`             | Closes yesterday's daily note and opens today's, syncing tasks, meetings, and memory.                                       |
+| `new-note`          | Creates a new note from the vault templates.                                                                                |
+| `process-meeting`   | Processes a meeting transcript into structured notes with summary, tasks, and decisions, then updates client/project memory. |
+| `create-new`        | Scaffolds the folder structure and memory files for a new client or project.                                                |
+| `update-memory`     | Updates client or project memory files based on recent interactions, notes, or new information.                             |
+| `task-conventions`  | Reference skill: Todoist/Obsidian task formatting and sync rules. Not user-invocable — loaded by other skills and agents.   |
+
+## Agents
+
+| Agent          | Description                                                                                                   |
+| -------------- | ------------------------------------------------------------------------------------------------------------- |
+| `task-manager` | Bridges Todoist and Obsidian — syncs tasks, closes/completes, pulls for daily notes, and creates new tasks.   |
 
 
 ## TODO
