@@ -11,7 +11,7 @@ The arguments should indicate the client or project to update, and optionally wh
 - `/update-memory acme-corp` — review recent notes and update memory
 - `/update-memory acme-corp based on today's discussions` — incorporate specific context
 
-Ask questions with the askUserQuestions tool to get clarifications when needed.
+Ask questions with the AskUserQuestion tool to get clarifications when needed.
 
 Read the memory system instructions before continuing.
 

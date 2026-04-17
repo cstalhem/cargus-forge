@@ -40,7 +40,7 @@ Do NOT create a glossary.md yet — that gets created later when there are enoug
 
 ## Step 5: Gather initial context
 
-Ask the user for initial information to populate ABOUT.md using the askUserQuestions tool:
+Ask the user for initial information to populate ABOUT.md using the AskUserQuestion tool:
 - What is this client/project about? (Summary)
 - Who are the key people involved? (Key People)
 - What is the current focus or first priority? (Current Focus)
