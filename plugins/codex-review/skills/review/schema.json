@@ -1,0 +1,43 @@
+{
+  "type": "object",
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": ["approved", "changes_requested"],
+      "description": "approved only when no blocker or major concerns remain; otherwise changes_requested"
+    },
+    "summary": {
+      "type": "string",
+      "description": "One-line overall assessment of the plan in its current state"
+    },
+    "concerns": {
+      "type": "array",
+      "description": "Every outstanding concern, grounded in a specific file or plan section",
+      "items": {
+        "type": "object",
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["blocker", "major", "minor"]
+          },
+          "location": {
+            "type": "string",
+            "description": "The file path or plan section the concern applies to"
+          },
+          "issue": {
+            "type": "string",
+            "description": "The concrete problem"
+          },
+          "suggestion": {
+            "type": "string",
+            "description": "A concrete way to resolve it"
+          }
+        },
+        "required": ["severity", "location", "issue", "suggestion"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["verdict", "summary", "concerns"],
+  "additionalProperties": false
+}

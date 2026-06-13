@@ -1,0 +1,9 @@
+{
+  "name": "codex-review",
+  "description": "Iteratively refine a plan document by looping with the Codex CLI (a second, independent model) until it has no blocking feedback left.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Carl Stålhem",
+    "url": "https://github.com/cstalhem"
+  }
+}

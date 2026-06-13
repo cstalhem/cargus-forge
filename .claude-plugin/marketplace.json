@@ -14,6 +14,11 @@
       "name": "knowledge-system",
       "source": "./plugins/knowledge-system",
       "description": "Bootstrap a three-tier knowledge system (AGENTS.md, rules, skills) for any project."
+    },
+    {
+      "name": "codex-review",
+      "source": "./plugins/codex-review",
+      "description": "Iteratively refine a plan document by looping with the Codex CLI until it has no blocking feedback left."
     }
   ]
 }
