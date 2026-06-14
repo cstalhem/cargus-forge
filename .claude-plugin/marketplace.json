@@ -19,6 +19,11 @@
       "name": "codex-review",
       "source": "./plugins/codex-review",
       "description": "Iteratively refine a plan document by looping with the Codex CLI until it has no blocking feedback left."
+    },
+    {
+      "name": "adr-management",
+      "source": "./plugins/adr-management",
+      "description": "Create and maintain Architecture Decision Records (ADRs) as living documents, with a litmus test for what earns a record."
     }
   ]
 }

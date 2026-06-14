@@ -1,0 +1,9 @@
+{
+  "name": "adr-management",
+  "description": "Create and maintain Architecture Decision Records (ADRs) as living documents — with a litmus test for what earns a record and rules for editing, reversing, and deprecating decisions.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Carl Stålhem",
+    "url": "https://github.com/cstalhem"
+  }
+}
