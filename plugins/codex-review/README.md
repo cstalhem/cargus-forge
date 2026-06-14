@@ -4,15 +4,15 @@ Pressure-test an implementation plan by looping it through the [Codex CLI](https
 
 ## What it does
 
-`/codex-review:review <plan-file>` runs an autonomous review loop in a forked context:
+`/codex-review:review <plan-file>` runs an autonomous review loop in a forked context, with three roles kept deliberately separate — Codex proposes, Claude drafts a fix, Claude verifies that fix against the codebase before applying it:
 
 1. Claude sends the plan to Codex (`codex exec`, read-only sandbox), which explores the real codebase and the web to ground its critique.
-2. Codex returns a structured verdict and a list of concerns (each with a severity, location, issue, and suggestion).
-3. Claude accepts the valid concerns and edits the plan in place, rejecting ones it judges wrong — Codex is treated as a peer, not an authority.
+2. Codex returns a structured verdict and a list of concerns, each with a severity (graded by a strict rubric), a kind (`add`/`cut`/`change` — so bloat gets flagged, not just gaps), location, issue, and suggestion.
+3. Claude accepts the valid concerns, drafts the smallest fix, **verifies it against the source of truth**, then edits the plan — Codex is treated as a peer, not an authority.
 4. Claude resumes the *same* Codex conversation (`codex exec resume`) so Codex remembers what it raised and what Claude rebutted, then re-reviews.
-5. The loop ends when Codex approves, after five rounds, or at a reasoned standoff.
+5. The loop ends when **Codex** approves (never Claude's own judgement), after five rounds, or at a reasoned standoff.
 
-Claude reports which concerns it accepted and addressed, which it rejected and why, and the final verdict. The plan file is edited in place.
+Claude reports which concerns it accepted and the exact edit made for each, which it rejected and why, and the final verdict. Only the `.md` source is edited; a generated companion (e.g. `.html`) is flagged for regeneration, never hand-edited.
 
 ## Prerequisites
 

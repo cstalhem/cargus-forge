@@ -4,7 +4,7 @@
     "verdict": {
       "type": "string",
       "enum": ["approved", "changes_requested"],
-      "description": "approved only when no blocker or major concerns remain; otherwise changes_requested"
+      "description": "approved only when no blocker or major concerns remain; minor concerns are acceptable. Otherwise changes_requested."
     },
     "summary": {
       "type": "string",
@@ -12,13 +12,19 @@
     },
     "concerns": {
       "type": "array",
-      "description": "Every outstanding concern, grounded in a specific file or plan section",
+      "description": "Every outstanding concern, grounded in a specific file or plan section. Raise everything you find now — do not hold minor items back for a later round.",
       "items": {
         "type": "object",
         "properties": {
           "severity": {
             "type": "string",
-            "enum": ["blocker", "major", "minor"]
+            "enum": ["blocker", "major", "minor"],
+            "description": "blocker = the plan cannot be executed as written, or following it produces broken / non-functional code. major = following the plan yields incorrect code or misses a goal the plan itself states. minor = clarity, rigor, or convention refinement that the plan works without (e.g. test-assertion granularity, wording, naming, a tighter type annotation in a final code block). When unsure between major and minor, it is minor."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["add", "cut", "change"],
+            "description": "add = the plan is missing something it needs. cut = the plan is over-specified, redundant, or bloated and should be shortened. change = existing content should be revised. Actively look for 'cut' concerns; a shorter plan that still conveys intent is better."
           },
           "location": {
             "type": "string",
@@ -30,10 +36,10 @@
           },
           "suggestion": {
             "type": "string",
-            "description": "A concrete way to resolve it"
+            "description": "A concrete way to resolve it. For coverage gaps and process risks, phrase as a recommendation — do not mandate a required gate; that is the author's call."
           }
         },
-        "required": ["severity", "location", "issue", "suggestion"],
+        "required": ["severity", "kind", "location", "issue", "suggestion"],
         "additionalProperties": false
       }
     }
