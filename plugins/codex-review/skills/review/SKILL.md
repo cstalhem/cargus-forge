@@ -10,7 +10,7 @@ allowed-tools: Bash Read Edit Write
 
 # Codex Plan Review
 
-Refine the plan document at the path in `$ARGUMENTS` by looping with the Codex CLI — a second, independent model — until Codex returns no blocking concerns or the round cap is reached. Codex reviews in read-only mode and never edits the plan; you are the only writer, and you edit only the `.md` source.
+Refine the plan document at the path in `$ARGUMENTS` by looping with the Codex CLI — a second, independent model — until Codex returns no blocking concerns or the round cap is reached. Codex reviews in read-only mode and never edits the plan; you are the only writer, and you edit the plan document in place.
 
 The loop has three distinct roles, kept separate on purpose:
 - **Codex** proposes concerns (read-only; never writes).
@@ -19,7 +19,7 @@ The loop has three distinct roles, kept separate on purpose:
 
 ## Setup
 
-1. Resolve `$ARGUMENTS` to a plan file path and store it as `PLAN`. If no path was given, stop and ask for one. **Only ever edit this `.md` source.** If a generated companion exists (e.g. a same-named `.html`), do not hand-edit it — note at the end that it needs regeneration from the source.
+1. Resolve `$ARGUMENTS` to a plan file path and store it as `PLAN`. If no path was given, stop and ask for one. **Only ever edit this plan file.** If it turns out to be a file generated from another source, or to have its own generated companion (e.g. a same-named `.html`), edit the source rather than the derived file and note at the end that the companion needs regeneration.
 
 2. Create one scratch file for Codex output and reuse it every round. Write it inside `$TMPDIR` (the harness-writable temp dir) and put the random token at the *end* of the template — BSD `mktemp` will not randomize `XXXXXX` if a suffix follows it:
    ```bash
@@ -69,7 +69,7 @@ For each concern Codex returns:
 
 3. **Verify the fix against the codebase — before applying it.** This is a separate step from drafting, and it must check the source of truth, not your own draft. If your fix asserts anything about the code (a function signature, an error message, a test's assertion style, a migration), confirm it by re-reading that code — not by trusting the edit you just wrote. A fix that contradicts the codebase is worse than the original concern.
 
-4. **Apply to the `.md` source only.** Never touch a generated companion file.
+4. **Apply to the plan file only.** If a generated companion exists, never hand-edit it.
 
 Keep a running ledger: concerns accepted (with the exact edit made), concerns rejected (with the reason), and `cut` concerns applied.
 
@@ -96,7 +96,7 @@ codex exec resume --last -c tools.web_search=true \
 
 When the loop ends, report:
 
-- The plan file path (the `.md` source, edited in place) and the final verdict.
+- The plan file path (edited in place) and the final verdict.
 - If a generated companion (e.g. `.html`) exists: flag that it needs regeneration from the source — you did not edit it.
 - Number of rounds used.
 - Concerns accepted, with the exact edit made for each (so authorship stays legible — the author can see precisely what changed and why).

@@ -12,7 +12,7 @@ Pressure-test an implementation plan by looping it through the [Codex CLI](https
 4. Claude resumes the *same* Codex conversation (`codex exec resume`) so Codex remembers what it raised and what Claude rebutted, then re-reviews.
 5. The loop ends when **Codex** approves (never Claude's own judgement), after five rounds, or at a reasoned standoff.
 
-Claude reports which concerns it accepted and the exact edit made for each, which it rejected and why, and the final verdict. Only the `.md` source is edited; a generated companion (e.g. `.html`) is flagged for regeneration, never hand-edited.
+Claude reports which concerns it accepted and the exact edit made for each, which it rejected and why, and the final verdict. Only the plan file is edited; if it has a generated companion (e.g. `.html`), that companion is flagged for regeneration, never hand-edited.
 
 ## Prerequisites
 
