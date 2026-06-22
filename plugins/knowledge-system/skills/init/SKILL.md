@@ -12,7 +12,7 @@ allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, TaskCreate, TaskUpdat
 
 Bootstrap a three-tier knowledge system for any project. Produces:
 
-- **L1 (Orientation):** AGENTS.md or CLAUDE.md with project overview, commands, design assumptions, and the Knowledge System section
+- **L1 (Orientation):** `CLAUDE.md` (the file Claude Code loads) with project overview, commands, design assumptions, and the Knowledge System section — sharable with other agents by keeping the content in `AGENTS.md` and symlinking `CLAUDE.md → AGENTS.md`
 - **L2 (Rules):** `.claude/rules/*.md` with path-scoped one-line rules
 - **L3 (Skills):** `.claude/skills/*/SKILL.md` with deep reference material
 - **Staging area:** Project-specific `MEMORY.md` for unvalidated learnings
@@ -56,7 +56,7 @@ Run 3-4 focused AskUserQuestion rounds:
 1. **Project purpose & context** — What does this project do? Is it personal or team? What's the development stage?
 2. **Dev environment & conventions** — Preferred package manager, test approach, any strong conventions? Anything Claude should never do?
 3. **Known gotchas** — Any sharp edges, tricky configurations, or "things you always forget"?
-4. **L1 file choice** — AGENTS.md (if collaborators/agents will read it) or CLAUDE.md (personal project)?
+4. **L1 file** — Should other AI agents (Cursor, Copilot, etc.) share these instructions? If yes, make `AGENTS.md` the real file and symlink `CLAUDE.md → AGENTS.md` (or, when Claude-specific content is also needed, use a `CLAUDE.md` whose first line is `@AGENTS.md`). If no, use `CLAUDE.md` directly. Claude Code only loads `CLAUDE.md`.
 
 ### Partial
 
@@ -159,7 +159,7 @@ Group proposed rules by file with path scoping shown:
 ```
 
 **L3 — Skills**
-List each proposed skill with name, description (<200 chars), and a one-line summary of what it would contain:
+List each proposed skill with name, `description` (what it does), `when_to_use` (trigger phrases), and a one-line summary of what it would contain:
 
 ```
 chakra-ui-v3 — "Chakra UI v3 component patterns..."
@@ -217,7 +217,8 @@ Create each skill directory with SKILL.md:
 ```markdown
 ---
 name: skill-name
-description: "Under 200 chars describing when to use this skill"
+description: "What the skill does — lead with the key use case"
+when_to_use: "Trigger phrases or example requests that should load this skill"
 ---
 
 # Skill Title
@@ -243,7 +244,7 @@ Tables or flowcharts for common decisions (when applicable).
 
 **Skills writing guide:**
 
-- Description must be under 200 characters
+- `description` states what the skill does, leading with the key use case; `when_to_use` holds trigger phrases and example requests. The two are concatenated in the skill listing and truncated at 1,536 characters combined — keep both tight
 - Key Patterns section should include real code examples from the project where possible
 - Anti-Patterns use story format: what went wrong → why → fix
 - Decision Aids are optional — only include when there are genuine multi-path decisions
@@ -254,9 +255,12 @@ Tables or flowcharts for common decisions (when applicable).
 Read the template from this skill's references directory:
 `${CLAUDE_SKILL_DIR}/references/knowledge-system-template.md`
 
-Insert it into the project's L1 file (AGENTS.md or CLAUDE.md), replacing `{L1_FILE}` with the actual filename. Place it after the main project content but before any MCP/tools section if one exists.
+Claude Code loads `CLAUDE.md`, not `AGENTS.md`. Resolve the real L1 file from the Phase 2 choice:
 
-If the L1 file doesn't exist yet, create it with the full project overview content followed by the Knowledge System section.
+- **CLAUDE.md only:** the real file is `CLAUDE.md`.
+- **Shared with other agents:** the real file is `AGENTS.md`; ensure `CLAUDE.md` resolves to it via symlink (`ln -s AGENTS.md CLAUDE.md`) or a `CLAUDE.md` whose first line is `@AGENTS.md`.
+
+Insert the template into the real L1 file, replacing `{L1_FILE}` with its filename. Place it after the main project content but before any MCP/tools section if one exists. If the file doesn't exist yet, create it with the full project overview content followed by the Knowledge System section.
 
 ### Step 5: Staging area
 

@@ -1,6 +1,5 @@
 ---
 description: "High-impact WRONG/CORRECT patterns — mistakes that break builds, cause data loss, or create security issues"
-paths: ["**"]
 ---
 
 # Critical Patterns
