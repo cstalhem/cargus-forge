@@ -7,7 +7,7 @@ Project knowledge lives in three tiers. Each has a distinct purpose and update t
 | Tier        | Location                | Loads                | Contains                                               |
 | ----------- | ----------------------- | -------------------- | ------------------------------------------------------ |
 | Orientation | `{L1_FILE}` (this file) | Always               | Project structure, commands, design assumptions        |
-| Rules       | `.claude/rules/`        | Always (path-scoped) | Concise do/don't rules                                 |
+| Rules       | `.claude/rules/`        | At launch, or on read if path-scoped | Concise do/don't rules                 |
 | Skills      | `.claude/skills/`       | On demand            | Deep reference: examples, anti-patterns, decision aids |
 
 **Staging area** — unvalidated learnings are stored as individual `staging_*.md` files in the project's memory directory (same directory as `MEMORY.md`), with index lines in `MEMORY.md` prefixed with `- [staging:`. This integrates with the auto-memory system rather than conflicting with it.
@@ -26,7 +26,7 @@ When you discover something worth capturing during work:
 1. **Caused by a mistake or gotcha?** → Add a one-line rule to the relevant file in `.claude/rules/`. Update the matching skill's Anti-Patterns section with the full context (what went wrong, why, the fix).
 2. **High-impact mistake (build-breaking, data loss, security)?** → Add a WRONG/CORRECT entry to `.claude/rules/critical-patterns.md`.
 3. **New pattern, example, or decision aid?** → Update the relevant skill in `.claude/skills/`.
-4. **New topic not covered by any existing skill?** → Create a new skill directory with `SKILL.md`. Keep description under 200 chars.
+4. **New topic not covered by any existing skill?** → Create a new skill directory with `SKILL.md`. Put what the skill does in `description` and trigger phrases in `when_to_use` (the two are truncated at 1,536 characters combined in the skill listing).
 5. **Not validated yet?** → Create a `staging_<slug>.md` file in the project's memory directory with frontmatter tags (`[staging] [type:gotcha|pattern|decision] [area:<project-area>]`) and add an index line to `MEMORY.md` prefixed with `- [staging:`. Add `[promotion-candidate]` to the description when the pattern recurs across 2+ sessions.
 
 ### Cross-referencing
@@ -41,5 +41,5 @@ When you discover something worth capturing during work:
 - When staging entries (files prefixed `staging_*` in the memory directory) have been validated across 2+ sessions, suggest promotion.
 - When a rule or skill leads to incorrect behavior, flag it: critical issues → propose a direct fix (with user approval), minor issues → create a staging entry with `[type:gotcha]` and `[promotion-candidate]` tags.
 - Keep rules to one line each — no code examples, no rationale (that belongs in skills).
-- Keep skill content timeless — no phase numbers, plan numbers, or session-specific context.
+- Write each entry as durable facts plus the reason it exists. Exclude conversational artifacts (prior assumptions, who proposed a change, session narration) and anything already recorded in the repo or another tier. Rules carry the fact in one line and link to a skill for the reason; skills, critical patterns, and staging entries state the reason inline. No phase numbers, plan numbers, or session-specific context.
 - Surface lint/type/test errors immediately rather than deferring them.
