@@ -1,0 +1,69 @@
+# Cargus Forge
+
+A marketplace monorepo of Claude Code plugins for knowledge management, note-taking workflows, and Claude Code productivity.
+
+## Repository layout
+
+- `plugins/<name>/` — one self-contained plugin each:
+  - `.claude-plugin/plugin.json` — manifest (`name`, `description`, `version`, `author`)
+  - `skills/<skill>/SKILL.md`, `agents/`, `hooks/hooks.json` — components, auto-discovered when the plugin is installed
+- `.claude-plugin/marketplace.json` — root marketplace listing every plugin (`name`, `source`, `description`)
+- `README.md` — human-facing plugin index
+
+Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`.
+
+## Local development loop
+
+- Test a plugin without installing it: `claude --plugin-dir ./plugins/<name>` (takes precedence over an installed copy of the same name)
+- After editing an installed plugin: `/reload-plugins` (reloads skills, agents, hooks, and plugin MCP/LSP servers without a restart)
+- Validate before opening a PR: `claude plugin validate ./plugins/<name>` (add `--strict` to treat warnings as errors)
+
+## Component authoring
+
+For how to write skills, agents, hooks, commands, MCP/LSP config, and plugin directory structure, use the installed **`plugin-dev`** plugin and the official docs. This repo's knowledge system does not restate that general guidance — it captures only this repo's wiring and conventions.
+
+# Knowledge System
+
+The purpose of this system is to make each change to the code simpler than the last, by continually capturing gotchas, patterns, and decisions as they're discovered.
+
+Project knowledge lives in three tiers. Each has a distinct purpose and update trigger.
+
+| Tier        | Location                | Loads                | Contains                                               |
+| ----------- | ----------------------- | -------------------- | ------------------------------------------------------ |
+| Orientation | `CLAUDE.md` (this file) | Always               | Project structure, commands, design assumptions        |
+| Rules       | `.claude/rules/`        | At launch, or on read if path-scoped | Concise do/don't rules                 |
+| Skills      | `.claude/skills/`       | On demand            | Deep reference: examples, anti-patterns, decision aids |
+
+**Staging area** — unvalidated learnings are stored as individual `staging_*.md` files in the project's memory directory (same directory as `MEMORY.md`), with index lines in `MEMORY.md` prefixed with `- [staging:`. This integrates with the auto-memory system rather than conflicting with it.
+
+**Critical patterns** — `.claude/rules/critical-patterns.md` captures high-impact WRONG/CORRECT patterns for mistakes that break builds, cause data loss, or create security issues.
+
+### Workflow checkpoints
+
+- **Before non-trivial tasks:** Scan `.claude/rules/` (including `critical-patterns.md`) and `.claude/skills/` for knowledge relevant to the task at hand. Skip for trivial changes (typos, copy edits, color tweaks, one-line fixes).
+- **After completing tasks:** Check if anything discovered during the task should be staged in `MEMORY.md`.
+
+### Updating the knowledge system
+
+When you discover something worth capturing during work:
+
+1. **Caused by a mistake or gotcha?** → Add a one-line rule to the relevant file in `.claude/rules/`. Update the matching skill's Anti-Patterns section with the full context (what went wrong, why, the fix).
+2. **High-impact mistake (build-breaking, data loss, security)?** → Add a WRONG/CORRECT entry to `.claude/rules/critical-patterns.md`.
+3. **New pattern, example, or decision aid?** → Update the relevant skill in `.claude/skills/`.
+4. **New topic not covered by any existing skill?** → Create a new skill directory with `SKILL.md`. Put what the skill does in `description` and trigger phrases in `when_to_use` (the two are truncated at 1,536 characters combined in the skill listing).
+5. **Not validated yet?** → Create a `staging_<slug>.md` file in the project's memory directory with frontmatter tags (`[staging] [type:gotcha|pattern|decision] [area:<project-area>]`) and add an index line to `MEMORY.md` prefixed with `- [staging:`. Add `[promotion-candidate]` to the description when the pattern recurs across 2+ sessions.
+
+### Cross-referencing
+
+- Rules reference backing skills: `(see skill: skill-name)` for deeper context.
+- Skills reference the rules they support for quick lookup.
+
+### Proactive maintenance
+
+- After fixing a bug caused by a missing rule, suggest adding the rule.
+- After a session where a skill would have prevented confusion, suggest updating it.
+- When staging entries (files prefixed `staging_*` in the memory directory) have been validated across 2+ sessions, suggest promotion.
+- When a rule or skill leads to incorrect behavior, flag it: critical issues → propose a direct fix (with user approval), minor issues → create a staging entry with `[type:gotcha]` and `[promotion-candidate]` tags.
+- Keep rules to one line each — no code examples, no rationale (that belongs in skills).
+- Write each entry as durable facts plus the reason it exists. Exclude conversational artifacts (prior assumptions, who proposed a change, session narration) and anything already recorded in the repo or another tier. Rules carry the fact in one line and link to a skill for the reason; skills, critical patterns, and staging entries state the reason inline. No phase numbers, plan numbers, or session-specific context.
+- Surface lint/type/test errors immediately rather than deferring them.
