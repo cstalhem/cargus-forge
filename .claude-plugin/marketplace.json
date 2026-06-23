@@ -13,7 +13,7 @@
     {
       "name": "knowledge-system",
       "source": "./plugins/knowledge-system",
-      "description": "Bootstrap a three-tier knowledge system (AGENTS.md, rules, skills) for any project."
+      "description": "Bootstrap a three-tier knowledge system (CLAUDE.md, rules, skills) for any project."
     },
     {
       "name": "codex-review",
