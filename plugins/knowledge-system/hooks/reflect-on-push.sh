@@ -3,13 +3,15 @@ set -euo pipefail
 
 # PostToolUse(Bash) hook: when Claude publishes work (git push / gh pr create),
 # remind it to reflect on whether the work warrants a knowledge-system update.
-# Reads the hook payload from stdin and emits context only on a match, so every
-# other Bash command is a no-op. PostToolUse fires only after the tool succeeds,
-# so a failed push never triggers the reminder.
+# Reads the hook payload from stdin and matches only the run command
+# (.tool_input.command), not the whole payload — otherwise any command whose
+# output merely mentions "git push"/"gh pr create" would false-trigger. Emits
+# context only on a match, so every other Bash command is a no-op.
 
 payload="$(cat)"
+command="$(printf '%s' "$payload" | jq -r '.tool_input.command // empty')"
 
-if printf '%s' "$payload" | grep -Eq 'git[[:space:]]+push|gh[[:space:]]+pr[[:space:]]+create'; then
+if printf '%s' "$command" | grep -Eq 'git[[:space:]]+push|gh[[:space:]]+pr[[:space:]]+create'; then
   cat <<'EOF'
 {
   "hookSpecificOutput": {

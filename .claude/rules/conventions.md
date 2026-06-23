@@ -14,6 +14,10 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 - Edit `plugin.json` and `marketplace.json` by hand — they are not package-manager files.
 - `author`/`owner` use `{ "name": "Carl Stålhem" }`; a plugin's `author` also includes `"url"`.
 
+## Hooks
+
+- PostToolUse(Bash) hooks must match `.tool_input.command` (via `jq`), never the raw stdin payload — the payload includes `tool_response`, so grepping the whole blob false-triggers on command output.
+
 ## Git workflow
 
 - Branch from `main`; never commit plugin changes directly to `main`.
