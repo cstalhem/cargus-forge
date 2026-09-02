@@ -5,7 +5,7 @@ description: >
   tasks to Todoist, ingests meeting notes, refreshes client/project
   memory, and pulls today's tasks and calendar into a new daily note.
   Use when starting the workday or creating today's daily note.
-disable-model-invocation: true
+disable-model-invocation: false
 allowed-tools: Read Write Edit Glob Grep Bash Task AskUserQuestion TodoWrite
 ---
 
