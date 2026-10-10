@@ -1,0 +1,518 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Engineering Plugin Plan</title>
+<link rel="stylesheet" href="htmlplan.css">
+<script src="htmlplan.js" defer></script>
+<style data-mock-shared>
+  .ui { font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1c1b19; background: #fff; border: 1px solid #ddd8cc; border-radius: 10px; overflow: hidden; }
+  .ui .hd { padding: 10px 14px; border-bottom: 1px solid #eee9dd; font-weight: 650; }
+  .ui .hd small { display: block; color: #8a8578; font-weight: 400; font-size: 12px; margin-top: 2px; }
+  .ui .ln { padding: 8px 14px; border-bottom: 1px solid #f3efe6; color: #3d3a33; display: flex; gap: 8px; align-items: baseline; }
+  .ui .ln .n { color: #8a8578; font-variant-numeric: tabular-nums; min-width: 1.2em; }
+  .ui .ln .q { margin-left: auto; font-size: 11.5px; color: #b4541f; font-weight: 600; white-space: nowrap; }
+  .ui .ft { display: flex; justify-content: flex-end; padding: 10px 14px; background: #faf8f3; }
+  .ui .btn { font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 7px; background: #1c1b19; color: #fff; }
+  .ui .grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .ui .cell { padding: 10px 12px; border-right: 1px solid #f3efe6; border-bottom: 1px solid #f3efe6; }
+  .ui .cell h5 { margin: 0 0 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: #8a8578; }
+  .ui .cell p { margin: 0; font-size: 13px; }
+  .ui .cell.warn h5 { color: #b4541f; }
+  .ui .pair { padding: 10px 14px; border-bottom: 1px solid #f3efe6; }
+  .ui .pair small { display: block; color: #8a8578; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
+  .ui .bad { color: #9b3a2a; text-decoration: line-through; text-decoration-color: #d9a59a; }
+  .ui .ok { color: #1f5f45; }
+</style>
+<body>
+
+<header>
+  <h1>Engineering Workflow Plugin for Cargus Forge</h1>
+  <doc-changes new="16" changed="2"></doc-changes>
+  <details class="thread"><summary>Why · 6 requests</summary>
+    <doc-quote via="prompt" from="Calle">I want to build out my own plugin for Engineering with Claude and AI. It should consist of Skills, templates, and any other small bits and bobs that are relevant for this discipline</doc-quote>
+    <doc-quote via="prompt" from="Calle">What I like about it is that it's opinionated about a order of operations (Discuss, Plan, Execute, Verify, Ship) … I also like the idea of state surviving between sessions</doc-quote>
+    <doc-quote via="prompt" from="Calle">What I am hesitant, or worried, about is context bloat. Especially GSD feels like it's very fond of writing to a lot of files and keeping them in a lot of places.</doc-quote>
+    <doc-quote via="prompt" from="Calle">I would really like to be able to get plan files or artifacts that I can open on my phone or other computer when I work from them.</doc-quote>
+    <doc-quote via="prompt" from="Calle">The process should also be helpful in highlighting for me which both my known and unknown unknowns are … It's also very important that it's a continuously improving process</doc-quote>
+    <doc-quote via="prompt" from="Calle">I'd also like to talk through and implement this project in stages so that it becomes manageable to implement.</doc-quote>
+  </details>
+</header>
+
+<main>
+<doc-plan>
+
+<!-- ═════ 1 · ROUTING AND PHASES ═════ -->
+<doc-claim id="route">
+  <p>The size of the work selects the path through the process.</p>
+  <doc-flow caption="The agent sizes the work after a short read of the code.">
+<script type="text/plain">
+req   = Request / issue or bug [pill]
+size  = Size check [diamond]
+one   = One session / issue = spec
+multi = Multi-session / sub-issues [accent]
+ship  = /ship / PR + setup fix [green]
+| req  | size  |
+| one  | multi |
+| ship | .     |
+req -> size
+size -> ship : trivial
+size -> one : one session
+size -> multi : more
+one -> ship : verify
+multi -> ship : converge
+</script>
+  </doc-flow>
+  <doc-ask id="research">
+    <p>When does the research phase run?</p>
+    <label><input type="radio" name="research" value="long" checked> Only on the long path, after the size check <small>other work gets a short read of the code</small></label>
+    <label><input type="radio" name="research" value="always"> On every feature, issue and bug <small>more tokens; small fixes become slow</small></label>
+    <label><input type="radio" name="research" value="modules"> On the long path, and on bugs across modules <small>a second rule to tune</small></label>
+  </doc-ask>
+  <div data-if="research=always"><doc-note tone="warn"><strong>Cost</strong> GSD path measured 8.7 times the tokens of direct work on a small task. A research pass on every bug moves us toward that number.</doc-note></div>
+
+  <doc-claim>
+    <p>The long path has seven phases. Each phase has one exit gate.</p>
+    <doc-machine name="phase" caption="One sub-issue goes through execute and verify in each fresh session.">
+<script type="text/plain">
+machine phase initial discuss
+state discuss         # Questions until no open question stays.
+state research        # Cited notes on the code and on outside sources.
+state plan            # One HTML page. You answer its decisions.
+state issues          # One umbrella issue and its sub-issues.
+state execute         # One sub-issue in one fresh session.
+state verify          # A separate agent grades against the goal.
+state converge        # Code against the scenarios. Gaps become sub-issues.
+state shipped final   # The PR merges. The setup gets one change.
+
+| discuss | research | plan   | issues  |
+| shipped | converge | verify | execute |
+
+discuss  -done->     research : no questions
+research -done->     plan     : cited
+plan     -answer->   issues   : answered
+issues   -approve->  execute  : approved
+execute  -pr->       verify   : PR
+verify   -fail->     execute  : fail
+verify   -pass->     converge : pass
+converge -gaps->     execute  : gaps
+converge -none->     shipped  : none
+</script>
+    </doc-machine>
+  </doc-claim>
+
+  <doc-claim>
+    <p>The agent finds the facts. You make the decisions.</p>
+    <doc-mock frame="terminal" title="/engineering:discuss" w="470"><template><b>Round 2</b> <span class="dim">· 3 questions · 2 sub-agents read the code</span>
+
+<span class="y">Q4</span> <b>Where does the retry limit live?</b>
+   <span class="g">→</span> In the job config, next to the timeout.
+<span class="y">Q5</span> <b>Can a user cancel a running export?</b>
+   <span class="g">→</span> Yes, until the upload starts.
+<span class="y">Q6</span> <b>Does a cancel need an audit row?</b>
+   <span class="g">→</span> No. The job log is enough.
+
+<span class="dim">Answer "yes" to take each recommendation.</span></template></doc-mock>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Each discussion ends with your known and unknown unknowns.</p>
+    <doc-mock frame="none" w="440" caption="The blind-spot pass fills four boxes. Each box gets one technique."><template>
+<div class="ui">
+  <div class="hd">Unknowns map · export feature<small>after round 4 of discuss</small></div>
+  <div class="grid">
+    <div class="cell"><h5>Known knowns</h5><p>CSV and JSON. Max 50 MB.</p></div>
+    <div class="cell"><h5>Known unknowns</h5><p>S3 multipart limits → research</p></div>
+    <div class="cell"><h5>Unknown knowns</h5><p>The look of the progress bar → prototype 3 versions</p></div>
+    <div class="cell warn" data-ref="uu"><h5>Unknown unknowns</h5><p>GDPR rules for exports of other users' data → read the source</p></div>
+  </div>
+</div></template>
+      <doc-pin ref="uu" title="Blind spots" anchor="tr">The agent names them. You decide if they matter.</doc-pin>
+    </doc-mock>
+  </doc-claim>
+
+  <doc-claim>
+    <p>A separate agent grades the work against the goal, not the summary.</p>
+    <doc-code title="verify report · sketch" lang="yaml">
+<script type="text/plain">
+goal: "A user can resume a feature from its umbrella issue"
+must_haves:
+  - truth: "/next names the open sub-issue with the lowest number"
+    exists: yes          # the file is there
+    substantive: yes     # not a stub
+    wired: yes           # the skill calls it
+    evidence: "eval next-basic: 3 of 3 passed"
+  - truth: "/next shows the last stop note"
+    exists: yes
+    substantive: no      # prints a fixed string
+    wired: n/a
+verdict: fail            # back to execute, with this report
+</script>
+    </doc-code>
+  </doc-claim>
+</doc-claim>
+
+<!-- ═════ 2 · STATE AND HANDOFFS ═════ -->
+<doc-claim id="state">
+  <p>Each phase hands work to the next through GitHub or the repo.</p>
+  <doc-flow caption="No chat history goes from one phase to the next.">
+<script type="text/plain">
+think = Discuss / to plan
+page  = Plan page / artifact [note]
+repo  = Repo / ADRs, glossary [db]
+gh    = GitHub / issues [db]
+exec  = Execute / to verify
+pr    = Pull request [green]
+| think | page |
+| repo  | gh   |
+| pr    | exec |
+think -> page : decisions
+think -> repo : ADRs, terms
+page -> gh : answers
+gh -> exec : one sub-issue
+repo -> exec : read
+exec -> pr
+exec -> gh : stop note
+</script>
+  </doc-flow>
+  <doc-ask id="store">
+    <p>Where does the state between sessions live?</p>
+    <label><input type="radio" name="store" value="github" checked> GitHub issues only, through one tracker profile <small>works from any device; the tracker can change later</small></label>
+    <label><input type="radio" name="store" value="files"> A folder of state files in the repo <small>the GSD model; more files to keep correct</small></label>
+    <label><input type="radio" name="store" value="both"> GitHub issues and one short STATE.md <small>two sources that can disagree</small></label>
+  </doc-ask>
+  <div data-if="store!=github"><doc-note tone="warn"><strong>Change</strong> Claims 2.1 and 2.3 change. The plugin must then keep files and issues the same.</doc-note></div>
+
+  <doc-claim>
+    <p>The umbrella issue holds the goal, the scenarios and the decisions.</p>
+    <doc-code title="umbrella issue · sketch" lang="markdown">
+<script type="text/plain">
+## Goal
+A user can resume any feature from one issue.
+
+## Scenarios
+- WHEN a session starts THEN `/next` names the open sub-issue
+- WHEN a sub-issue closes THEN the stop note updates
+
+## Decisions
+- D1 · State lives in GitHub issues (ADR-0003)
+
+## Out of scope
+- Unattended runs
+
+## Open questions
+- Does a draft PR count as progress?
+</script>
+      <doc-pin line="4" tone="info" title="WHEN/THEN">Each scenario becomes a test or an eval case.</doc-pin>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Each sub-issue fits one session and names one <code>verify</code> command.</p>
+    <doc-code title="sub-issue · sketch" lang="markdown">
+<script type="text/plain">
+Part of #41 · Blocked by #42
+
+## What it delivers
+`/next` prints the open sub-issue and the last stop note.
+
+## Acceptance
+- [ ] WHEN no sub-issue is open THEN `/next` says "run /ship"
+- [ ] WHEN #42 is open THEN `/next` names #42
+
+## Files
+skills/next/SKILL.md (new)
+
+## Verify
+claude plugin eval ./plugins/engineering --case next-basic
+</script>
+      <doc-pin line="14" tone="warn" title="Must fail first">The command must fail before the work and pass after it.</doc-pin>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>The <code>/next</code> command tells you where you stopped, on any device.</p>
+    <doc-mock frame="terminal" title="/engineering:next" w="470"><template><span class="dim">></span> /engineering:next
+<b>#41 Resume a feature from its issue</b>
+<span class="g">✓</span> #42 Tracker profile        <span class="dim">merged</span>
+<span class="y">▸</span> #43 /next command          <span class="dim">open</span>
+    <span class="dim">stop note 2026-10-09: "Eval passes. Text not final."</span>
+<span class="dim">○</span> #44 Converge pass          <span class="dim">blocked by #43</span>
+
+Next: <b>/engineering:execute 43</b></template></doc-mock>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Plans are disposable. ADRs, the glossary and the tests stay.</p>
+    <doc-tree caption="What a repo keeps after a feature ships.">
+<script type="text/plain">
+repo/
+  docs/adr/          # decisions that last
+  GLOSSARY.md        # one meaning for each term
+  docs/agents/       # commands, tracker, checks
+  tests/             # the judge of "done"
+- .planning/         # not used
+- plans/             # plan pages stay artifacts
+</script>
+    </doc-tree>
+  </doc-claim>
+</doc-claim>
+
+<!-- ═════ 3 · PLANS ON THE PHONE ═════ -->
+<doc-claim id="phone">
+  <p>You read and answer each plan on your phone.</p>
+  <doc-mock frame="phone" w="360" caption="The page opens closed. The level-1 claims tell the whole plan."><template>
+<div class="ui" style="border:0;border-radius:0">
+  <div class="hd">Export to S3 Plan<small>Proposed · 7 files · +4 new · ~3 changed</small></div>
+  <div class="ln"><span class="n">1</span>A user can start an export from the list.<span class="q">1 decision</span></div>
+  <div class="ln"><span class="n">2</span>The export runs as a job with a retry limit.</div>
+  <div class="ln"><span class="n">3</span>The user sees progress and can cancel.<span class="q">1 decision</span></div>
+  <div class="ln"><span class="n">4</span>Old exports expire after 7 days.</div>
+  <div class="ft"><span class="btn" data-ref="answer">2 to answer</span></div>
+</div></template>
+    <doc-pin ref="answer" title="Decisions" anchor="tl">A tap goes to the next open decision.</doc-pin>
+  </doc-mock>
+  <doc-ask id="htmlplan">
+    <p>How does the plugin make HTML plans?</p>
+    <label><input type="radio" name="htmlplan" value="depend" checked> Depend on the html-plan plugin <small>lint, decisions and phone layout exist now</small></label>
+    <label><input type="radio" name="htmlplan" value="fork"> Copy and adapt html-plan (MIT) <small>we own a 209 KB runtime</small></label>
+    <label><input type="radio" name="htmlplan" value="own"> Write a lighter page of our own <small>less weight; we rebuild the answer flow</small></label>
+  </doc-ask>
+  <div data-if="htmlplan=depend"><doc-note tone="info"><strong>Setup</strong> marketplace.json must allow the claude-plugins-community marketplace as a source of dependencies.</doc-note></div>
+
+  <doc-claim>
+    <p>Plans, issues and ADRs use STE at approximately 80 percent.</p>
+    <doc-mock frame="none" w="440" caption="Chat stays in normal prose. Only the artifacts use STE."><template>
+<div class="ui">
+  <div class="pair"><small>Before</small><span class="bad">It is imperative that we ensure the umbrella issue is kept up to date prior to commencing a new session.</span></div>
+  <div class="pair" data-ref="after"><small>After · STE</small><span class="ok">Update the umbrella issue before you start a new session.</span></div>
+</div></template>
+      <doc-pin ref="after" title="9 words" anchor="tr">The limit for an instruction is 20 words.</doc-pin>
+    </doc-mock>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Your answers come back to the session as one structured response.</p>
+    <doc-code title="response from the page · sketch" lang="markdown">
+<script type="text/plain">
+# Re: Engineering Workflow Plugin for Cargus Forge
+## Decisions
+1. [2] Where does the state between sessions live?  _(kept as proposed)_
+   → **GitHub issues only, through one tracker profile** `github`
+2. [5] Where do we start?
+   → **Process first, then each phase in order** `phases`  ✎ (was: contract)
+## Comments
+- **3.1 Plans, issues and ADRs use STE at approximately 80 percent.**
+  > also for commit messages?
+</script>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Remote Control sessions on the Linux host can publish the page.</p>
+    <doc-mock frame="terminal" title="always-on host" w="470"><template><span class="dim">$</span> claude remote-control --name cargus-forge --spawn worktree
+<span class="g">✓</span> Serving <b>cargus-forge</b> <span class="dim">· open it in the Claude app</span>
+<span class="dim">…</span>
+<span class="g">⧉</span> Published <b>Export to S3 Plan</b> <span class="dim">· private · v1</span></template></doc-mock>
+    <doc-note tone="info"><strong>Limit</strong> Mods draw only in the local terminal. The phone never shows them, so this plugin does not use them.</doc-note>
+  </doc-claim>
+</doc-claim>
+
+<!-- ═════ 4 · CONTEXT BUDGET ═════ -->
+<doc-claim id="lean">
+  <p>The plugin loads only the instructions that the current phase needs.</p>
+  <doc-tree caption="Sketch. Eight skills you type, five skills the model calls, one hook.">
+<script type="text/plain">
+plugins/engineering/
+  + .claude-plugin/plugin.json
+  + skills/
+    + setup/          # you type it · repo profile and checks
+    + discuss/        # you type it · questions + unknowns
+    + research/       # you type it · cited notes
+    + plan/           # you type it · HTML page
+    + to-issues/      # you type it · umbrella + sub-issues
+    + execute/        # you type it · one sub-issue
+    + ship/           # you type it · PR + one setup change
+    + next/           # you type it · where you stopped
+    + grill/          # model calls it · question rounds
+    + domain-model/   # model calls it · glossary + ADR
+    + tdd/            # model calls it · red, green
+    + verify/         # model calls it · goal-backward
+    + ste-writing/    # model calls it · writing standard
+  + hooks/hooks.json  # reflect after a push
+</script>
+  </doc-tree>
+  <doc-ask id="legacy">
+    <p>What happens to knowledge-system and adr-management?</p>
+    <label><input type="radio" name="legacy" value="replace" checked> Engineering takes over both; we deprecate them later <small>one owner for each trigger</small></label>
+    <label><input type="radio" name="legacy" value="split"> They stay; engineering leaves out ADR and knowledge skills <small>smaller plugin; you install three plugins</small></label>
+    <label><input type="radio" name="legacy" value="overlap"> They stay, and engineering has its own versions <small>two skills answer the same trigger</small></label>
+  </doc-ask>
+
+  <doc-claim>
+    <p>Skills that you type cost no context until you call them.</p>
+    <doc-code title="two SKILL.md headers · sketch" lang="yaml">
+<script type="text/plain">
+# skills/execute/SKILL.md
+name: execute
+description: Run one sub-issue from code to PR.
+disable-model-invocation: true    # not listed until you type it
+---
+# skills/tdd/SKILL.md
+name: tdd
+description: Red-green loop at test seams agreed before the code.
+when_to_use: When a change alters behaviour behind a seam.
+                                  # listed always; body loads on use
+</script>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>The plugin stays near 1,500 lines of instructions in total.</p>
+    <doc-mock frame="terminal" title="instruction lines" w="470"><template><b>Markdown lines of skill and agent text</b>
+GSD core                ~95,000   <span class="dim">72 commands, 64 agents</span>
+mattpocock/skills        ~1,900   <span class="dim">27 skills</span>
+<span class="g">engineering (target)      1,500</span>   <span class="dim">no skill over 150</span></template></doc-mock>
+    <doc-note tone="risk"><strong>Evidence</strong> GSD core loads 35,000 to 40,000 tokens before its plan phase starts. We measure each skill with <code>claude plugin eval</code>.</doc-note>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Engineering takes ideas from our plugins but copies no files.</p>
+    <doc-flow caption="Left: plugins that exist. Right: where each idea goes.">
+<script type="text/plain">
+ks  = knowledge-system [muted]
+adr = adr-management [muted]
+cx  = codex-review [muted]
+sh  = ship + push hook [green]
+dm  = domain-model [green]
+vf  = verify [green]
+| ks  | sh |
+| adr | dm |
+| cx  | vf |
+ks -> sh : reflect, tiers
+adr -> dm : litmus, living ADRs
+cx -> vf : second opinion
+</script>
+    </doc-flow>
+    <doc-claim at="plugins/knowledge-system/hooks/reflect-on-push.sh:12">
+      <p><b>reflect-on-push.sh:12</b> · the push match</p>
+      <doc-code src="plugins/knowledge-system/hooks/reflect-on-push.sh" lines="10-21" hl="12">
+        <doc-pin line="17" tone="info" title="Becomes generic">The new hook asks about ADRs, rules and checks.</doc-pin>
+      </doc-code>
+    </doc-claim>
+  </doc-claim>
+</doc-claim>
+
+<!-- ═════ 5 · STAGES ═════ -->
+<doc-claim id="stages">
+  <p>We build in six stages, and the thinnest working path comes first.</p>
+  <div class="cols">
+    <div class="card"><h4>0 · Contract</h4><p>Process contract and the first ADRs. No plugin code.</p></div>
+    <div class="card"><h4>1 · Skeleton</h4><p><code>setup</code>, <code>execute</code>, <code>verify</code> and <code>ship</code> on one real issue in this repo.</p></div>
+    <div class="card"><h4>2 · Front end</h4><p>grill, discuss with the unknowns map, domain-model, STE.</p></div>
+    <div class="card"><h4>3 · Long path</h4><p>research, plan page, to-issues, next, converge.</p></div>
+    <div class="card"><h4>4 · Guardrails</h4><p>setup adds hooks, CI and tests. Reflect after a push.</p></div>
+    <div class="card"><h4>5 · By need</h4><p>diagnose, architecture review, Codex, quiz, parallel runs.</p></div>
+  </div>
+  <doc-ask id="start">
+    <p>Where do we start?</p>
+    <label><input type="radio" name="start" value="contract" checked> Contract first, then one thin path from end to end <small>we learn early if the handoffs work</small></label>
+    <label><input type="radio" name="start" value="phases"> Process first, then each phase in order <small>handoff faults show only at the last phase</small></label>
+    <label><input type="radio" name="start" value="frontend"> The front end first, to design the rest with it <small>grill helps now; no test from end to end</small></label>
+  </doc-ask>
+
+  <doc-claim>
+    <p>Stage 0 writes the process as contracts between the phases.</p>
+    <doc-code title="docs/engineering-plugin/process.md · sketch" lang="markdown">
+<script type="text/plain">
+## execute
+Gets:       one open sub-issue; the docs/agents/ profile
+Gives:      a PR that links the sub-issue; a stop note on the umbrella
+Stores in:  GitHub
+Exit gate:  the verify command passes; the verify agent says pass
+Stops for:  a change to the architecture → ask (deviation rule 4)
+</script>
+      <doc-pin line="6" tone="info" title="From GSD">Rules 1 to 3 fix bugs and blocks. Rule 4 asks.</doc-pin>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Stage 1 takes one real issue in this repo from setup to merge.</p>
+    <doc-code title="first issue for the skeleton · sketch" lang="markdown">
+<script type="text/plain">
+## What it delivers
+CI fails a PR when a plugin is not valid or not in step.
+
+## Acceptance
+- [ ] WHEN plugin.json is not valid THEN the CI job fails
+- [ ] WHEN the descriptions in plugin.json and marketplace.json differ
+      THEN the CI job fails
+- [ ] WHEN a plugin changes without a version bump THEN the CI job fails
+
+## Verify
+gh run view --log-failed   # on a PR that breaks each rule
+</script>
+      <doc-pin line="6" tone="warn" title="Fails today">Three plugins have descriptions that differ now.</doc-pin>
+    </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Each stage adds eval cases, and the evals run before each release.</p>
+    <doc-tree caption="Sketch. Graders can match text, tool use, files or an LLM verdict.">
+<script type="text/plain">
+plugins/engineering/evals/
+  + execute-closes-issue/
+    + prompt.md
+    + graders/closed.md      # tool_used: gh issue close
+  + next-names-open-issue/
+    + prompt.md
+    + graders/names.md       # regex: #43
+</script>
+    </doc-tree>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Five smaller questions wait for the stage that needs them.</p>
+    <doc-mock frame="none" w="440" caption="Comment on any row to answer it early."><template>
+<div class="ui">
+  <div class="pair"><small>Stage 0</small>Plugin name. The default is <b>engineering</b>.</div>
+  <div class="pair"><small>Stage 1</small>Solo or team? It changes review and the issue templates.</div>
+  <div class="pair"><small>Stage 4</small>Which stacks does setup support first?</div>
+  <div class="pair" style="border:0"><small>Stage 5</small>Unattended runs? Codex as a second opinion?</div>
+</div></template></doc-mock>
+  </doc-claim>
+</doc-claim>
+
+<!-- ═════ SHARED / SCOPE ═════ -->
+<doc-claim aux="shared">
+  <p>Shared: the research behind each claim, on the branch.</p>
+  <doc-tree caption="Branch engineering-plugin. Seven reports, saved without edits.">
+<script type="text/plain">
+docs/engineering-plugin/
+  + README.md          # index and status
+  + synthesis.md       # findings, workflow, questions, stages
+  + plan.html          # the source of this page
+  + research/
+    + 01-mattpocock-skills.md
+    + 02-gsd-core-and-path.md
+    + 03-claude-code-docs.md
+    + 04-karpathy-thariq-html-plan.md
+    + 05-cargus-forge-plugins.md
+    + 06-practitioner-workflows.md
+    + 07-spec-driven-toolkits.md
+</script>
+  </doc-tree>
+</doc-claim>
+
+<doc-claim aux="scope">
+  <p>Not changing now: no plugin code, no issues and no edits to the old plugins.</p>
+  <ul>
+    <li>The three plugins that exist stay as they are until decision 4 has an answer.</li>
+    <li>No GitHub issues before decision 2 has an answer.</li>
+    <li>No mods, no STATE.md and no <code>.planning/</code> folder.</li>
+    <li>This first plan is the one plan in git. Its source stays with the research.</li>
+  </ul>
+</doc-claim>
+
+</doc-plan>
+</main>
+</body></html>
