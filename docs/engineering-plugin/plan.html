@@ -8,7 +8,7 @@
   .ui { font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #1c1b19; background: #fff; border: 1px solid #ddd8cc; border-radius: 10px; overflow: hidden; }
   .ui .hd { padding: 10px 14px; border-bottom: 1px solid #eee9dd; font-weight: 650; }
   .ui .hd small { display: block; color: #8a8578; font-weight: 400; font-size: 12px; margin-top: 2px; }
-  .ui .ln { padding: 8px 14px; border-bottom: 1px solid #f3efe6; color: #3d3a33; display: flex; gap: 8px; align-items: baseline; }
+  .ui .ln { padding: 8px 14px; border-bottom: 1px solid #f3efe6; color: #3d3a33; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
   .ui .ln .n { color: #8a8578; font-variant-numeric: tabular-nums; min-width: 1.2em; }
   .ui .ln .q { margin-left: auto; font-size: 11.5px; color: #b4541f; font-weight: 600; white-space: nowrap; }
   .ui .ft { display: flex; justify-content: flex-end; padding: 10px 14px; background: #faf8f3; }
@@ -22,13 +22,25 @@
   .ui .pair small { display: block; color: #8a8578; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 3px; }
   .ui .bad { color: #9b3a2a; text-decoration: line-through; text-decoration-color: #d9a59a; }
   .ui .ok { color: #1f5f45; }
+  .ui .lbl { font-size: 11.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
+  .ui .l-ready { color: #1f5f45; background: #e2efdf; border-color: #b9d6b4; }
+  .ui .l-active { color: #1d4f91; background: #e1ebf8; border-color: #b5cbe9; }
+  .ui .l-review { color: #6b3fa0; background: #efe6f8; border-color: #d3c0ea; }
+  .ui .l-blocked { color: #9b3a2a; background: #f8e4df; border-color: #e7bfb5; }
+  .ui .ico { color: #1f7a52; }
+  .cc { font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; color: #1c1b19; background: #fff; border: 1px solid #ddd8cc; border-radius: 10px; padding: 12px 14px; }
+  .cc .you { color: #8a8578; } .cc .you b { color: #1c1b19; }
+  .cc .dot { color: #c6613f; }
+  .cc .row { display: grid; grid-template-columns: 4.6em 1fr; gap: 0 8px; margin-left: 1.4em; }
+  .cc .k { font-weight: 700; } .cc .dim { color: #8a8578; }
+  .cc p { margin: 6px 0 6px 1.4em; }
 </style>
 <body>
 
 <header>
   <h1>Engineering Workflow Plugin for Cargus Forge</h1>
   <doc-changes new="17" changed="2"></doc-changes>
-  <details class="thread"><summary>Why · 9 requests</summary>
+  <details class="thread"><summary>Why · 11 requests</summary>
     <doc-quote via="prompt" from="Calle">I want to build out my own plugin for Engineering with Claude and AI. It should consist of Skills, templates, and any other small bits and bobs that are relevant for this discipline</doc-quote>
     <doc-quote via="prompt" from="Calle">What I like about it is that it's opinionated about a order of operations (Discuss, Plan, Execute, Verify, Ship) … I also like the idea of state surviving between sessions</doc-quote>
     <doc-quote via="prompt" from="Calle">What I am hesitant, or worried, about is context bloat. Especially GSD feels like it's very fond of writing to a lot of files and keeping them in a lot of places.</doc-quote>
@@ -38,6 +50,8 @@
     <doc-quote via="doc" from="Calle, comment on v1 claim 1.1">Should not the step between "Plan" and "Issues" here already do the size check and break down the issues into proper sizes?</doc-quote>
     <doc-quote via="doc" from="Calle, comment on v1 claim 2.3">I don't want to have to write out a state text in an issue body, since this will be missed and get outdated, so we need some other way of tracking that.</doc-quote>
     <doc-quote via="doc" from="Calle, comment on v1 claim 3.3">we need to make sure that plans are removed when done so that we dont end up with a bunch of orphaned artifacts nobody needs.</doc-quote>
+    <doc-quote via="doc" from="Calle, comment on v2 claim 1.4">What do we need this skill for? What does it do that /verify does not? Why do we need both?</doc-quote>
+    <doc-quote via="doc" from="Calle, comment on v2 claim 2.3">I feel that we should use actual labels on GitHub in order to track which issue is in which state, that way we can see that clearly, even if we browse the issue list on GitHub directly.</doc-quote>
   </details>
 </header>
 
@@ -46,28 +60,28 @@
 
 <!-- ═════ 1 · THE PROCESS ═════ -->
 <doc-claim id="process">
-  <p>One size test routes each request. Every issue then runs one loop.</p>
-  <doc-flow dashed="goes back" caption="The front end only makes issues that pass the size test.">
+  <p>Each request passes one size test. Then Shape makes the issues and Build does them.</p>
+  <doc-flow dashed="goes back to Shape" caption="Shape and Build are the two halves of the process. The names come from Basecamp's Shape Up.">
 <script type="text/plain">
 req   = Request [pill]
 size  = Size test / one session? [diamond]
-front = Front end / discuss to slice [accent]
+shape = Shape / discuss to slice [accent]
 issue = Issue / with scenarios
-loop  = Loop / execute, verify [green]
-ship  = Merged [pill]
+build = Build / execute, verify [green]
+done  = Merged [pill]
 | req   | size  |
-| front | issue |
-| ship  | loop  |
+| shape | issue |
+| done  | build |
 req -> size
 size -> issue : yes
-size -> front : no
-front -> issue : N issues
-issue -> loop
-loop -> ship
-loop --> front : too big
+size -> shape : no
+shape -> issue : sub-issues
+issue -> build
+build -> done
+build --> shape : too big
 </script>
   </doc-flow>
-  <doc-note tone="ok"><strong>Decided</strong> Research runs only in the front end. Trivial changes skip the plugin.</doc-note>
+  <doc-note tone="ok"><strong>Decided</strong> Research runs only in Shape. Trivial changes skip the plugin.</doc-note>
 
   <doc-claim>
     <p>The same size test runs at intake, at slice and during execute.</p>
@@ -79,7 +93,8 @@ An issue fits one session when all four are true:
 3. After a short read, the agent can name every file it changes.
 4. It has no open design question for you.
 
-Intake:  one request  → pass: issue  · fail: front end
+Intake:  one request  → pass: Build  · fail: Shape
+         (no scenarios yet? discuss runs one short round first)
 Slice:   each sub-issue must pass    · fail: split it again
 Execute: the agent finds a fail      → stop, send it back to slice
 </script>
@@ -87,14 +102,14 @@ Execute: the agent finds a fail      → stop, send it back to slice
   </doc-claim>
 
   <doc-claim>
-    <p>Larger work goes through discuss, research, plan and slice first.</p>
-    <doc-machine name="front" caption="Each phase hands one artifact to the next. Slice makes the issues.">
+    <p>Shape writes everything into one umbrella issue, then slice cuts it into sub-issues.</p>
+    <doc-machine name="shape" caption="Each phase adds to the umbrella issue. Nothing goes in a local file.">
 <script type="text/plain">
-machine front initial discuss
-state discuss       # Question rounds. Ends with the unknowns map.
-state research      # Cited notes on the code and on outside sources.
-state plan          # One HTML page. You answer its decisions.
-state slice final   # Umbrella issue and sub-issues that pass the size test.
+machine shape initial discuss
+state discuss       # Makes the umbrella issue: goal, scenarios, decisions.
+state research      # Adds one comment with cited notes to the umbrella.
+state plan          # Publishes the plan page. Your answers go to the umbrella.
+state slice final   # Makes sub-issues. Each one gets its share of the scenarios.
 
 | discuss | research | plan | slice |
 
@@ -103,6 +118,7 @@ research -done->   plan     : cited
 plan     -answer-> slice    : answered
 </script>
     </doc-machine>
+    <doc-note tone="info"><strong>Scenarios</strong> The acceptance criteria are the WHEN/THEN scenarios. Discuss writes them. Slice gives each sub-issue the scenarios it delivers.</doc-note>
     <doc-claim>
       <p><b>skills/discuss</b> · question rounds</p>
       <doc-mock frame="terminal" title="/engineering:discuss" w="470"><template><b>Round 2</b> <span class="dim">· 3 questions · 2 sub-agents read the code</span>
@@ -132,40 +148,45 @@ plan     -answer-> slice    : answered
       </doc-mock>
     </doc-claim>
     <doc-claim>
-      <p><b>skills/to-issues</b> · the slice result</p>
-      <doc-mock frame="terminal" title="/engineering:to-issues" w="470"><template><b>#38 Export to S3</b> <span class="dim">· umbrella · 4 sub-issues</span>
+      <p><b>skills/slice</b> · why it is a separate step</p>
+      <doc-code title="three reasons · sketch" lang="markdown">
+<script type="text/plain">
+1. Slice needs the plan. You cut by modules and seams,
+   and the plan decides them. Before the plan, a cut is a guess.
+2. Slice runs again later. Execute sends a too-big issue
+   back to slice (rule 5). Discuss is long finished then.
+3. Slice is the one skill that writes sub-issues and links.
+   One owner keeps the GitHub structure the same each time.
 
-#39 Export job with retry limit   <span class="g">✓ size test</span>
-#40 Start export from the list    <span class="g">✓</span>  <span class="dim">blocked by #39</span>
-#41 Progress and cancel           <span class="g">✓</span>  <span class="dim">blocked by #39</span>
-#42 Expire old exports            <span class="g">✓</span>
-
-<span class="y">split</span> "Progress, cancel and retry UI" failed test 1
-      <span class="dim">→ now #41 and part of #39</span></template></doc-mock>
+You do not type /slice. Plan calls it after your answers.
+Execute calls it on rule 5.
+</script>
+      </doc-code>
     </doc-claim>
   </doc-claim>
 
   <doc-claim>
-    <p>Each issue runs one loop: execute, verify, then you merge.</p>
+    <p>Build runs one loop for each issue: execute, verify, then you merge.</p>
     <doc-machine name="loop" caption="The same loop runs for a one-session issue and for each sub-issue.">
 <script type="text/plain">
 machine loop initial ready
 state ready          # Open, and no open issue blocks it.
-state execute        # A linked branch. TDD at the agreed seams.
-state verify         # A separate agent grades against the scenarios.
+state execute        # A worktree and a linked branch. TDD at the agreed seams.
+state verify         # A separate agent grades the PR against the scenarios.
 state merged final   # You merge the PR. The PR closes the issue.
 state split  final   # Too big. It goes back to slice.
 
 | ready | execute | verify | merged |
 | .     | split   | .      | .      |
 
-ready   -claim->  execute : branch
+ready   -claim->  execute : worktree
 execute -pr->     verify  : draft PR
 verify  -fail->   execute : report
 verify  -pass->   merged  : you merge
 execute -stop->   split   : too big
 </script>
     </doc-machine>
+    <doc-note tone="ok"><strong>Decided</strong> Each active issue gets its own worktree. Two features can run at the same time.</doc-note>
     <doc-claim>
       <p><code>skills/verify</code> · the report goes on the PR, not in a file</p>
       <doc-code title="verify report · PR comment · sketch" lang="yaml">
@@ -200,44 +221,42 @@ verdict: fail                    # back to execute with this comment
   </doc-claim>
 
   <doc-claim>
-    <p>When the last sub-issue merges, converge compares the code with the umbrella.</p>
-    <doc-mock frame="terminal" title="/engineering:converge 38" w="470"><template><b>#38 Export to S3</b> <span class="dim">· 4 of 4 sub-issues merged</span>
+    <p>When the last sub-issue merges, verify runs once more on the whole umbrella.</p>
+    <doc-mock frame="terminal" title="/engineering:verify #38" w="470"><template><b>#38 Export to S3</b> <span class="dim">· 4 of 4 sub-issues merged · code on main</span>
 
 <span class="g">✓</span> WHEN a user starts an export THEN a job starts
 <span class="g">✓</span> WHEN the upload fails THEN the job retries 3 times
 <span class="r">✗</span> WHEN a user cancels THEN the partial file goes away
-   <span class="dim">no test; the code leaves the S3 part</span>
+   <span class="dim">#41 stops the job. #39 owns the upload.</span>
+   <span class="dim">No sub-issue owned the cleanup.</span>
 
-<span class="y">+</span> Opened #47 "Delete partial upload on cancel" <span class="dim">· sub-issue of #38</span></template></doc-mock>
+<span class="y">+</span> slice opened #47 "Delete partial upload on cancel"</template></doc-mock>
+    <doc-note tone="info"><strong>Why both</strong> Each sub-issue passed its own check. The feature failed between them. This was "converge" in v2. It is now the same verify skill on a larger scope.</doc-note>
   </doc-claim>
 </doc-claim>
 
 <!-- ═════ 2 · STATE ═════ -->
 <doc-claim id="state">
-  <p>GitHub and git hold the state. Nobody writes a status by hand.</p>
-  <doc-flow caption="No chat history goes from one phase to the next.">
+  <p>Each phase reads and writes known places on GitHub and in the repo.</p>
+  <doc-code title="where each phase reads and writes · sketch" lang="markdown">
 <script type="text/plain">
-think = Front end / to slice
-page  = Plan page / artifact [note]
-repo  = Repo / ADRs, glossary [db]
-gh    = GitHub / issues, PRs [db]
-exec  = Loop / to verify
-git   = git / branches [db]
-| think | page |
-| repo  | gh   |
-| git   | exec |
-think -> page : decisions
-think -> repo : ADRs, terms
-page -> gh : answers
-gh -> exec : one issue
-repo -> exec : read
-exec -> git : commits
-exec -> gh : PR closes it
+SHAPE      reads                            writes
+discuss    request, code, ADRs, glossary    umbrella issue: goal, scenarios, decisions
+                                            repo: ADRs and glossary terms
+research   umbrella issue, code, the web    umbrella issue: one comment, cited notes
+plan       umbrella issue, research         plan page; your answers → umbrella decisions
+slice      umbrella issue, plan answers     sub-issues, "blocked by" links, labels
+
+BUILD
+execute    one issue, docs/agents/          worktree, branch, commits, draft PR
+verify     the PR and its issue             PR comment; on pass the PR is ready
+           or: the umbrella and main        new sub-issues through slice
 </script>
-  </doc-flow>
+    <doc-pin line="3" tone="info" title="The umbrella issue">This is the one record of a feature. See claim 2.1.</doc-pin>
+  </doc-code>
   <doc-note tone="ok"><strong>Decided</strong> GitHub issues hold the state, through one tracker profile.</doc-note>
 
-  <doc-claim>
+  <doc-claim id="umbrella">
     <p>The umbrella issue holds the goal, the scenarios and the decisions.</p>
     <doc-code title="umbrella issue · sketch" lang="markdown">
 <script type="text/plain">
@@ -257,8 +276,8 @@ A user can export their projects to their own S3 bucket.
 
 Plan page: https://claude.ai/artifact/…
 </script>
-      <doc-pin line="5" tone="info" title="WHEN/THEN">Each scenario becomes a test. Converge checks them at the end.</doc-pin>
-      <doc-pin line="15" tone="info" title="Written once">Set at slice. No section of this body tracks progress.</doc-pin>
+      <doc-pin line="5" tone="info" title="WHEN/THEN">Discuss writes these. Each one becomes a test.</doc-pin>
+      <doc-pin line="15" tone="info" title="Written once">Slice adds the link. No part of this body tracks progress.</doc-pin>
     </doc-code>
   </doc-claim>
 
@@ -286,40 +305,53 @@ bun test src/export/cancel.test.ts
   </doc-claim>
 
   <doc-claim>
-    <p><code>/next</code> reads each status from GitHub links, branches and PRs.</p>
-    <doc-code title="how /next gets a status · sketch" lang="ts">
-<script type="text/plain">
-// Every input is a fact that GitHub or git records. None is prose.
-function status(issue: Issue): Status {
-  if (issue.closed)                               return "done"     // the PR closed it
-  if (issue.blockedBy.some((b) => !b.closed))     return "blocked"  // GitHub "blocked by" link
-  if (issue.linkedBranch || issue.openPR)         return "active"   // execute made the branch
-  return "ready"
-}
-
-// Which one is "next"?
-// 1. The branch you are on links an issue  → resume that issue.
-// 2. Else list "ready" issues for each open umbrella → you pick.
-</script>
-    </doc-code>
-    <doc-ask id="parallel">
-      <p>How do you work on two features at the same time?</p>
-      <label><input type="radio" name="parallel" value="worktree" checked> One worktree for each active issue <small>Remote Control can make one with --spawn worktree</small></label>
-      <label><input type="radio" name="parallel" value="branch"> One checkout; switch branches <small>one session at a time per repo</small></label>
-      <label><input type="radio" name="parallel" value="none"> One active issue at a time <small>simplest; slower</small></label>
+    <p>A label on each open issue shows its status on GitHub.</p>
+    <doc-mock frame="browser" url="github.com/cstalhem/postbox/issues" w="480" caption="You see the status in the issue list, on the web or in the GitHub app."><template>
+<div class="ui" style="border:0;border-radius:0">
+  <div class="ln"><span class="ico">◉</span><b>Export job with retry limit</b><span class="lbl l-review">status: review</span><span class="lbl" style="color:#5f5a4f;border-color:#ddd8cc">feature</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Progress and cancel</b><span class="lbl l-active" data-ref="active">status: active</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Start export from the list</b><span class="lbl l-blocked">status: blocked</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Expire old exports</b><span class="lbl l-ready">status: ready</span></div>
+</div></template>
+      <doc-pin ref="active" title="Set by automation" anchor="tr">execute sets it. Nobody sets a status label by hand.</doc-pin>
+    </doc-mock>
+    <doc-ask id="labels">
+      <p>What keeps the status labels correct?</p>
+      <label><input type="radio" name="labels" value="skills" checked> Skills set them; <code>/next</code> repairs drift <small>no extra setup; a GitHub Action can follow in stage 4</small></label>
+      <label><input type="radio" name="labels" value="action"> A GitHub Action sets them from events <small>also correct when you work outside Claude; needs a spike</small></label>
+      <label><input type="radio" name="labels" value="manual"> Skills set them, and nothing repairs them <small>labels drift when you merge by hand</small></label>
     </doc-ask>
     <doc-claim>
-      <p><b>skills/next</b> · what you see</p>
-      <doc-mock frame="terminal" title="/engineering:next" w="470"><template><span class="dim">></span> /engineering:next
-<span class="dim">You are on branch</span> 43-next-command <span class="dim">→ issue</span> <b>#43</b>
-<span class="dim">#43 is a sub-issue of</span> #41 <b>Resume a feature</b>
-
-<b>Active</b>   #43 /next command      <span class="dim">draft PR #57 · 3 commits</span>
-<b>Ready</b>    #39 Export job         <span class="dim">under #38 Export to S3</span>
-<b>Blocked</b>  #44 Converge pass      <span class="dim">waits for #43</span>
-<b>Done</b>     #42 Tracker profile    <span class="dim">merged in PR #52</span>
-
-Next: <b>/engineering:execute 43</b></template></doc-mock>
+      <p><code>skills/next/status.ts</code> · facts decide, the label shows the result</p>
+      <doc-code title="status rules · sketch" lang="ts">
+<script type="text/plain">
+// The facts are the truth. A label only shows the result.
+function status(i: Issue): Label | null {
+  // done: the PR closed it
+  if (i.closed) return null
+  // GitHub "blocked by" link to an open issue
+  if (i.blockedBy.some((b) => !b.closed)) return "status: blocked"
+  // verify passed and marked the PR ready
+  if (i.pr && !i.pr.draft) return "status: review"
+  // execute made the branch
+  if (i.linkedBranch || i.pr) return "status: active"
+  return "status: ready"
+}
+// /next runs this on each open issue and fixes labels that differ.
+</script>
+      </doc-code>
+    </doc-claim>
+    <doc-claim>
+      <p><b>skills/next</b> · the reply in Claude Code</p>
+      <doc-mock frame="none" w="470" caption="Claude answers in the chat. The same reply shows in the terminal, the desktop app and Remote Control."><template>
+<div class="cc">
+  <div class="you">❯ <b>/engineering:next</b></div>
+  <p><span class="dot">⏺</span> You are in the worktree for <b>#43</b>. It is a sub-issue of #41.</p>
+  <div class="row"><span class="k">Active</span><span>#43 /next command · draft PR #57</span></div>
+  <div class="row"><span class="k">Ready</span><span>#39 Export job <span class="dim">(#38 Export to S3)</span></span></div>
+  <div class="row"><span class="k">Blocked</span><span>#44 Status labels <span class="dim">waits for #43</span></span></div>
+  <p>Continue #43 with <b>/engineering:execute 43</b>? I fixed one label: #40 was "active" with no branch.</p>
+</div></template></doc-mock>
     </doc-claim>
   </doc-claim>
 
@@ -360,8 +392,9 @@ Before a PR: bun run check      # lint + typecheck + test, as in CI
 # Issue tracker
 Repo:       cstalhem/postbox
 Umbrella:   label "feature"; the work goes in sub-issues
+Status:     labels status: ready | active | review | blocked
 Blocking:   GitHub "blocked by" links, not text
-Branches:   gh issue develop <n> --checkout   → "<n>-slug"
+Branches:   gh issue develop <n> → "<n>-slug", one worktree each
 PRs:        the body has "Closes #<n>"
 Priority:   you pick; no project board
 </script>
@@ -384,7 +417,7 @@ Priority:   you pick; no project board
 </div></template>
     <doc-pin ref="answer" title="Decisions" anchor="tl">A tap goes to the next open decision.</doc-pin>
   </doc-mock>
-  <doc-note tone="ok"><strong>Decided</strong> The plugin depends on html-plan. It does not copy it.</doc-note>
+  <doc-note tone="ok"><strong>Decided</strong> The plugin depends on html-plan. Its rules are defaults, and sentence lengths are targets.</doc-note>
 
   <doc-claim>
     <p>html-plan installs as a dependency from the claude-community marketplace.</p>
@@ -410,44 +443,18 @@ Priority:   you pick; no project board
   </doc-claim>
 
   <doc-claim>
-    <p>STE rules are defaults. The sentence lengths are targets, not gates.</p>
-    <doc-mock frame="none" w="440" caption="Chat stays in normal prose. Only the artifacts use STE."><template>
-<div class="ui">
-  <div class="pair"><small>Before</small><span class="bad">It is imperative that we ensure the umbrella issue is kept up to date prior to commencing a new session.</span></div>
-  <div class="pair" data-ref="after"><small>After · STE</small><span class="ok">Update the umbrella issue before you start a new session.</span></div>
-</div></template>
-      <doc-pin ref="after" title="Target: 20 words" anchor="tr">A longer sentence is fine when it reads better.</doc-pin>
-    </doc-mock>
-    <doc-ask id="ste">
-      <p>How strict is the STE rule?</p>
-      <label><input type="radio" name="ste" value="defaults" checked> Rules as defaults; lengths as targets <small>html-plan lint warns; nothing blocks</small></label>
-      <label><input type="radio" name="ste" value="strict"> Full STE; lint warnings must go <small>clearer text; slower to write</small></label>
-      <label><input type="radio" name="ste" value="plain"> Plain English only; no STE <small>less consistent wording</small></label>
-    </doc-ask>
-  </doc-claim>
-
-  <doc-claim>
     <p>Your answers come back to the session as one structured response.</p>
     <doc-code title="response from the page · sketch" lang="markdown">
 <script type="text/plain">
-# Re: Engineering Workflow Plugin for Cargus Forge
+# Re: Export to S3
 ## Decisions
-1. [2.3] How do you work on two features at the same time?  _(kept as proposed)_
-   → **One worktree for each active issue** `worktree`
+1. [3] Can a user cancel after the upload starts?  _(kept as proposed)_
+   → **No** `no`
 ## Comments
-- **3.2 STE rules are defaults. The sentence lengths are targets, not gates.**
-  > also for commit messages?
+- **2 The export runs as a job with a retry limit.**
+  > 3 retries is too many for a 50 MB file
 </script>
     </doc-code>
-  </doc-claim>
-
-  <doc-claim>
-    <p>Remote Control sessions on the Linux host can publish the page.</p>
-    <doc-mock frame="terminal" title="always-on host" w="470"><template><span class="dim">$</span> claude remote-control --name cargus-forge --spawn worktree
-<span class="g">✓</span> Serving <b>cargus-forge</b> <span class="dim">· open it in the Claude app</span>
-<span class="dim">…</span>
-<span class="g">⧉</span> Published <b>Export to S3 Plan</b> <span class="dim">· private · v1</span></template></doc-mock>
-    <doc-note tone="info"><strong>Limit</strong> Mods draw only in the local terminal. The phone never shows them, so this plugin does not use them.</doc-note>
   </doc-claim>
 
   <doc-claim>
@@ -466,38 +473,40 @@ draft  -slice->   linked  : link
 linked -close->   deleted : you confirm
 </script>
     </doc-machine>
-    <doc-ask id="cleanup">
-      <p>When does a plan page go away?</p>
-      <label><input type="radio" name="cleanup" value="close" checked> When the umbrella closes, after you confirm <small>the mockups stay readable during the work</small></label>
-      <label><input type="radio" name="cleanup" value="slice"> Right after slice <small>the issues hold the decisions; less to clean up</small></label>
-      <label><input type="radio" name="cleanup" value="keep"> Never; keep pages as a record <small>the orphans you want to avoid</small></label>
-    </doc-ask>
-    <doc-note tone="info"><strong>Orphans</strong> <code>/next</code> also lists plan pages whose umbrella is closed, so abandoned work gets cleaned up too.</doc-note>
+    <doc-note tone="ok"><strong>Decided</strong> A page goes when its umbrella closes, after you confirm. <code>/next</code> also lists pages whose umbrella is closed.</doc-note>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Remote Control sessions on the Linux host can publish the page.</p>
+    <doc-mock frame="terminal" title="always-on host" w="470"><template><span class="dim">$</span> claude remote-control --name cargus-forge --spawn worktree
+<span class="g">✓</span> Serving <b>cargus-forge</b> <span class="dim">· open it in the Claude app</span>
+<span class="dim">…</span>
+<span class="g">⧉</span> Published <b>Export to S3 Plan</b> <span class="dim">· private · v1</span></template></doc-mock>
+    <doc-note tone="info"><strong>Limit</strong> Mods draw only in the local terminal. The phone never shows them, so this plugin does not use them.</doc-note>
   </doc-claim>
 </doc-claim>
 
 <!-- ═════ 4 · CONTEXT BUDGET ═════ -->
 <doc-claim id="lean">
   <p>The plugin loads only the instructions that the current phase needs.</p>
-  <doc-tree caption="Sketch. Nine skills you type, five skills the model calls, one hook.">
+  <doc-tree caption="Sketch. Seven skills you type, six skills the model calls, one hook.">
 <script type="text/plain">
 plugins/engineering/
   + .claude-plugin/plugin.json
   + skills/
-    + setup/          # you type it · repo profile and checks
-    + discuss/        # you type it · questions + unknowns
-    + research/       # you type it · cited notes
-    + plan/           # you type it · HTML page
-    + to-issues/      # you type it · slice into sub-issues
-    + execute/        # you type it · one issue
-    + converge/       # you type it · code against the umbrella
-    + ship/           # you type it · PR + one setup change
-    + next/           # you type it · status from GitHub
-    + grill/          # model calls it · question rounds
-    + domain-model/   # model calls it · glossary + ADR
-    + tdd/            # model calls it · red, green
-    + verify/         # model calls it · goal-backward
-    + ste-writing/    # model calls it · writing standard
+    + setup/          # you type it · repo profile, labels, checks
+    + discuss/        # you type it · questions → umbrella issue
+    + research/       # you type it · cited notes on the umbrella
+    + plan/           # you type it · HTML page, then slice
+    + execute/        # you type it · one issue in a worktree
+    + ship/           # you type it · merge, close, one setup change
+    + next/           # you type it · status and label repair
+    + slice/          # plan and execute call it · sub-issues
+    + verify/         # execute calls it · issue or umbrella
+    + grill/          # discuss calls it · question rounds
+    + domain-model/   # discuss calls it · glossary + ADR
+    + tdd/            # execute calls it · red, green
+    + ste-writing/    # any skill calls it · writing standard
   + hooks/hooks.json  # reflect after a push
 </script>
   </doc-tree>
@@ -561,14 +570,14 @@ cx -> vf : second opinion
 <doc-claim id="stages">
   <p>We build in six stages, and the thinnest working path comes first.</p>
   <div class="cols">
-    <div class="card"><h4>0 · Contract</h4><p>Size test, phase contracts, status rules, page life. First ADRs. No plugin code.</p></div>
-    <div class="card"><h4>1 · Skeleton</h4><p><code>setup</code>, <code>execute</code>, <code>verify</code> and <code>ship</code> on one real issue in this repo.</p></div>
-    <div class="card"><h4>2 · Front end</h4><p>grill, discuss with the unknowns map, domain-model, STE.</p></div>
-    <div class="card"><h4>3 · Long path</h4><p>research, plan page, to-issues, next, converge.</p></div>
+    <div class="card"><h4>0 · Contract</h4><p>Size test, phase contracts, status labels, page life. First ADRs. No plugin code.</p></div>
+    <div class="card"><h4>1 · Build</h4><p><code>setup</code>, <code>execute</code>, <code>verify</code> and <code>ship</code> on one real issue in this repo.</p></div>
+    <div class="card"><h4>2 · Shape, part 1</h4><p>grill, discuss with the unknowns map, domain-model, STE.</p></div>
+    <div class="card"><h4>3 · Shape, part 2</h4><p>research, plan page, slice, next, verify on the umbrella.</p></div>
     <div class="card"><h4>4 · Guardrails</h4><p>setup adds hooks, CI and tests. Reflect after a push.</p></div>
     <div class="card"><h4>5 · By need</h4><p>diagnose, architecture review, Codex, quiz, parallel runs.</p></div>
   </div>
-  <doc-note tone="ok"><strong>Kept by default</strong> The contract comes first, then one thin path. You did not open this decision. Say so if you want another start.</doc-note>
+  <doc-note tone="ok"><strong>Kept by default</strong> The contract comes first, then one thin path. You did not open this decision in v1. Say so if you want another start.</doc-note>
 
   <doc-claim>
     <p>Stage 0 writes the process as contracts between the phases.</p>
@@ -576,19 +585,19 @@ cx -> vf : second opinion
 <script type="text/plain">
 ## execute
 Gets:       one ready issue; the docs/agents/ profile
-Gives:      a linked branch and a draft PR that closes the issue
-Stores in:  git and GitHub. No status text anywhere.
+Gives:      a worktree, a linked branch and a draft PR that closes the issue
+Stores in:  git and GitHub. The label changes to "status: active".
 Exit gate:  the verify command passes; the verify agent says pass
 Stops for:  rule 4 (architecture) or rule 5 (size test fails)
 </script>
-      <doc-pin line="5" tone="info" title="Derived state">The branch and the PR are the status. /next reads them.</doc-pin>
+      <doc-pin line="4" tone="info" title="Derived state">The facts decide the label. /next repairs it.</doc-pin>
     </doc-code>
     <doc-note tone="warn"><strong>Spike</strong> Stage 0 also confirms that <code>gh</code> can read sub-issues and "blocked by" links on your repos.</doc-note>
   </doc-claim>
 
   <doc-claim>
     <p>Stage 1 takes one real issue in this repo from setup to merge.</p>
-    <doc-code title="first issue for the skeleton · sketch" lang="markdown">
+    <doc-code title="first issue for Build · sketch" lang="markdown">
 <script type="text/plain">
 ## What it delivers
 CI fails a PR when a plugin is not valid or not in step.
@@ -626,8 +635,9 @@ gh run view --log-failed   # on a PR that breaks each rule
 <script type="text/plain">
 docs/engineering-plugin/
   README.md          # index and status
-  synthesis.md       # findings, workflow, questions, stages, v2 changes
+  synthesis.md       # findings, workflow, stages, review log
   plan.html          # the source of this page
+  responses/         # your answers to each version, word for word
   research/
     01-mattpocock-skills.md
     02-gsd-core-and-path.md
@@ -645,7 +655,7 @@ docs/engineering-plugin/
   <ul>
     <li>The three plugins that exist stay as they are until engineering is stable.</li>
     <li>No GitHub issues before the stage 0 contract is done.</li>
-    <li>No mods, no STATE.md, no <code>.planning/</code> folder and no status text in issues.</li>
+    <li>No mods, no STATE.md, no <code>.planning/</code> folder and no status text in issue bodies.</li>
     <li>This first plan is the one plan in git. Its source stays with the research.</li>
   </ul>
 </doc-claim>

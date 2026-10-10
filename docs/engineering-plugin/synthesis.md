@@ -1,7 +1,7 @@
 ---
 title: "Engineering plugin: synthesis"
 date: 2026-10-10
-status: draft v2 — five decisions made; three new decisions open (see section 7)
+status: draft v3 — all decisions so far made; one open (status-label upkeep); see sections 7–8
 ---
 
 # Engineering plugin: synthesis
@@ -249,3 +249,65 @@ Two supporting rules:
   - solo or team (stage 1);
   - stacks (stage 4);
   - autonomy and Codex (stage 5).
+
+## 8. Review 2: decisions and what changed (plan v3)
+
+The response to plan v2 is saved in `responses/v2-response.md`. All three recommendations were kept:
+
+| Decision | Answer |
+|---|---|
+| Parallel features | One worktree per active issue |
+| STE strictness | STE rules are defaults; sentence lengths are targets |
+| Plan-page cleanup | Deleted when the umbrella issue closes, after confirmation |
+
+### What each comment changed
+
+**"Front end" was the wrong word.** It collides with front-end development.
+- The two halves of the process are now **Shape** (discuss → research → plan → slice) and **Build** (execute → verify → merge).
+- The terms come from Basecamp's *Shape Up*, a known practice, rather than invented vocabulary.
+
+**Where discuss output goes, and why slicing is separate.** The plan never said where Shape's output lands. It now does: **everything goes into one umbrella issue.**
+- **discuss** creates the umbrella issue: goal, WHEN/THEN scenarios (these *are* the acceptance criteria), decisions, and out of scope. It also writes ADRs and glossary terms to the repo.
+- **research** adds one comment with cited notes to the umbrella.
+- **plan** publishes the page, and your answers go into the umbrella's decisions.
+- **slice** creates the sub-issues. Each gets its share of the scenarios, plus "blocked by" links and status labels.
+
+Slicing is a separate step for three reasons:
+1. It needs the plan, because you cut along the modules and seams that the plan decides.
+2. Execute re-enters it under rule 5, long after discuss has finished.
+3. It is the single owner of GitHub structure (sub-issues and links).
+
+It is no longer a command you type. It is renamed from `to-issues` to `slice`, plan calls it after your answers, and execute calls it under rule 5.
+
+**Converge vs. verify.** The question exposed redundancy, and they merge.
+- Converge was "verify on a larger scope". There is now **one verify skill with two scopes**:
+  - **issue scope:** at PR time, against that issue's scenarios;
+  - **umbrella scope:** when the last sub-issue merges, against the umbrella's scenarios on `main`.
+- Umbrella scope catches what no single issue owned. Example: cancel stops the job (#41), and the upload belongs to #39, so nobody cleaned up the partial file.
+- Gaps found there go through slice and become new sub-issues.
+- The plugin drops from 14 skills to 13.
+
+**The disconnected second diagram, and the "to verify" label.**
+- "Loop / to verify" meant "execute *through* verify", and it read like a destination.
+- The diagram is replaced by a **read/write table** that uses the same phase names as the process diagram: for each phase, what it reads and what it writes. This is a preview of the stage 0 contract.
+
+**/next looked like a separate CLI.**
+- The mockup now shows the real UI: you type `/engineering:next` in Claude Code, and Claude replies in the conversation.
+- That reply looks the same in the terminal, the desktop app, and Remote Control on the phone.
+- A small script inside the skill (`status.ts`) reads GitHub, so the result is deterministic. Claude only explains it.
+
+**Status labels on GitHub.** The user wants the status to be visible when browsing issues on GitHub. This is adopted, and it refines the "derived, never written" rule rather than replacing it:
+- Labels: `status: ready | active | review | blocked`. Closed issues lose their status label.
+- **The facts stay the truth.** These are: closed by a PR, a "blocked by" link to an open issue, a linked branch, and whether the PR is a draft.
+- **Labels are a projection, set only by automation.**
+  - slice sets ready or blocked;
+  - execute sets active;
+  - verify sets review when it passes, by marking the PR ready;
+  - `/next` recomputes every status and repairs labels that drift, for example after a manual merge.
+- **New decision:** what keeps the labels correct. Recommended: skills set them and `/next` repairs drift. A GitHub Action that reconciles labels from events can follow in stage 4, after a spike to check which events Actions can see.
+- **Setup consequence:** `setup` creates the status labels in each repo, and `issue-tracker.md` documents them.
+
+### Consequences for the stages
+- **Stage 0:** the contract now includes the status-label rules and the reconcile logic.
+- **Stage 1** (renamed "Build"): `execute` creates a worktree and a linked branch and sets `status: active`. `verify` marks the PR ready and sets `status: review`. `setup` creates the labels.
+- **Stage 3** ("Shape, part 2"): `slice` and umbrella-scope `verify` replace `to-issues` and `converge`.
