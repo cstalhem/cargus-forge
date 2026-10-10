@@ -1,7 +1,7 @@
 ---
 title: "Engineering plugin: synthesis"
 date: 2026-10-10
-status: draft, waiting on the five decisions in the plan
+status: draft v2 — five decisions made; three new decisions open (see section 7)
 ---
 
 # Engineering plugin: synthesis
@@ -150,3 +150,102 @@ Two practices run through every stage:
 - **Phases in order, starting with discuss.** It feels natural, but the handoff faults appear only when the last phase is built. That is the most expensive moment to find them.
 - **The thinking front end first** (`grill`), so it can help design the rest. Grill is cheap: Matt's version is 30 lines. We can still use it informally from stage 0 without building it first.
 - **Guardrails first** (CI and pre-commit). These are valuable, but they are generic. They show up in stage 1 as the dogfood issue rather than as a stage of their own.
+
+## 7. Review 1: decisions and what changed (plan v2)
+
+The response to plan v1 is saved word for word in `responses/v1-response.md`. All five recommendations were kept. The fifth decision (where to start) was not opened, so it stands as a default rather than a confirmed choice.
+
+### Decisions made
+
+| # | Decision | Answer |
+|---|---|---|
+| 1 | When research runs | Only on the long path, after the size check |
+| 2 | State store | GitHub issues only, through one tracker profile |
+| 3 | HTML plans | Depend on the `html-plan` plugin |
+| 4 | Old plugins | Engineering takes over knowledge-system and adr-management. They are deprecated later. |
+| 5 | Start | The contract first, then one thin end-to-end path (default; not opened) |
+
+### What each comment changed
+
+**Size check vs. the long path (comments on claims 1 and 1.1).**
+- v1 drew two separate diagrams and never showed how they connect. The comment was right: slicing between plan and issues *is* a size check.
+- v2 has **one size test, applied in three places**. An issue fits one session when all four hold:
+  1. It delivers one behaviour you can demo or test on its own.
+  2. One verify command proves it, and that command fails before the work.
+  3. After a short read, the agent can name every file it changes.
+  4. It has no open design question.
+- The three places:
+  - **Intake** routes the request: pass → one issue; fail → the front end.
+  - **Slice** (to-issues) splits the work until every sub-issue passes.
+  - **Execute** stops and sends an issue back to slice if it turns out to fail the test (deviation rule 5).
+- As a result, the one-session path is no longer a separate path. It is the same **loop** (execute → verify → merge) that every sub-issue runs. The front end (discuss → research → plan → slice) exists only to produce issues that pass the size test.
+
+**Grading placement (comment on claim 1.4).**
+- v1 grouped claims by topic, but the reader reads siblings as a sequence, which was misleading.
+- v2 orders the process claims chronologically. Verify now sits inside the loop, after execute, once per issue.
+
+**State without status text (comment on claim 2.3).**
+- The stop note is gone. Every status is *derived* from facts GitHub and git record:
+  - **done:** the issue is closed by its PR.
+  - **blocked:** a GitHub "blocked by" link points to an open issue.
+  - **active:** the issue has a linked branch (created by `gh issue develop`) or an open PR.
+  - **ready:** none of the above.
+- How "next" is chosen:
+  1. If the current branch links an issue, resume that issue.
+  2. Otherwise, list the ready issues per open umbrella, and you pick.
+- This follows GSD's "measured, never narrated" rule.
+- **New decision:** how to run parallel features. Recommended: one worktree per active issue, which Remote Control's `--spawn worktree` supports.
+- The `/next` mockup now explains itself: it shows the branch-to-issue link and labelled status groups.
+- **Spike in stage 0:** confirm that `gh` can read sub-issues and "blocked by" links (via `gh api graphql`).
+
+**`docs/agents/` (comment on claim 2.4).** v2 shows two examples:
+- `commands.md`: install, test all, test one, typecheck, lint, run, the pre-PR check.
+- `issue-tracker.md`: repo, umbrella label, blocking links, branch naming, PR closing keywords, priority.
+- Why a separate folder: `CLAUDE.md` loads in every session, while skills read these files only on demand. `CLAUDE.md` gets a one-line pointer.
+
+**`tests/` and the grading report (comment on claim 2.4).** These are two different things:
+- **The project's own tests are committed** and last forever. The WHEN/THEN scenarios become real tests there, which is what "tests are the judge of done" means.
+- **The verify report** is per-issue and not committed. It is posted as a **PR comment**, so it stays attached to the change, is readable on the phone, and leaves no files behind.
+
+**Cross-marketplace dependency (comment on claim 3).** This is possible, and the docs describe it (`research/03` and the plugin dependencies page):
+- `plugin.json` declares `"dependencies": ["html-plan@claude-community"]`. `claude-community` is the marketplace name in `anthropics/claude-plugins-community`.
+- The root `marketplace.json` adds `"allowCrossMarketplaceDependenciesOn": ["claude-community"]`. Without it, the install skips html-plan and engineering fails to load.
+- Do not set a version range. html-plan has no release tags, so a range would only disable our plugin.
+- Open point: the docs do not say whether `claude-community` must already be added on the machine. A test install in stage 1 answers it.
+
+**STE 20-word limit (comment on claim 3.1).**
+- No hard enforcement. STE rules become defaults, and the lengths become targets.
+- html-plan's linter only *warns* (at 25 words), and nothing blocks.
+- **New decision:** strictness. Recommended: rules as defaults, lengths as targets.
+
+**Orphaned plan pages (comment on claim 3.3).** Each plan page now has a lifecycle:
+1. `plan` publishes it, and revisions update the same link.
+2. `to-issues` writes the link into the umbrella issue.
+3. When the umbrella closes, `ship` asks you to confirm and deletes the page. Artifact deletes always need your confirmation.
+
+Two supporting rules:
+- `/next` also lists plan pages whose umbrella is closed, which catches abandoned work.
+- **New decision:** when a page goes away. Recommended: when the umbrella closes.
+- Technical note for stage 3: to revise a plan in a later session, the plan's *source* must be retrievable. Publish the source as a supporting file of the artifact, rather than keeping it in local state.
+
+**Evals (comment on claim 2.2).**
+- Parked for their own discussion before stage 1 ends.
+- The sub-issue example now uses a plain test command instead of `claude plugin eval`.
+
+### Consequences for the stages
+
+- **Stage 0** grows. It now covers:
+  - the size test;
+  - the phase contracts;
+  - the status-derivation rules;
+  - the plan-page lifecycle;
+  - the first ADRs;
+  - a `gh` spike for sub-issues and blocking links.
+- **Stage 1:** `execute` claims an issue by creating a linked branch, because the derived state depends on it. The test install of the html-plan dependency also happens here.
+- **Stage 3:** `next` (status derivation and orphan listing) and plan-page deletion in `ship`.
+- **Open topics:**
+  - evals (before stage 1 ends);
+  - the plugin name (stage 0);
+  - solo or team (stage 1);
+  - stacks (stage 4);
+  - autonomy and Codex (stage 5).

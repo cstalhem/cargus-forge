@@ -6,6 +6,7 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 |---|---|
 | [synthesis.md](synthesis.md) | Findings, proposed workflow, open questions, and build stages |
 | [plan.html](plan.html) | Source of the interactive HTML plan, [published as a private artifact](https://claude.ai/artifact/GiMwcbCXxzz1RaNmcDrHMr). It needs the `html-plan` runtime to pack. |
+| [responses/v1-response.md](responses/v1-response.md) | Your answers and comments on plan v1, copied word for word |
 | [research/01-mattpocock-skills.md](research/01-mattpocock-skills.md) | mattpocock/skills: grilling, setup, tdd, domain modelling, to-spec, to-tickets |
 | [research/02-gsd-core-and-path.md](research/02-gsd-core-and-path.md) | GSD core and GSD path: phases, state model, subagents, context cost |
 | [research/03-claude-code-docs.md](research/03-claude-code-docs.md) | Claude Code docs (v2.1.296): plugins, skills, hooks, Remote Control, Artifacts, mods |
@@ -14,4 +15,4 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 | [research/06-practitioner-workflows.md](research/06-practitioner-workflows.md) | Superpowers, HumanLayer, Compound Engineering, Ralph, and others, plus the evidence |
 | [research/07-spec-driven-toolkits.md](research/07-spec-driven-toolkits.md) | Spec Kit, Kiro, BMAD, OpenSpec, Agent OS, Tessl, Cline Memory Bank, and the critiques of spec-driven development |
 
-**Status:** stage 0. This stage is waiting on the five decisions in the plan.
+**Status:** stage 0. Plan v2 is published: the five decisions are made, and three new ones are open (parallel features, STE strictness, plan-page cleanup). See synthesis.md section 7 and `responses/`.
