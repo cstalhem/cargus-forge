@@ -150,15 +150,21 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 
 Each status is derived from facts that GitHub and git record. Only automation writes labels (ADR-001). v0 uses no labels.
 
-| Facts on an open issue | Status | Label |
-|---|---|---|
-| a "blocked by" link to an open issue | blocked | none (GitHub shows a Blocked icon) |
-| its PR merged into the feature branch | merged | `status: merged` (proposed) |
-| a ready PR (not a draft) | needs review | `status: needs review` |
-| a linked branch or a draft PR | in progress | `status: in progress` |
-| none of these | ready | none |
+| Facts on an open issue | Status | Label | Set by |
+|---|---|---|---|
+| no status label and no `umbrella` label | request: needs discuss | none (the default) | — |
+| discuss found that it fails the size test | umbrella | `umbrella` | discuss |
+| it passed the size test | ready | `status: ready` | discuss (single issue), slice (sub-issues) |
+| a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status: ready` label stays | — |
+| a linked branch or a draft PR | in progress | `status: in progress` | execute |
+| a ready PR (not a draft) | needs review | `status: needs review` | verify, on pass |
+| its PR merged into the feature branch | merged | `status: merged` | `status.sh` |
 
-A closed issue is done. Its labels do no harm.
+- **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
+- **Each new status label replaces the one before it.**
+- **`status.sh` repairs labels from facts:** branches, PRs and merges. It never sets `status: ready`, because only the size test can do that.
+- **`next` lists unlabelled open issues as requests,** and suggests `discuss` for each one.
+- A closed issue is done. Its labels do no harm.
 
 ## Formats
 
