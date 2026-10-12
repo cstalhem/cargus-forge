@@ -1,7 +1,7 @@
 ---
 title: "Engineering plugin: synthesis"
 date: 2026-10-10
-status: draft v3 — all decisions so far made; one open (status-label upkeep); see sections 7–8
+status: draft v4 — one open decision (PR flow); see sections 7–9
 ---
 
 # Engineering plugin: synthesis
@@ -311,3 +311,72 @@ It is no longer a command you type. It is renamed from `to-issues` to `slice`, p
 - **Stage 0:** the contract now includes the status-label rules and the reconcile logic.
 - **Stage 1** (renamed "Build"): `execute` creates a worktree and a linked branch and sets `status: active`. `verify` marks the PR ready and sets `status: review`. `setup` creates the labels.
 - **Stage 3** ("Shape, part 2"): `slice` and umbrella-scope `verify` replace `to-issues` and `converge`.
+
+## 9. Review 3: what changed (plan v4)
+
+The comments are saved in `responses/v3-comments.md`. **Shape → Build** is confirmed as the vocabulary.
+
+### PR flow: a decision that had been left implicit
+
+v3 said "verify on each PR". That implied one PR per sub-issue without ever deciding it. The user expected one PR per umbrella. The three options:
+
+| Option | Branches | Consequences |
+|---|---|---|
+| **One PR per sub-issue into main** (recommended) | `39-export-job` → `main` | • Small PRs that are easy to review on a phone.<br>• `Closes #n` works, because GitHub closing keywords fire only on PRs into the default branch.<br>• One worktree per issue (already decided) fits.<br>• Trunk-based, small-batch flow, which DORA's research consistently links to delivery performance.<br>• Cost: half a feature can sit on main. Mitigation: size test 1 makes each slice useful on its own, and a slice that would expose unfinished UI hides behind a flag. |
+| Feature branch per umbrella | `39-export-job` → `38-export-to-s3` → `main` | • main only ever sees whole features.<br>• Two levels of PRs.<br>• Closing keywords don't fire on PRs into the feature branch, so `ship` must close sub-issues itself (more mechanics).<br>• The long-lived branch drifts from main. |
+| One branch and PR per umbrella | `38-export-to-s3` → `main` | • One big review.<br>• A branch can't be checked out in two worktrees, so sub-issues of one feature run one after another.<br>• The verify report goes on the sub-issue, because there is no PR to put it on. |
+
+The plan carries this as a decision with recommended option 1. Under option 1:
+- issue-scope verify runs on each sub-issue's PR into `main`;
+- umbrella-scope verify runs on `main` after the last sub-issue PR merges;
+- the umbrella stays open until that check passes, and then `ship` closes it, which in turn triggers the plan-page cleanup.
+
+### The /next script runs deterministically
+
+The script is not something the model may or may not call. It uses **dynamic context injection**: a line of the form `` !`${CLAUDE_SKILL_DIR}/status.sh --fix-labels` `` in `SKILL.md`.
+- Claude Code runs it at invocation, *before* the model sees the skill.
+- The model only receives the output, and the skill tells it not to query GitHub again.
+
+Constraints from the docs (`research/03`):
+- The command must be pre-approved in `allowed-tools`, for example `Bash(${CLAUDE_SKILL_DIR}/status.sh *)`. Otherwise the invocation aborts.
+- A non-zero exit aborts the skill, so the script always exits 0 and prints errors as text.
+- Each command has a 2-minute timeout.
+
+This becomes a **general pattern**: scripts fetch facts, the model judges.
+- `execute` injects the issue (`gh issue view … --json`) and `docs/agents/commands.md` the same way.
+- This also saves turns and context.
+
+The script language is bash with `gh` and `jq`, so there is no extra runtime. `gh` v2.94.0 added JSON fields and flags for parent, sub-issues and dependencies (the GitHub changelog of 2026-06-10). `setup` checks the `gh` version.
+
+### Labels cut to two
+
+GitHub already shows:
+- **blocked:** a "Blocked" icon on the Issues page, and the filters `is:blocked`, `is:blocking`, `blocked-by:` (GitHub docs and the 2025-08-21 changelog). The docs state no plan restriction but do not confirm the free plan. The stage 0 spike checks it on the user's private repos.
+- **done:** the issue is closed.
+
+So only two labels remain, for what GitHub does not show in the issue list:
+
+| Label | Set by (its only option) | Meaning |
+|---|---|---|
+| `status: in progress` | `execute`, when it claims the issue | A session works on it |
+| `status: needs review` | `verify`, on pass; this replaces "in progress" | It waits for you. Filtering on this label is your review queue. |
+
+- No label means ready.
+- Labels left on closed issues do no harm, because every list uses `is:open`.
+- `slice` sets no label.
+- `status.sh` repairs drift on open issues.
+- No GitHub Action. The user does not want one, and drift repair covers the gap.
+
+### Smaller changes
+- The read/write table now names the PR target and which labels each phase writes.
+- The `/next` reply mock adds a "Review" row.
+- The skill tree adds `next/status.sh`.
+- A new claim (4.2) covers the "scripts fetch the facts" pattern.
+- The stage 0 spike now tests three things:
+  - `gh` 2.94+ relationship data;
+  - the Blocked icon on the user's plan;
+  - a dynamic-context script under Remote Control.
+
+### Note on the plan's own size
+
+The page is now about 860 words of prose, against html-plan's budget of 350. It is outgrowing its format, which is the same bloat this plugin is meant to avoid. Once the remaining decision is made, stage 0 replaces this page with `process.md` (the phase contracts) and ADRs. The plan then stops growing.

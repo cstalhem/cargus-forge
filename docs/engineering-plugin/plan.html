@@ -39,8 +39,8 @@
 
 <header>
   <h1>Engineering Workflow Plugin for Cargus Forge</h1>
-  <doc-changes new="17" changed="2"></doc-changes>
-  <details class="thread"><summary>Why · 11 requests</summary>
+  <doc-changes new="18" changed="2"></doc-changes>
+  <details class="thread"><summary>Why · 13 requests</summary>
     <doc-quote via="prompt" from="Calle">I want to build out my own plugin for Engineering with Claude and AI. It should consist of Skills, templates, and any other small bits and bobs that are relevant for this discipline</doc-quote>
     <doc-quote via="prompt" from="Calle">What I like about it is that it's opinionated about a order of operations (Discuss, Plan, Execute, Verify, Ship) … I also like the idea of state surviving between sessions</doc-quote>
     <doc-quote via="prompt" from="Calle">What I am hesitant, or worried, about is context bloat. Especially GSD feels like it's very fond of writing to a lot of files and keeping them in a lot of places.</doc-quote>
@@ -52,6 +52,8 @@
     <doc-quote via="doc" from="Calle, comment on v1 claim 3.3">we need to make sure that plans are removed when done so that we dont end up with a bunch of orphaned artifacts nobody needs.</doc-quote>
     <doc-quote via="doc" from="Calle, comment on v2 claim 1.4">What do we need this skill for? What does it do that /verify does not? Why do we need both?</doc-quote>
     <doc-quote via="doc" from="Calle, comment on v2 claim 2.3">I feel that we should use actual labels on GitHub in order to track which issue is in which state, that way we can see that clearly, even if we browse the issue list on GitHub directly.</doc-quote>
+    <doc-quote via="prompt" from="Calle, on v3">Do we really do one PR per sub-issue? Between which branches in that case? Regardless, I thought we wanted one PR per Umbrella that then merges to main?</doc-quote>
+    <doc-quote via="prompt" from="Calle, on v3">I don't think we want labels that are already described some other way. GitHub could show blockers on the free plan, yes? … I don't think we will need a GitHub Action at all.</doc-quote>
   </details>
 </header>
 
@@ -166,7 +168,7 @@ Execute calls it on rule 5.
   </doc-claim>
 
   <doc-claim>
-    <p>Build runs one loop for each issue: execute, verify, then you merge.</p>
+    <p>Build runs one loop for each issue: execute, verify, then you merge one PR.</p>
     <doc-machine name="loop" caption="The same loop runs for a one-session issue and for each sub-issue.">
 <script type="text/plain">
 machine loop initial ready
@@ -187,6 +189,15 @@ execute -stop->   split   : too big
 </script>
     </doc-machine>
     <doc-note tone="ok"><strong>Decided</strong> Each active issue gets its own worktree. Two features can run at the same time.</doc-note>
+    <doc-ask id="prflow">
+      <p>Where does the PR of a sub-issue go?</p>
+      <label><input type="radio" name="prflow" value="main" checked> One PR for each sub-issue, into main <small>small PRs; "Closes #n" works; each slice ships alone</small></label>
+      <label><input type="radio" name="prflow" value="feature"> Sub-issue PRs into a feature branch, then one PR to main <small>main sees the whole feature at once; two PR levels</small></label>
+      <label><input type="radio" name="prflow" value="single"> One branch and one PR for each umbrella <small>one big review; sub-issues run one after the other</small></label>
+    </doc-ask>
+    <div data-if="prflow=main"><doc-note tone="info"><strong>Branches</strong> <code>39-export-job</code> → <code>main</code>. A merged slice must be safe alone. If a slice shows half a feature, it hides behind a flag.</doc-note></div>
+    <div data-if="prflow=feature"><doc-note tone="warn"><strong>Cost</strong> <code>39-export-job</code> → <code>38-export-to-s3</code> → <code>main</code>. "Closes #n" works only on PRs into main, so ship must close each sub-issue itself.</doc-note></div>
+    <div data-if="prflow=single"><doc-note tone="warn"><strong>Cost</strong> Two sub-issues cannot use one branch in two worktrees. Sub-issues of one umbrella then run one after the other, and verify reports go on the sub-issue.</doc-note></div>
     <doc-claim>
       <p><code>skills/verify</code> · the report goes on the PR, not in a file</p>
       <doc-code title="verify report · PR comment · sketch" lang="yaml">
@@ -222,7 +233,7 @@ verdict: fail                    # back to execute with this comment
 
   <doc-claim>
     <p>When the last sub-issue merges, verify runs once more on the whole umbrella.</p>
-    <doc-mock frame="terminal" title="/engineering:verify #38" w="470"><template><b>#38 Export to S3</b> <span class="dim">· 4 of 4 sub-issues merged · code on main</span>
+    <doc-mock frame="terminal" title="/engineering:verify #38" w="470"><template><b>#38 Export to S3</b> <span class="dim">· 4 of 4 sub-issue PRs merged into main</span>
 
 <span class="g">✓</span> WHEN a user starts an export THEN a job starts
 <span class="g">✓</span> WHEN the upload fails THEN the job retries 3 times
@@ -230,7 +241,8 @@ verdict: fail                    # back to execute with this comment
    <span class="dim">#41 stops the job. #39 owns the upload.</span>
    <span class="dim">No sub-issue owned the cleanup.</span>
 
-<span class="y">+</span> slice opened #47 "Delete partial upload on cancel"</template></doc-mock>
+<span class="y">+</span> slice opened #47 "Delete partial upload on cancel"
+<span class="dim">The umbrella stays open until this check passes.</span></template></doc-mock>
     <doc-note tone="info"><strong>Why both</strong> Each sub-issue passed its own check. The feature failed between them. This was "converge" in v2. It is now the same verify skill on a larger scope.</doc-note>
   </doc-claim>
 </doc-claim>
@@ -248,9 +260,12 @@ plan       umbrella issue, research         plan page; your answers → umbrella
 slice      umbrella issue, plan answers     sub-issues, "blocked by" links, labels
 
 BUILD
-execute    one issue, docs/agents/          worktree, branch, commits, draft PR
-verify     the PR and its issue             PR comment; on pass the PR is ready
-           or: the umbrella and main        new sub-issues through slice
+execute    one issue, docs/agents/          worktree, branch, draft PR into main
+                                            label: status: in progress
+verify     the PR and its issue             PR comment; on pass: PR ready and
+                                            label: status: needs review
+           or: the umbrella and main        new sub-issues through slice;
+                                            on pass: ship closes the umbrella
 </script>
     <doc-pin line="3" tone="info" title="The umbrella issue">This is the one record of a feature. See claim 2.1.</doc-pin>
   </doc-code>
@@ -305,39 +320,51 @@ bun test src/export/cancel.test.ts
   </doc-claim>
 
   <doc-claim>
-    <p>A label on each open issue shows its status on GitHub.</p>
+    <p>Two labels show what GitHub does not show already.</p>
     <doc-mock frame="browser" url="github.com/cstalhem/postbox/issues" w="480" caption="You see the status in the issue list, on the web or in the GitHub app."><template>
 <div class="ui" style="border:0;border-radius:0">
-  <div class="ln"><span class="ico">◉</span><b>Export job with retry limit</b><span class="lbl l-review">status: review</span><span class="lbl" style="color:#5f5a4f;border-color:#ddd8cc">feature</span></div>
-  <div class="ln"><span class="ico">◉</span><b>Progress and cancel</b><span class="lbl l-active" data-ref="active">status: active</span></div>
-  <div class="ln"><span class="ico">◉</span><b>Start export from the list</b><span class="lbl l-blocked">status: blocked</span></div>
-  <div class="ln"><span class="ico">◉</span><b>Expire old exports</b><span class="lbl l-ready">status: ready</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Export job with retry limit</b><span class="lbl l-review" data-ref="review">status: needs review</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Progress and cancel</b><span class="lbl l-active">status: in progress</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Start export from the list</b><span class="lbl l-blocked" data-ref="blocked">⊘ Blocked</span></div>
+  <div class="ln"><span class="ico">◉</span><b>Expire old exports</b><span class="dim" style="font-size:12px;color:#8a8578">no label = ready</span></div>
 </div></template>
-      <doc-pin ref="active" title="Set by automation" anchor="tr">execute sets it. Nobody sets a status label by hand.</doc-pin>
+      <doc-pin ref="blocked" title="GitHub draws this" anchor="tr">The "blocked by" link makes the icon. The filter is is:blocked.</doc-pin>
+      <doc-pin ref="review" title="Waits for you" anchor="tl">Filter on this label to see what you must review.</doc-pin>
     </doc-mock>
-    <doc-ask id="labels">
-      <p>What keeps the status labels correct?</p>
-      <label><input type="radio" name="labels" value="skills" checked> Skills set them; <code>/next</code> repairs drift <small>no extra setup; a GitHub Action can follow in stage 4</small></label>
-      <label><input type="radio" name="labels" value="action"> A GitHub Action sets them from events <small>also correct when you work outside Claude; needs a spike</small></label>
-      <label><input type="radio" name="labels" value="manual"> Skills set them, and nothing repairs them <small>labels drift when you merge by hand</small></label>
-    </doc-ask>
+    <doc-note tone="ok"><strong>Decided</strong> Each skill sets at most one label. <code>/next</code> repairs drift. No GitHub Action. Blocked, done and the sub-issue tree come from GitHub itself.</doc-note>
     <doc-claim>
-      <p><code>skills/next/status.ts</code> · facts decide, the label shows the result</p>
-      <doc-code title="status rules · sketch" lang="ts">
+      <p><code>skills/next/SKILL.md</code> · the script runs before Claude reads the skill</p>
+      <doc-code title="skills/next/SKILL.md · sketch" lang="markdown">
 <script type="text/plain">
-// The facts are the truth. A label only shows the result.
-function status(i: Issue): Label | null {
-  // done: the PR closed it
-  if (i.closed) return null
-  // GitHub "blocked by" link to an open issue
-  if (i.blockedBy.some((b) => !b.closed)) return "status: blocked"
-  // verify passed and marked the PR ready
-  if (i.pr && !i.pr.draft) return "status: review"
-  // execute made the branch
-  if (i.linkedBranch || i.pr) return "status: active"
-  return "status: ready"
-}
-// /next runs this on each open issue and fixes labels that differ.
+---
+name: next
+description: Show what to work on next, from GitHub and git.
+disable-model-invocation: true
+allowed-tools: Bash(${CLAUDE_SKILL_DIR}/status.sh *)
+---
+## Status
+!`${CLAUDE_SKILL_DIR}/status.sh --fix-labels`
+
+Explain the status above in at most 8 lines.
+Suggest one command. Do not query GitHub again.
+</script>
+        <doc-pin line="8" tone="ok" title="Not optional">Claude Code runs this line when you type /next. The model only sees the output.</doc-pin>
+        <doc-pin line="5" tone="info" title="Pre-approved">Without this grant, the script cannot run and /next stops.</doc-pin>
+      </doc-code>
+    </doc-claim>
+    <doc-claim>
+      <p><code>skills/next/status.sh</code> · facts decide, the label shows the result</p>
+      <doc-code title="status rules · sketch" lang="bash">
+<script type="text/plain">
+# Facts from gh 2.94+ JSON: parent, sub-issues,
+# blocked-by, linked branches and PRs.
+# For each open issue:
+#   blocked by an open issue → no label (GitHub icon)
+#   ready PR (not a draft)   → "status: needs review"
+#   branch or draft PR       → "status: in progress"
+#   none of these            → no label (ready)
+# --fix-labels: change a label that differs from this.
+# Always exit 0, or Claude Code stops the skill.
 </script>
       </doc-code>
     </doc-claim>
@@ -349,8 +376,9 @@ function status(i: Issue): Label | null {
   <p><span class="dot">⏺</span> You are in the worktree for <b>#43</b>. It is a sub-issue of #41.</p>
   <div class="row"><span class="k">Active</span><span>#43 /next command · draft PR #57</span></div>
   <div class="row"><span class="k">Ready</span><span>#39 Export job <span class="dim">(#38 Export to S3)</span></span></div>
+  <div class="row"><span class="k">Review</span><span>#42 Tracker profile · PR #52 waits for you</span></div>
   <div class="row"><span class="k">Blocked</span><span>#44 Status labels <span class="dim">waits for #43</span></span></div>
-  <p>Continue #43 with <b>/engineering:execute 43</b>? I fixed one label: #40 was "active" with no branch.</p>
+  <p>Continue #43 with <b>/engineering:execute 43</b>? The script fixed one label: #40 was "in progress" with no branch.</p>
 </div></template></doc-mock>
     </doc-claim>
   </doc-claim>
@@ -392,10 +420,10 @@ Before a PR: bun run check      # lint + typecheck + test, as in CI
 # Issue tracker
 Repo:       cstalhem/postbox
 Umbrella:   label "feature"; the work goes in sub-issues
-Status:     labels status: ready | active | review | blocked
-Blocking:   GitHub "blocked by" links, not text
+Status:     labels "status: in progress", "status: needs review"
+Blocking:   GitHub "blocked by" links (icon, is:blocked)
 Branches:   gh issue develop <n> → "<n>-slug", one worktree each
-PRs:        the body has "Closes #<n>"
+PRs:        one per issue, into main; the body has "Closes #<n>"
 Priority:   you pick; no project board
 </script>
       </doc-code>
@@ -501,6 +529,7 @@ plugins/engineering/
     + execute/        # you type it · one issue in a worktree
     + ship/           # you type it · merge, close, one setup change
     + next/           # you type it · status and label repair
+      + status.sh     # runs before Claude reads the skill
     + slice/          # plan and execute call it · sub-issues
     + verify/         # execute calls it · issue or umbrella
     + grill/          # discuss calls it · question rounds
@@ -528,6 +557,22 @@ when_to_use: When a change alters behaviour behind a seam.
                                   # listed always; body loads on use
 </script>
     </doc-code>
+  </doc-claim>
+
+  <doc-claim>
+    <p>Scripts fetch the facts before the model reads a skill. The model judges.</p>
+    <doc-code title="skills/execute/SKILL.md · sketch" lang="markdown">
+<script type="text/plain">
+## The issue
+!`gh issue view $0 --json title,body,parent,blockedBy`
+
+## How to build and check this repo
+!`cat docs/agents/commands.md`
+
+Work on this issue only. Follow the deviation rules below.
+</script>
+    </doc-code>
+    <doc-note tone="info"><strong>Why</strong> The model cannot skip a fact or fetch it another way. It also saves turns and context.</doc-note>
   </doc-claim>
 
   <doc-claim>
@@ -570,7 +615,7 @@ cx -> vf : second opinion
 <doc-claim id="stages">
   <p>We build in six stages, and the thinnest working path comes first.</p>
   <div class="cols">
-    <div class="card"><h4>0 · Contract</h4><p>Size test, phase contracts, status labels, page life. First ADRs. No plugin code.</p></div>
+    <div class="card"><h4>0 · Contract</h4><p>Size test, phase contracts, PR flow, two labels, page life. First ADRs. No plugin code.</p></div>
     <div class="card"><h4>1 · Build</h4><p><code>setup</code>, <code>execute</code>, <code>verify</code> and <code>ship</code> on one real issue in this repo.</p></div>
     <div class="card"><h4>2 · Shape, part 1</h4><p>grill, discuss with the unknowns map, domain-model, STE.</p></div>
     <div class="card"><h4>3 · Shape, part 2</h4><p>research, plan page, slice, next, verify on the umbrella.</p></div>
@@ -586,13 +631,13 @@ cx -> vf : second opinion
 ## execute
 Gets:       one ready issue; the docs/agents/ profile
 Gives:      a worktree, a linked branch and a draft PR that closes the issue
-Stores in:  git and GitHub. The label changes to "status: active".
+Stores in:  git and GitHub. execute adds "status: in progress".
 Exit gate:  the verify command passes; the verify agent says pass
 Stops for:  rule 4 (architecture) or rule 5 (size test fails)
 </script>
       <doc-pin line="4" tone="info" title="Derived state">The facts decide the label. /next repairs it.</doc-pin>
     </doc-code>
-    <doc-note tone="warn"><strong>Spike</strong> Stage 0 also confirms that <code>gh</code> can read sub-issues and "blocked by" links on your repos.</doc-note>
+    <doc-note tone="warn"><strong>Spike</strong> Stage 0 tests three facts on your private repos. <code>gh</code> 2.94+ reads sub-issues and "blocked by" links. The Blocked icon shows on your plan. A skill script runs under Remote Control.</doc-note>
   </doc-claim>
 
   <doc-claim>
