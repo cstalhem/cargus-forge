@@ -15,4 +15,4 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 | [research/06-practitioner-workflows.md](research/06-practitioner-workflows.md) | Superpowers, HumanLayer, Compound Engineering, Ralph, and others, plus the evidence |
 | [research/07-spec-driven-toolkits.md](research/07-spec-driven-toolkits.md) | Spec Kit, Kiro, BMAD, OpenSpec, Agent OS, Tessl, Cline Memory Bank, and the critiques of spec-driven development |
 
-**Status:** stage 0. Plan v3 is published, and every decision so far is made. Open: how status labels stay correct, plus the parked topics (evals and others). See synthesis.md sections 7–8 and `responses/`.
+**Status:** stage 0. Plan v4 is published. One decision is open: the PR flow (one PR per sub-issue into main is recommended). See synthesis.md sections 7–9 and `responses/`.
