@@ -90,9 +90,10 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
-- **Gives:** the branch `<n>-<slug>`, linked to the issue with `gh issue develop`, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue.
+- **Gives:** a branch linked to the issue with `gh issue develop`, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue.
+- **Branch name:** `docs/agents/issue-tracker.md` sets the pattern for each repo, for example `feature/<n>-<slug>`. The default is `<n>-<slug>`, which is the form `gh issue develop` makes.
 - **Worktree:** execute uses the session's worktree and does not make a second one.
-  1. The session is in a worktree on its own new branch (for example `worktree-bright-running-fox`), with no commits and no changes. execute switches that worktree to `<n>-<slug>` and deletes the unused branch.
+  1. The session is in a worktree on its own new branch, with no commits and no changes. Remote Control names these `.claude/worktrees/bridge-cse_<id>` on the branch `worktree-bridge-cse_<id>`. execute switches that worktree to the issue branch and deletes the unused branch.
   2. The session is already on `<n>-<slug>` for this issue. execute resumes the work.
   3. The session is in a worktree that holds other work. execute stops and asks you.
   4. The session is not in a worktree. execute enters a new one, then follows step 1.
@@ -215,3 +216,4 @@ Closes #<umbrella>
 - **Verify commands for skills:** a skill has no test command until evals are settled. Sub-issues of the skeleton need one, so the evals discussion comes before slice.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
 - **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
+- **Worktree cleanup:** worktrees stay after their work merges. On 2026-10-12, feederer had 6 Remote Control worktrees, including one with a detached HEAD and one that was locked. homelab-docker had 3. The proposal for a later stage: `next` lists each worktree whose branch has merged or whose issue is closed, and removes it after you confirm. It never removes a worktree that has uncommitted work.
