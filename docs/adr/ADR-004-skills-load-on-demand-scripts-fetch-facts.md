@@ -10,7 +10,7 @@ status: active
 
 ## Details
 - **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `research`, `plan`, `execute`, `ship`, `next`.
-- **Called skills:** `slice`, `verify`, `grill`, `domain-model`, `tdd`, `ste-writing`.
+- **Called skills:** `slice`, `verify`, `reflect`, `grill`, `domain-model`, `tdd`, `ste-writing`.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill.
 - **Scripted facts:**
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
@@ -31,3 +31,4 @@ status: active
 ## Consequences
 - Each new fact that a skill needs, needs a script, and each script needs a pre-approval line.
 - The model cannot start a Build phase without you.
+- Scripted facts work in Remote Control sessions.

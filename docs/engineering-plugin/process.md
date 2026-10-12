@@ -207,11 +207,12 @@ Closes #<umbrella>
 ```
 
 ## Open items
-- **Spike (stage 0), partly done on 2026-10-12:**
+- **Spike (stage 0), done on 2026-10-12:**
   - **Done:** `gh` 2.101.0 on the host gives `parent`, `subIssues`, `subIssuesSummary`, `blockedBy`, `blocking` and `closedByPullRequestsReferences` as `--json` fields. `gh issue develop --list <n>` gives the linked branches.
   - **Done:** on the private repo feederer, `gh issue list --json parent,subIssuesSummary,blockedBy` works. For example, #138 shows 2 of 2 sub-issues complete. `blockedBy` returns `{nodes, totalCount}`, with no error. No feederer issue uses "blocked by" yet.
-  - **Open:** confirm that the Blocked icon shows on your GitHub plan.
-  - **Open:** confirm that a `!`cmd`` script runs under Remote Control.
+  - **Done:** the Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app. That is acceptable.
+  - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads the `blockedBy` field and does not use search.
+  - **Done:** a `!`cmd`` line in a skill ran under Remote Control. The model saw `gh version 2.101.0` and the branch name, not the raw command.
 - **The `status: merged` label:** keep it, or show the state only in `next`.
 - **Verify commands for skills:** a skill has no test command until evals are settled. Sub-issues of the skeleton need one, so the evals discussion comes before slice.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
