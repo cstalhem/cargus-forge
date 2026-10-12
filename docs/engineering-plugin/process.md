@@ -209,7 +209,7 @@ Closes #<umbrella>
 ## Open items
 - **Spike (stage 0), partly done on 2026-10-12:**
   - **Done:** `gh` 2.101.0 on the host gives `parent`, `subIssues`, `subIssuesSummary`, `blockedBy`, `blocking` and `closedByPullRequestsReferences` as `--json` fields. `gh issue develop --list <n>` gives the linked branches.
-  - **Open:** cargus-forge is public, so the same check must run on one of your private repos.
+  - **Done:** on the private repo feederer, `gh issue list --json parent,subIssuesSummary,blockedBy` works. For example, #138 shows 2 of 2 sub-issues complete. `blockedBy` returns `{nodes, totalCount}`, with no error. No feederer issue uses "blocked by" yet.
   - **Open:** confirm that the Blocked icon shows on your GitHub plan.
   - **Open:** confirm that a `!`cmd`` script runs under Remote Control.
 - **The `status: merged` label:** keep it, or show the state only in `next`.
