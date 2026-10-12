@@ -2,7 +2,7 @@
 
 This is the contract between the phases of the engineering plugin. Each phase gets inputs, gives outputs, stores them in one known place, has one exit gate, and has defined points where it stops and asks you.
 
-The decisions behind the contract are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
+The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
 ## Words
 
@@ -11,27 +11,35 @@ The decisions behind the contract are in [docs/adr/](../adr/README.md). Lines ma
 | **Request** | A sentence, an issue or a bug report that starts work. |
 | **Size test** | The test of whether one issue fits one session (see below). |
 | **Shape** | discuss → research → plan → slice. It turns a request into issues. |
-| **Build** | execute → verify → merge, once for each issue, then ship. |
-| **Umbrella issue** | The one record of a feature: goal, scenarios, decisions, out of scope. |
-| **Sub-issue** | One session of work under an umbrella issue. |
+| **Build** | execute → verify → merge, once for each issue. For an umbrella, ship comes last. |
+| **Issue** | One session of work. It is either a single issue (no umbrella) or a sub-issue. |
+| **Umbrella issue** | The one record of a feature that needs more than one session: goal, scenarios, decisions, out of scope. |
+| **Sub-issue** | An issue under an umbrella issue. |
 | **Scenario** | One acceptance criterion as `WHEN … THEN …`. Each scenario becomes a test. |
 | **Feature branch** | The branch of an umbrella issue. Sub-issue PRs merge into it. |
-| **Final PR** | The one PR that takes a feature branch into `main`. |
+| **Final PR** | The one PR that takes a feature branch into `main`. ship opens it. |
 
 ## Flow
 
 ```mermaid
-flowchart LR
-  R([Request]) --> T{Size test}
-  T -- pass --> I[One issue]
-  T -- fail --> D[discuss] --> RS[research] --> P[plan] --> S[slice]
-  S --> SI[Sub-issues]
+flowchart TD
+  R([Request]) --> D[discuss]
+  D --> T{Size test}
+  T -- pass --> I[Single issue]
+  T -- fail --> U[Umbrella issue] --> RS[research] --> P[plan] --> S[slice]
+  S --> SI[Sub-issues + feature branch]
   I --> E[execute]
   SI --> E
   E --> V[verify]
   V -- fail --> E
-  V -- pass --> M[You merge]
-  M --> SH[ship: umbrella verify + final PR]
+  V -- pass --> M1[You merge the PR]
+  M1 -- single issue, into main --> C1([Issue closed])
+  M1 -- sub-issue, into feature branch --> Q{All sub-issues merged?}
+  Q -- no: next sub-issue --> E
+  Q -- yes --> SH[ship]
+  SH -- gap --> S
+  SH --> M2[You merge the final PR into main]
+  M2 --> C2([Umbrella and sub-issues closed])
   E -. too big .-> S
 ```
 
@@ -44,18 +52,21 @@ An issue fits one session when all four are true:
 3. After a short read of the code, the agent can name every file it changes.
 4. It has no open design question for you.
 
-The test runs at three points:
-- **Intake:** a request that passes goes straight to Build. A request that fails goes to Shape.
-- **slice:** each sub-issue must pass. A sub-issue that fails is split again.
-- **execute:** if the agent finds a failure, it stops and sends the issue back to slice.
+The test needs scenarios and settled questions, so **discuss always comes first**. The test then runs at three points:
+- **The end of discuss.** If the request passes, discuss writes a single issue and you go to Build. If it fails, discuss writes an umbrella issue and you go on with Shape.
+- **slice.** Each sub-issue must pass. A sub-issue that fails is split again.
+- **execute.** If the agent finds a failure, it stops and sends the issue back to slice.
+
+An issue that already has scenarios and passes the test skips discuss. Sub-issues from slice are like this.
 
 ## Phases
 
 ### discuss (Shape)
 - **Gets:** a request, the code, `docs/adr/`.
-- **Gives:** an umbrella issue in the format below.
+- **Gives:** a single issue if the size test passes, or an umbrella issue if it fails. Both use the formats below.
 - **Stores in:** GitHub.
-- **Exit gate:** no open question remains, and you confirm the scenarios.
+- **Exit gate:** no open question remains, you confirm the scenarios, and the size test has a result.
+- **Depth fits the request.** A small request needs one or two rounds. discuss stops when the size test can be answered and passes. A request that fails the test gets full rounds.
 - **v0:** question rounds. Each round asks every question whose prerequisites are settled. Each question has a recommended answer that "yes" accepts.
 - **Later:** the unknowns map, ADRs and the glossary.
 
@@ -79,7 +90,14 @@ The test runs at three points:
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
-- **Gives:** a worktree, a branch `<n>-<slug>` taken from the feature branch (from `main` for a one-session issue), commits, and a draft PR into that same base branch.
+- **Gives:** the branch `<n>-<slug>`, linked to the issue with `gh issue develop`, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue.
+- **Worktree:** execute uses the session's worktree and does not make a second one.
+  1. The session is in a worktree on its own new branch (for example `worktree-bright-running-fox`), with no commits and no changes. execute switches that worktree to `<n>-<slug>` and deletes the unused branch.
+  2. The session is already on `<n>-<slug>` for this issue. execute resumes the work.
+  3. The session is in a worktree that holds other work. execute stops and asks you.
+  4. The session is not in a worktree. execute enters a new one, then follows step 1.
+  - The directory name stays the same, because moving the directory of a running session breaks it.
+  - execute asks you to name the session with `/rename <n>-<slug>`, which also works from the phone.
 - **Exit gate:** the issue's verify command passes, then execute calls verify.
 - **Deviation rules:**
   1. A bug in the way of the issue: fix it, and name the fix in the PR.
@@ -98,22 +116,29 @@ The test runs at three points:
 - **Later:** `status: needs review` on pass.
 
 ### merge (you)
-You review the sub-issue PR and merge it into the feature branch. For a one-session issue, you merge into `main`, and `Closes #n` closes the issue.
+You review the PR and merge it. A sub-issue PR merges into the feature branch, and its issue stays open until the final PR. A single-issue PR merges into `main`, and `Closes #n` closes the issue.
 
-### verify, umbrella scope (Build; ship calls it)
-- **Gets:** the umbrella's scenarios and the feature branch.
-- **Gives:** one comment on the umbrella issue. Each gap goes to slice, which opens a new sub-issue.
-- **Exit gate:** every umbrella scenario passes.
-
-### ship (Build)
+### ship (Build, for an umbrella issue)
 - **Gets:** an umbrella issue whose sub-issue PRs have all merged into the feature branch.
 - **Does:**
   1. Merges `main` into the feature branch, by merge and not rebase.
-  2. Runs umbrella-scope verify.
-  3. Opens the final PR into `main`.
+  2. Runs verify on the umbrella scope (below).
+  3. Opens the final PR from the feature branch into `main`.
 - **Gives:** a ready final PR. Its body has one `Closes #n` line for each sub-issue and one for the umbrella.
-- **Exit gate:** umbrella verify passes and CI passes. You merge.
-- **Later:** delete the plan page after you confirm, and propose one change to the setup.
+- **Exit gate:** umbrella verify passes and CI passes.
+- **Then:** you merge the final PR, and GitHub closes the umbrella and every sub-issue.
+- **Later:** delete the plan page after you confirm, and reflect (below).
+
+### verify, umbrella scope (Build; ship calls it)
+- **Gets:** the umbrella's scenarios and the feature branch.
+- **Gives:** one comment on the umbrella issue. Each gap goes to slice, which opens a new sub-issue. ship stops until that sub-issue is merged.
+- **Exit gate:** every umbrella scenario passes.
+
+### reflect (not in v0)
+Runs once for each piece of work that lands on `main`: in ship for an umbrella, and at the end of execute for a single issue.
+- **Gives:** zero or more proposals to change the setup, such as a rule, a check, a line in `docs/agents/`, or an ADR.
+- **Evidence:** each proposal names its evidence from this work. That is a repeated correction, a failed check that a rule could have stopped, or a command that the agent had to find twice.
+- **No evidence means no proposal.** "No setup change" is a normal result, not a failure.
 
 ### next (not in v0)
 - **Gets:** GitHub and git, through `status.sh`, which runs before the model reads the skill.
@@ -154,9 +179,9 @@ A closed issue is done. Its labels do no harm.
 - <item>
 ```
 
-### Sub-issue
+### Issue (single issue or sub-issue)
 ```markdown
-Sub-issue of #<umbrella> · Blocked by #<n>      ← GitHub links, not text, where possible
+Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub links, not text, where possible
 
 ## What it delivers
 <one behaviour>
@@ -186,6 +211,7 @@ Closes #<umbrella>
   - **Open:** cargus-forge is public, so the same check must run on one of your private repos.
   - **Open:** confirm that the Blocked icon shows on your GitHub plan.
   - **Open:** confirm that a `!`cmd`` script runs under Remote Control.
-- **The `status: merged` label:** propose to keep it, or show the state only in `next`.
+- **The `status: merged` label:** keep it, or show the state only in `next`.
 - **Verify commands for skills:** a skill has no test command until evals are settled. Sub-issues of the skeleton need one, so the evals discussion comes before slice.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
+- **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
