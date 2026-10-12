@@ -4,8 +4,9 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 
 | File | Contents |
 |---|---|
+| [process.md](process.md) | **The contract.** Phases, size test, status, formats. The stage 0 output. |
 | [synthesis.md](synthesis.md) | Findings, proposed workflow, open questions, and build stages |
-| [plan.html](plan.html) | Source of the interactive HTML plan, [published as a private artifact](https://claude.ai/artifact/GiMwcbCXxzz1RaNmcDrHMr). It needs the `html-plan` runtime to pack. |
+| [plan.html](plan.html) | Frozen at v4, and replaced by process.md and `docs/adr/`. Source of the interactive HTML plan, [published as a private artifact](https://claude.ai/artifact/GiMwcbCXxzz1RaNmcDrHMr). It needs the `html-plan` runtime to pack. |
 | [responses/](responses/) | Your answers and comments on each plan version, copied word for word |
 | [research/01-mattpocock-skills.md](research/01-mattpocock-skills.md) | mattpocock/skills: grilling, setup, tdd, domain modelling, to-spec, to-tickets |
 | [research/02-gsd-core-and-path.md](research/02-gsd-core-and-path.md) | GSD core and GSD path: phases, state model, subagents, context cost |
@@ -15,4 +16,4 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 | [research/06-practitioner-workflows.md](research/06-practitioner-workflows.md) | Superpowers, HumanLayer, Compound Engineering, Ralph, and others, plus the evidence |
 | [research/07-spec-driven-toolkits.md](research/07-spec-driven-toolkits.md) | Spec Kit, Kiro, BMAD, OpenSpec, Agent OS, Tessl, Cline Memory Bank, and the critiques of spec-driven development |
 
-**Status:** stage 0. The plan page is frozen at v4, and every decision for it is made (feature branch for each umbrella). Next: a small stage 0 (`process.md` and ADRs), then a walking skeleton across Shape and Build. See synthesis.md section 10.
+**Status:** stage 0 is written: `process.md` and [ADR-001 to ADR-005](../adr/README.md), waiting for your review. Next: the evals discussion, then the skeleton umbrella issue, created by hand.
