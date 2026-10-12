@@ -10,7 +10,8 @@ status: active
 
 ## Details
 - `domain-model` takes the ADR rules from adr-management: the litmus test, living ADRs, and glossary alignment.
-- `ship` and its push hook take the reflection step and the knowledge tiers from knowledge-system.
+- `reflect` takes the reflection step from knowledge-system, and `domain-model` takes the knowledge tiers.
+- `reflect` runs once for each piece of work that lands on `main`, from ship or from execute. It proposes a change only when it has evidence. There is no push hook, because with feature branches a push hook fires on every sub-issue push.
 - `verify` can use a second opinion in the style of codex-review. codex-review stays as it is.
 
 ## Rejected alternatives

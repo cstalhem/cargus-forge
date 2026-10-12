@@ -31,3 +31,5 @@ status: active
 - Each repo must be on GitHub, with `gh` 2.94 or later, which reads parent, sub-issue and dependency data as JSON.
 - A different tracker needs a new tracker profile and a new status script.
 - Work can resume from any device that can read GitHub, including Remote Control on a phone.
+- The Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app.
+- `status.sh` reads each issue's `blockedBy` field. GitHub's search API did not return `is:blocked` results.
