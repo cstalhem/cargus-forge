@@ -1,7 +1,7 @@
 ---
 title: "Engineering plugin: synthesis"
 date: 2026-10-10
-status: draft v4 — one open decision (PR flow); see sections 7–9
+status: decisions complete for stage 0; next: small stage 0 (process.md + ADRs), then a walking skeleton (section 10)
 ---
 
 # Engineering plugin: synthesis
@@ -380,3 +380,60 @@ So only two labels remain, for what GitHub does not show in the issue list:
 ### Note on the plan's own size
 
 The page is now about 860 words of prose, against html-plan's budget of 350. It is outgrowing its format, which is the same bloat this plugin is meant to avoid. Once the remaining decision is made, stage 0 replaces this page with `process.md` (the phase contracts) and ADRs. The plan then stops growing.
+
+## 10. Review 4: PR flow decided, and how to proceed in small chunks
+
+### PR flow: a feature branch for each umbrella (decided)
+
+The user prefers that a feature lands on `main` as one item. GitHub supports this: one PR closes several issues when each is named with its own keyword (`Closes #39, Closes #40, Closes #38`). Closing keywords fire only when that PR targets the default branch, which the final feature PR does.
+
+The flow:
+- **Feature branch:** `38-export-to-s3`, created by `slice` from `main`.
+- **Sub-issue work:** in its own worktree, on a branch such as `39-export-job` taken from the feature branch. Its PR goes *into the feature branch*. These PRs stay small, so they can still be reviewed on a phone, and they give the verify report a home.
+- **Final PR:** feature branch → `main`. `ship` writes its body with a `Closes #n` line for every sub-issue and for the umbrella.
+- **Umbrella-scope verify now runs on the feature branch, before the final PR is ready.** Gaps are caught *before* `main`, not after. This improves on v4, where that check ran on `main` after the fact.
+
+What it costs:
+- The feature branch can drift from `main`. Merge `main` into it regularly (merge, not rebase).
+- **Open detail for the Build contract:** a sub-issue whose PR has merged into the feature branch stays open until the final PR. Its status needs a representation. That is either a derived "merged into feature" state that `status.sh` reads from the merged PR, or a third label. This is settled in the contract, not now.
+
+### How to start small: a walking skeleton across Shape and Build
+
+The problem: we need the process in order to build the process.
+
+The answer is to **bootstrap**, the way a compiler is first written in another language and then compiles itself. The first version of the process is run *by hand*: this conversation, plain Claude Code, `gh` commands. As each skill's v0 exists, it takes over its own step for the rest of the work.
+
+**A thin slice across all phases, not `discuss` first.** Reasons:
+1. `discuss`'s output (the umbrella issue) is the input of every later phase. Designed alone, its format is a guess about what slice, execute and verify need.
+2. Four rounds of review already ran a manual discuss. The conversational part is the best-understood part. The unknowns are in the hand-offs: issue formats, branches and PRs, closing keywords, verify on a PR, the final PR.
+3. This is the "contract first, then one thin path" decision. It is also the walking skeleton (Alistair Cockburn) or tracer bullet (*The Pragmatic Programmer*, and Matt Pocock's slicing). Get every part working end to end at minimum depth, then thicken where the evidence says it hurts.
+
+**What the skeleton contains.** Each v0 skill is about 20–40 lines, and the total is about 200 lines.
+
+| Phase | v0 does | Left out until later |
+|---|---|---|
+| discuss | Question rounds with recommended answers. Writes the umbrella issue from a template (goal, WHEN/THEN scenarios, decisions, out of scope). | unknowns map, glossary, ADRs, domain-model |
+| research | — | the whole phase; Claude Code's normal reading of the code is enough |
+| plan | A short "Design" section in the umbrella issue, which is readable in the GitHub app | the HTML plan page and the html-plan dependency |
+| slice | Creates the feature branch and the sub-issues (scenarios, files, a verify command, "blocked by" links). Applies the size test as a checklist. | — |
+| execute | One sub-issue → a worktree branch from the feature branch → a PR into the feature branch | deviation-rule depth, injected scripts |
+| verify | A fresh-context subagent grades the scenarios with evidence and posts a PR comment. Also runs at umbrella scope. | label changes |
+| ship | Umbrella verify, then the final PR with every `Closes #n` | the reflection hook, plan-page cleanup |
+| next | — | status.sh and labels; `gh issue list` is enough at first |
+
+**The test feature for the skeleton** has to exercise the umbrella and feature-branch path, so it needs at least two sub-issues. The proposal is the CI for cargus-forge as one umbrella with three sub-issues:
+1. CI runs `claude plugin validate`.
+2. CI fails when descriptions differ between `plugin.json` and `marketplace.json`.
+3. CI fails when a plugin changes without a version bump.
+
+It is real, small, useful, and it fails today: three plugins have descriptions that differ.
+
+**The sequence:**
+1. **Stage 0, small.**
+   - `process.md`: one block per phase, giving what it gets, what it gives, where it stores, its exit gate, and when it stops to ask.
+   - 3–4 ADRs: state store and labels, the PR flow, the plugin dependency, invocation and scripted facts.
+   - This replaces the big plan page, which stops at v4.
+2. **The skeleton umbrella by hand.** We write the umbrella issue and its sub-issues (one per v0 skill) ourselves, following `process.md`.
+3. **Build the v0 skills.** Each one is a sub-issue, done with plain Claude Code on a feature branch, and the skeleton's own final PR closes them all.
+4. **Run the skeleton** on the CI feature, end to end, using only the plugin. Note every friction point.
+5. **Thicken by evidence.** Each later stage deepens the phase that hurt most in the run before it, and each later umbrella is shaped with the skills from the previous stage. In expected order: discuss depth, the plan page, status labels, guardrails, research.
