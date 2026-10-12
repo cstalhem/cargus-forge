@@ -1,7 +1,7 @@
 ---
 title: "Engineering plugin: synthesis"
 date: 2026-10-10
-status: decisions complete for stage 0; next: small stage 0 (process.md + ADRs), then a walking skeleton (section 10)
+status: stage 0 written (process.md + ADR-001..005); see section 10
 ---
 
 # Engineering plugin: synthesis
