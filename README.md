@@ -8,6 +8,7 @@ Plugins for knowledge management, note-taking workflows, and Claude Code product
 - **Knowledge System** (`plugins/knowledge-system`): Bootstrap a three-tier knowledge system (CLAUDE.md, rules, skills) for any project with guided research and adaptive questioning.
 - **Codex Review** (`plugins/codex-review`): Iteratively refine a plan document with feedback from the Codex CLI until it has no blocking concerns left.
 - **ADR Management** (`plugins/adr-management`): Create and maintain Architecture Decision Records (ADRs) as living documents, with a litmus test for what earns a record.
+- **Engineering** (`plugins/engineering`): Turn a request into GitHub issues and build each one into a verified pull request: discuss, slice, execute, verify, ship.
 
 ## Plugin Ideas (Todo)
 - [ ] Add a plugin for task tracking integrations (e.g., Todoist/Things).

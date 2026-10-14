@@ -24,6 +24,11 @@
       "name": "adr-management",
       "source": "./plugins/adr-management",
       "description": "Create and maintain Architecture Decision Records (ADRs) as living documents, with a litmus test for what earns a record."
+    },
+    {
+      "name": "engineering",
+      "source": "./plugins/engineering",
+      "description": "Turn a request into GitHub issues and build each one into a verified pull request: discuss, slice, execute, verify, ship."
     }
   ]
 }
