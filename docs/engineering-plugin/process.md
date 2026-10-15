@@ -168,6 +168,8 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 
 ## Formats
 
+Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
 ### Umbrella issue
 ```markdown
 ## Goal
@@ -196,12 +198,19 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 ## Scenarios
 - WHEN <condition> THEN <result>
 
+## Decisions                                      ← optional
+- D1 · <decision>
+- D<n> (umbrella #<umbrella>)
+
 ## Files
 <paths>
 
 ## Verify
 <one command that fails before the work and passes after it>
 ```
+
+- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
+- When a sub-issue depends on an umbrella decision, point to it as `D<n> (umbrella #<umbrella>)`. Do not copy its text.
 
 ### Final PR body
 ```markdown

@@ -2,6 +2,8 @@
 
 A scenario is one acceptance criterion as `WHEN <condition> THEN <result>`. Each scenario becomes a test.
 
+Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
 ## Umbrella issue
 The one record of a feature that needs more than one session.
 
@@ -34,6 +36,10 @@ Sub-issue of #<umbrella> · Blocked by #<n>
 ## Scenarios
 - WHEN <condition> THEN <result>
 
+## Decisions
+- D1 · <decision>
+- D<n> (umbrella #<umbrella>)
+
 ## Files
 <paths>
 
@@ -42,3 +48,5 @@ Sub-issue of #<umbrella> · Blocked by #<n>
 ```
 
 - The first line is for sub-issues only. Set the parent and "blocked by" as GitHub links where possible, not only as text.
+- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
+- When a sub-issue depends on an umbrella decision, point to it as `D<n> (umbrella #<umbrella>)`. Do not copy its text.
