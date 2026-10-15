@@ -200,7 +200,7 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 
 ## Decisions                                      ← optional
 - D1 · <decision>
-- D<n> (umbrella #<umbrella>)
+- #<umbrella> D<n>
 
 ## Files
 <paths>
@@ -210,7 +210,7 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 ```
 
 - `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
-- When a sub-issue depends on an umbrella decision, point to it as `D<n> (umbrella #<umbrella>)`. Do not copy its text.
+- When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
 ### Final PR body
 ```markdown
