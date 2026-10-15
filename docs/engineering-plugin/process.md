@@ -86,7 +86,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Gets:** the umbrella issue with its design and decisions.
 - **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
-- **Stops for:** a scenario that no sub-issue can own. That goes back to plan.
+- **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan, and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
@@ -168,6 +168,8 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 
 ## Formats
 
+Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
 ### Umbrella issue
 ```markdown
 ## Goal
@@ -196,12 +198,19 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 ## Scenarios
 - WHEN <condition> THEN <result>
 
+## Decisions                                      ← optional
+- D1 · <decision>
+- #<umbrella> D<n>
+
 ## Files
 <paths>
 
 ## Verify
 <one command that fails before the work and passes after it>
 ```
+
+- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
+- When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
 ### Final PR body
 ```markdown
