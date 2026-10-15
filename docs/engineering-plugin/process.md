@@ -86,7 +86,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Gets:** the umbrella issue with its design and decisions.
 - **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
-- **Stops for:** a scenario that no sub-issue can own. That goes back to plan.
+- **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan, and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
