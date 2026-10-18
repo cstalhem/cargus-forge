@@ -560,6 +560,12 @@
   figure figcaption {
     margin-top: 12px;
   }
+  /* Mermaid tags node text with class "label"; undo the page's .label style. */
+  figure .mermaid .label {
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+  }
 
   /* BLOCK: code -------------------------------------------------------- */
   .code {
@@ -1267,7 +1273,9 @@
     <p>{{SECTION_PROSE}}</p>
 
     <!-- BLOCK: figure (optional). Mermaid renders natively in a Claude
-         Artifact. For pixel control, put an inline <svg> in .frame instead. -->
+         Artifact, and through the mermaid script at the end when the report
+         is opened as a file. For pixel control, put an inline <svg> in .frame
+         instead. -->
     <figure>
       <div class="frame">
         <pre class="mermaid">
@@ -1481,5 +1489,25 @@ flowchart LR
       { rootMargin: "-10% 0px -70% 0px" },
     );
     targets.forEach((t) => io.observe(t));
+  })();
+</script>
+
+<script>
+  // Mermaid outside a Claude Artifact. An artifact renders pre.mermaid
+  // natively inside a frame, so the library only loads when the report is
+  // opened directly as a file and has diagrams. Needs a network connection;
+  // without one the diagram source stays visible. Keep as is.
+  (() => {
+    if (window.self !== window.top) return;
+    if (!document.querySelector("pre.mermaid")) return;
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+    s.onload = () => {
+      const t = document.documentElement.dataset.theme;
+      const dark = t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral" });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    };
+    document.head.appendChild(s);
   })();
 </script>
