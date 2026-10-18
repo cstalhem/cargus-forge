@@ -1,13 +1,13 @@
 ---
 name: run
-description: Research a question in depth and produce a sourced HTML report. Splits the question into sub-topics, runs parallel researcher agents that each write a cross-checked note, then has a synthesizer agent compile the notes into one report and publishes it as an artifact. Also continues or updates earlier research in an existing topic folder.
+description: Research a question in depth and produce a sourced HTML report. Splits the question into sub-topics, runs parallel researcher agents that each write a cross-checked note, then has a synthesizer agent compile the notes into one report, publishes it as an artifact, and merges the research into the default branch with a pull request. Also continues or updates earlier research in an existing topic folder.
 when_to_use: When the user asks to research, investigate or compare something and wants a sourced write-up or report, or asks to continue, extend or update earlier research.
 argument-hint: <research question> [--deep]
 ---
 
 # Research
 
-You orchestrate the research. You plan the work, delegate it to the plugin's agents, check what comes back, publish the report and report to the user. You do not research or write the report yourself.
+You orchestrate the research. You plan the work, delegate it to the plugin's agents, check what comes back, publish the report, merge the research into the default branch and report to the user. You do not research or write the report yourself.
 
 - **`researcher`** (`research:researcher`): researches one sub-topic and writes one note to `<topic-folder>/research/`.
 - **`synthesizer`** (`research:synthesizer`): compiles the notes into the report.
@@ -36,7 +36,7 @@ Split the question into sub-topics that can be researched independently and toge
 - Give each sub-topic its note file: `YYYY-MM-DD-<slug>.md` with today's date (run `date +%F` if you do not know it) and a short kebab-case slug, unique within `research/`. When amending, use the existing note's file.
 - Note any context the user gave (constraints, links, files, their situation). Each researcher gets the parts that matter for its task.
 
-Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one.
+Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one.
 
 ## 3. Delegate the research
 
@@ -80,11 +80,28 @@ The report template is built to be published as a Claude Artifact. If you have a
 
 If publishing fails, keep going and tell the user why in your reply.
 
-## 7. Report to the user
+## 7. Merge the research into the default branch
+
+Add the research to the repository with a pull request and merge it, so the default branch always holds the latest research. Do this only when the working folder is a git repository with a GitHub remote and you can push and create pull requests (with `gh` or a GitHub tool). Otherwise skip this step and say so in your reply.
+
+Follow the repository's own conventions for branch names, commit messages and merging if it documents any. Otherwise:
+
+1. Note the current branch so you can return to it.
+2. Fetch the default branch and create a new branch from it: `research/<folder-name>-<YYYY-MM-DD>`.
+3. Stage only the topic folder (`git add <topic-folder>`). Never stage other changes in the working folder; they are not part of this research.
+4. Commit with a message that names the research question, e.g. `Add research: <research question>` or `Update research: <research question>`.
+5. Push the branch and open a pull request against the default branch. In the description, give the answer in two or three sentences, the confidence, the notes added or amended, and the artifact link if there is one.
+6. Merge the pull request with the repository's default merge method, then delete the branch.
+7. Switch back to the branch from step 1. If that is the default branch, pull so it includes the merge.
+
+If any step fails (a conflict, a rejected push, a merge that needs approval), stop there. Leave the branch and pull request as they are and tell the user what failed and what is left to do.
+
+## 8. Report to the user
 
 Reply briefly with:
 
 - The link to the published report, if you published it.
+- The link to the merged pull request, or why the research was not merged.
 - The path to the report and the research notes.
 - The answer to the research question in two or three sentences.
 - Overall confidence and the main caveats.
@@ -93,5 +110,6 @@ Reply briefly with:
 ## Rules
 
 - Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
+- Commit only the topic folder. Never commit, stash or discard anything else in the working folder.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
 - If an agent reports a missing template or topic folder, fix the input and run it again. Do not work around it.
