@@ -14,7 +14,7 @@ The delegating agent gives you:
 
 - **Topic folder:** relative to the working folder, e.g. `azure-landing-zones/`.
 - **Research question:** what the report must answer.
-- **Report template:** the path to `report.html`. If none was given, use `${CLAUDE_PLUGIN_ROOT}/skills/research/templates/report.html`.
+- **Report template:** the path to `report.html`. If none was given, use `${CLAUDE_PLUGIN_ROOT}/skills/run/templates/report.html`.
 - **Notes (optional):** which notes in `research/` to use. Default: all notes in the folder.
 - **Depth (optional):** `Overview` or `Deep dive`. Default: `Overview`.
 - **Existing report (optional):** a report to update instead of starting a new one.
