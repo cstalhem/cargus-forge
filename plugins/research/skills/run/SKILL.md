@@ -1,5 +1,5 @@
 ---
-name: research
+name: run
 description: Research a question in depth and produce a sourced HTML report. Splits the question into sub-topics, runs parallel researcher agents that each write a cross-checked note, then has a synthesizer agent compile the notes into one report. Also continues or updates earlier research in an existing topic folder.
 when_to_use: When the user asks to research, investigate or compare something and wants a sourced write-up or report, or asks to continue, extend or update earlier research.
 argument-hint: <research question> [--deep]

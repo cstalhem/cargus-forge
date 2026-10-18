@@ -15,7 +15,7 @@ The delegating agent gives you:
 - **Task:** the topic or question to research.
 - **Complementary information (optional):** context, constraints, links, files or earlier notes.
 - **Topic folder:** the folder for this research topic, relative to the working folder, e.g. `azure-landing-zones/`.
-- **Note template:** the path to `research-note.md`. If none was given, use `${CLAUDE_PLUGIN_ROOT}/skills/research/templates/research-note.md`.
+- **Note template:** the path to `research-note.md`. If none was given, use `${CLAUDE_PLUGIN_ROOT}/skills/run/templates/research-note.md`.
 - **Existing note (optional):** a note to continue or amend instead of starting a new one.
 
 The working folder is laid out like this:
