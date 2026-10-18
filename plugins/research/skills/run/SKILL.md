@@ -1,13 +1,13 @@
 ---
 name: run
-description: Research a question in depth and produce a sourced HTML report. Splits the question into sub-topics, runs parallel researcher agents that each write a cross-checked note, then has a synthesizer agent compile the notes into one report. Also continues or updates earlier research in an existing topic folder.
+description: Research a question in depth and produce a sourced HTML report. Splits the question into sub-topics, runs parallel researcher agents that each write a cross-checked note, then has a synthesizer agent compile the notes into one report and publishes it as an artifact. Also continues or updates earlier research in an existing topic folder.
 when_to_use: When the user asks to research, investigate or compare something and wants a sourced write-up or report, or asks to continue, extend or update earlier research.
 argument-hint: <research question> [--deep]
 ---
 
 # Research
 
-You orchestrate the research. You plan the work, delegate it to the plugin's agents, check what comes back and report to the user. You do not research or write the report yourself.
+You orchestrate the research. You plan the work, delegate it to the plugin's agents, check what comes back, publish the report and report to the user. You do not research or write the report yourself.
 
 - **`researcher`** (`research:researcher`): researches one sub-topic and writes one note to `<topic-folder>/research/`.
 - **`synthesizer`** (`research:synthesizer`): compiles the notes into `<topic-folder>/<topic-slug>.html`.
@@ -63,10 +63,22 @@ Start one `synthesizer` with:
 - **Depth.**
 - **Existing report:** the path, if the folder already had one.
 
-## 6. Report to the user
+## 6. Publish the report
+
+The report template is built to be published as a Claude Artifact. If you have a tool that publishes an HTML file as an artifact, publish the report with it. If you have none, skip this step; the report file still works when opened in a browser.
+
+1. Read the whole report file first. Publishing shares it, so check that it is the report you expect and has no leftover `{{` placeholders.
+2. Look for `<topic-folder>/artifact-url.txt`. If it exists, the report was published before: update that artifact by its URL so the link stays the same. Otherwise publish a new artifact.
+3. Publish with the report's `<title>` as its name, the sentence from its `description` meta tag as the description, and a generic icon such as `report`.
+4. For a new artifact, write its URL to `<topic-folder>/artifact-url.txt`, one line, nothing else.
+
+If publishing fails, keep going and tell the user why in your reply.
+
+## 7. Report to the user
 
 Reply briefly with:
 
+- The link to the published report, if you published it.
 - The path to the report and the research notes.
 - The answer to the research question in two or three sentences.
 - Overall confidence and the main caveats.
@@ -74,6 +86,6 @@ Reply briefly with:
 
 ## Rules
 
-- Only the agents write files. You write nothing yourself.
+- Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
 - If an agent reports a missing template or topic folder, fix the input and run it again. Do not work around it.

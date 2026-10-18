@@ -70,7 +70,7 @@ Copy the template and fill it. The template is artifact-ready: it has no `<!doct
 
 - **Required blocks:** sidebar, question, lead + takeaways, scope, at least one body section, open questions, source index.
 - **Optional blocks:** list, quote, figure, code, table, stats, chart, callout, timeline, key terms. Use one only when the content calls for it. Delete every block you do not use, including its comment.
-- **Keep as is:** the top bar, the drawer markup (`drawer-head`, `scrim`) and the script at the end. They provide the mobile menu and contents highlighting. Put the report name in the top bar too.
+- **Keep as is:** the top bar, the drawer markup (`drawer-head`, `scrim`) and both scripts at the end. They provide the mobile menu, contents highlighting, and diagram rendering when the report is opened as a file. Put the report name in the top bar too.
 - **Scope:** "Covered" and "Not covered" from the notes' Assignment sections, merged. "Decisions" from the notes' Decisions made, merged and shortened to what affects the reader's interpretation.
 - **Callouts:** `callout disagree` for conflicting sources, `callout caveat` for low confidence, single-source claims and partial notes, plain `callout` for other notes to the reader.
 - **Quote:** only verbatim text that a note records as a direct quote. Never paraphrase inside a quote.
