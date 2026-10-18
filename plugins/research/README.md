@@ -18,9 +18,11 @@ You can also just ask Claude to research something; the skill starts on its own.
 3. One `researcher` agent per sub-topic searches the web in parallel and writes a cited note. Important claims are cross-checked against at least two sources.
 4. If a key sub-topic comes back thin, Claude runs one follow-up round on the gaps.
 5. A `synthesizer` agent compiles the notes into one HTML report. It works only from the notes and cannot search the web.
-6. Claude publishes the report as a private Claude Artifact when a publishing tool is available, and replies with the answer, confidence, caveats and open questions.
+6. Claude publishes the report as a private Claude Artifact when a publishing tool is available.
+7. If the working folder is a git repository with a GitHub remote, Claude commits the topic folder on a `research/<folder-name>-<date>` branch, opens a pull request against the default branch and merges it. Nothing outside the topic folder is committed.
+8. Claude replies with the answer, confidence, caveats, open questions, and links to the report and the pull request.
 
-Run it again on the same subject to extend or update the research. New sub-topics get new notes, gaps are amended in place, and the report is rebuilt and republished to the same link.
+Run it again on the same subject to extend or update the research. New sub-topics get new notes, gaps are amended in place, the report is rebuilt and republished to the same link, and the update is merged with a new pull request.
 
 ## What it writes
 
@@ -44,5 +46,6 @@ azure-landing-zones/
 ## Requirements and limits
 
 - Web search and web fetch must be available to the researchers.
+- Merging needs push access and `gh` or a GitHub tool. Without them, or outside a git repository, the research stays as local files. If your permission settings ask before merging, approve the merge when prompted.
 - The report is built for Claude Artifacts. Opened as a local file, it renders in quirks mode (no doctype), and mermaid diagrams and fonts load from a CDN, so they need a network connection.
 - Not yet verified in Cowork: that `model:` in plugin agents is honoured, that a publishing tool is available, and that `${CLAUDE_PLUGIN_ROOT}` expands in agent files. The skill passes template paths explicitly, so the last one only matters when an agent is used directly.
