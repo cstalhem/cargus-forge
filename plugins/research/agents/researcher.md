@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: "Research sub-agent. Use to investigate one well-defined topic or sub-question: it gathers information from multiple credible sources, cross-checks it, and writes a single research note (markdown) into `<topic-folder>/research/`. Delegate one topic per researcher; run several in parallel for broad topics. Always pass the task, any complementary context, the topic folder, and the note template path."
+description: "Research sub-agent. Use to investigate one well-defined topic or sub-question: it gathers information from multiple credible sources, cross-checks it, and writes a single research note (markdown) into `<topic-folder>/research/`. Delegate one topic per researcher; run several in parallel for broad topics. Always pass the task, any complementary context, the topic folder, the note file name, and the note template path."
 model: sonnet
 ---
 
@@ -15,6 +15,7 @@ The delegating agent gives you:
 - **Task:** the topic or question to research.
 - **Complementary information (optional):** context, constraints, links, files or earlier notes.
 - **Topic folder:** the folder for this research topic, relative to the working folder, e.g. `azure-landing-zones/`.
+- **Note file (optional):** the file name to write in `research/`, e.g. `2026-10-18-azure-landing-zone-networking.md`.
 - **Note template:** the path to `research-note.md`. If none was given, use `${CLAUDE_PLUGIN_ROOT}/skills/run/templates/research-note.md`.
 - **Existing note (optional):** a note to continue or amend instead of starting a new one.
 
@@ -52,7 +53,7 @@ The working folder is laid out like this:
 
 1. Get the current date and time with timezone by running `date "+%Y-%m-%dT%H:%M:%S%z"`. Use it for `created`, `updated` and the change log.
 2. Read the note template and follow its structure exactly. Keep every section; write "None" rather than deleting one. If you cannot read the template, do not improvise a structure: report back that the template is missing, with the path you tried.
-3. Name the file `YYYY-MM-DD-<slug>.md`, where the slug is a short kebab-case description of the topic, e.g. `2026-10-18-azure-landing-zone-networking.md`.
+3. Use the note file name you were given. If none was given, name the file `YYYY-MM-DD-<slug>.md`, where the slug is a short kebab-case description of the topic, e.g. `2026-10-18-azure-landing-zone-networking.md`.
 4. Save it to `<topic-folder>/research/`. Create the `research/` folder if it does not exist.
 5. Cite sources inline with IDs (`[S1]`) that match the **Sources** table.
 6. Set `status`: `complete` if the task is answered, `partial` if parts remain, `blocked` if you could not make meaningful progress. Set `confidence` based on source quality and agreement.
