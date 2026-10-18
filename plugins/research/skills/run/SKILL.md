@@ -21,7 +21,7 @@ Request: $ARGUMENTS
 
 ## 1. Frame the research
 
-1. Work out the research question from the request. If there is none, ask the user for it.
+1. Work out the research question from the request. If there is none, ask the user for it; in an unattended run, stop and report that the question is missing.
 2. Pick the depth: `Deep dive` if the user passed `--deep` or asked for depth, otherwise `Overview`.
 3. Pick the topic folder: a short kebab-case slug of the subject in the working folder, e.g. `azure-landing-zones/`. If a folder for the subject already exists, use it.
 4. Set the report path to `<topic-folder>/<folder-name>.html`, e.g. `azure-landing-zones/azure-landing-zones.html`. If the folder already has a report under another name, keep that name.
@@ -36,7 +36,7 @@ Split the question into sub-topics that can be researched independently and toge
 - Give each sub-topic its note file: `YYYY-MM-DD-<slug>.md` with today's date (run `date +%F` if you do not know it) and a short kebab-case slug, unique within `research/`. When amending, use the existing note's file.
 - Note any context the user gave (constraints, links, files, their situation). Each researcher gets the parts that matter for its task.
 
-Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one.
+Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one, or if the run is unattended (see Rules).
 
 ## 3. Delegate the research
 
@@ -109,6 +109,7 @@ Reply briefly with:
 
 ## Rules
 
+- Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply.
 - Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
 - Commit only the topic folder. Never commit, stash or discard anything else in the working folder.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
