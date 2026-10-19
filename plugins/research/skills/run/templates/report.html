@@ -433,21 +433,23 @@
     padding: 0;
     margin: 0;
   }
+  /* List items use a hanging marker, not flex: in a flex item every piece
+     of inline content (text, code, strong, refs) would become a column. */
   .takeaways li {
-    display: flex;
-    gap: 14px;
-    align-items: baseline;
+    padding-left: 19px;
     font-size: 16.5px;
     line-height: 1.6;
     color: var(--ink-2);
   }
   .takeaways li::before {
     content: "";
+    display: inline-block;
     width: 5px;
     height: 5px;
+    margin-left: -19px;
+    margin-right: 14px;
+    vertical-align: 3px;
     background: var(--accent);
-    flex: none;
-    transform: translateY(-3px);
   }
 
   /* BLOCK: list -------------------------------------------------------- */
@@ -463,31 +465,36 @@
   }
   ul.plain li,
   ol.plain li {
-    display: flex;
-    gap: 13px;
-    align-items: baseline;
     font-size: 17.5px;
     line-height: 1.6;
     color: var(--ink-2);
   }
+  ul.plain li {
+    padding-left: 18px;
+  }
   ul.plain li::before {
     content: "";
+    display: inline-block;
     width: 5px;
     height: 5px;
+    margin-left: -18px;
+    margin-right: 13px;
+    vertical-align: 3px;
     background: var(--faint);
-    flex: none;
-    transform: translateY(-3px);
   }
   ol.plain li {
     counter-increment: n;
+    padding-left: 27px;
   }
   ol.plain li::before {
     content: counter(n);
+    display: inline-block;
+    width: 14px;
+    margin-left: -27px;
+    margin-right: 13px;
     font-family: var(--mono);
     font-size: 12.5px;
     color: var(--accent);
-    width: 14px;
-    flex: none;
   }
 
   /* BLOCK: ref (inline citation) -------------------------------------- */
@@ -501,7 +508,9 @@
     border: none;
     padding: 0 1px;
   }
-  .ref + .ref::before {
+  /* .ref-next is set by the script on a marker directly after another
+     marker; a CSS sibling selector would also match across text. */
+  .ref.ref-next::before {
     content: ",";
     color: var(--muted);
     margin-right: 1px;
@@ -884,20 +893,20 @@
     gap: 16px;
   }
   .questions li {
-    display: flex;
-    gap: 14px;
-    align-items: baseline;
+    padding-left: 26px;
     font-size: 15.5px;
     line-height: 1.58;
     color: var(--ink-3);
   }
   .questions li::before {
     content: "";
+    display: inline-block;
     width: 12px;
     height: 1px;
+    margin-left: -26px;
+    margin-right: 14px;
+    vertical-align: 5px;
     background: var(--accent);
-    flex: none;
-    transform: translateY(-5px);
   }
 
   /* BLOCK: sources ----------------------------------------------------- */
@@ -1435,7 +1444,18 @@ flowchart LR
 </div>
 
 <script>
-  // Drawer (narrow screens) and contents highlighting. Keep as is.
+  // Citation commas, drawer (narrow screens) and contents highlighting.
+  // Keep as is.
+  document.querySelectorAll(".ref").forEach((ref) => {
+    let prev = ref.previousSibling;
+    while (prev && prev.nodeType === Node.TEXT_NODE && !prev.textContent.trim()) {
+      prev = prev.previousSibling;
+    }
+    if (prev && prev.nodeType === Node.ELEMENT_NODE && prev.classList.contains("ref")) {
+      ref.classList.add("ref-next");
+    }
+  });
+
   (() => {
     const root = document.documentElement;
     const openBtn = document.getElementById("menu-open");
