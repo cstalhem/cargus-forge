@@ -29,7 +29,7 @@ Issue: $ARGUMENTS
    - **Base:** for a sub-issue, the branch that `gh issue develop --list <parent>` shows. Stop if the parent has none. For a single issue, the default branch in `issue-tracker.md`, else `main`.
 2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes` and `gh issue develop --list <n>`. The session is in a worktree when the git dir and the common dir differ.
    - **On the issue's branch:** resume. Read `git log --oneline origin/<base>..HEAD` to see what is done.
-   - **In a worktree on another issue's branch whose PR has merged (`gh pr list --head <that branch> --state merged`), with no changes:** say so, and ask whether to reuse this worktree for #<n>. On yes, go on as in the case of a worktree on its own new branch, and delete the old issue's local branch. On no, stop.
+   - **In a worktree on another issue's branch whose PR has merged, with no changes and `HEAD` at that PR's last commit (`headRefOid` from `gh pr list --head <that branch> --state merged --json headRefOid`):** say so, and ask whether to reuse this worktree for #<n>. On yes, go on as in the case of a worktree on its own new branch, and delete the old issue's local branch. On no, stop.
    - **Not in a worktree:** enter a new one with the EnterWorktree tool, then go on as in the next case.
    - **In a worktree on its own new branch (Remote Control names it `worktree-…`), with no changes and no commits that are not on a remote:**
      1. If no branch is linked to the issue, run `gh issue develop <n> --base <base> --name <n>-<slug>`, with the branch pattern from `issue-tracker.md`.
