@@ -1,2 +1,3 @@
 - Read only this plugin's files, the current repo's files, and GitHub data about the current repo, such as issues or branch protection, through `gh` calls that change nothing. Read `docs/adr/` and `docs/agents/` only if they exist.
 - Add no labels.
+- Pass every issue body, PR body and comment to `gh` with `--body-file <path>`. First write the text with the Write tool to a new file in the session's scratchpad directory, else in `$TMPDIR`. Never use a heredoc: Claude Code's worktree guard refuses one whose text mentions git.

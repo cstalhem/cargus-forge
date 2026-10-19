@@ -71,7 +71,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Stores in:** GitHub.
 - **Exit gate:** no open question remains, you confirm the scenarios, and the size test has a result.
 - **Depth fits the request.** A small request needs one or two rounds. discuss stops when the size test can be answered and passes. A request that fails the test gets full rounds.
-- **v0:** question rounds. Each round asks every question whose prerequisites are settled. Each question has a recommended answer that "yes" accepts.
+- **v0:** question rounds. Each round asks at most five questions whose prerequisites are settled, the ones that unblock others first. Each question has a recommended answer that "yes" accepts.
 - **Later:** the unknowns map, ADRs and the glossary.
 
 ### research (Shape, not in v0)
