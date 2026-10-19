@@ -4,7 +4,7 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 
 | File | Contents |
 |---|---|
-| [process.md](process.md) | **The contract.** Phases, size test, status, formats. The stage 0 output. |
+| [process.md](process.md) | The design record for the stages after v0, and the design notes the ADRs link to. The v0 skills and their references now hold the v0 process. |
 | [synthesis.md](synthesis.md) | Findings, proposed workflow, open questions, and build stages |
 | [plan.html](plan.html) | Frozen at v4, and replaced by process.md and `docs/adr/`. Source of the interactive HTML plan, [published as a private artifact](https://claude.ai/artifact/GiMwcbCXxzz1RaNmcDrHMr). It needs the `html-plan` runtime to pack. |
 | [responses/](responses/) | Your answers and comments on each plan version, copied word for word |
@@ -16,4 +16,4 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 | [research/06-practitioner-workflows.md](research/06-practitioner-workflows.md) | Superpowers, HumanLayer, Compound Engineering, Ralph, and others, plus the evidence |
 | [research/07-spec-driven-toolkits.md](research/07-spec-driven-toolkits.md) | Spec Kit, Kiro, BMAD, OpenSpec, Agent OS, Tessl, Cline Memory Bank, and the critiques of spec-driven development |
 
-**Status:** stage 0 is written: `process.md` and [ADR-001 to ADR-005](../adr/README.md), waiting for your review. Next: the evals discussion, then the skeleton umbrella issue, created by hand.
+**Status:** v0, the walking skeleton (#24), is built: discuss, slice, execute, verify and ship. Next: the end-to-end run on the CI request.
