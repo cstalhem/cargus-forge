@@ -89,7 +89,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links.
 - **Re-split:** the sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
-- **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan, and slice does not settle them in a sub-issue.
+- **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan (discuss in v0), and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.

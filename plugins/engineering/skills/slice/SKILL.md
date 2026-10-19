@@ -20,14 +20,15 @@ Issue: $ARGUMENTS
 ## Steps
 1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Use the bare number, without `#`, in commands. Run `gh issue view <n> --json title,body,parent,subIssues,blockedBy,blocking`.
    - **Umbrella mode:** the issue has a `## Goal` section. If it already has sub-issues, read them. The scenarios they own count as owned. Read the code that the Design section names.
-   - **Re-split mode:** the issue has a `parent`. Read the umbrella with `gh issue view <parent> --json title,body,subIssues`. The rest of the arguments are execute's findings: the criterion that fails and why. Read the work so far: the branch from `gh issue develop --list <n>`, and its `git log` and `git diff` against the feature branch from `gh issue develop --list <parent>`.
+   - **Re-split mode:** the issue has a `parent` and no `## Goal` section. Read the umbrella with `gh issue view <parent> --json title,body,subIssues`. The rest of the arguments are execute's findings: the criterion that fails and why. Read the work so far: the branch from `gh issue develop --list <n>`, and its `git log` and `git diff` against the feature branch from `gh issue develop --list <parent>`.
    - Anything else: stop and say why.
 2. **Plan.** Each body uses the issue format in `formats.md` exactly, including its Decisions rules.
    - **Umbrella mode:** split the umbrella into sub-issues with one behaviour each. Show each sub-issue (its title, its draft body and the four size-test verdicts), a table of each umbrella scenario and the sub-issues that own it, and which sub-issue blocks which.
    - **Re-split mode:** the sub-issue keeps the part that is built or closest to built. Rewrite its Scenarios, Files and Verify for that part, and do not keep its old body, because GitHub's edit history keeps it. Each other part becomes a new sub-issue of the same umbrella. Show:
      - the narrowed sub-issue and each new part: its title, its draft body and the four size-test verdicts;
      - a table of the umbrella scenarios that the old sub-issue owned, and the issues that own them after the split;
-     - the links: each new part is blocked by the narrowed sub-issue and by every issue that blocked it, and each issue that the old sub-issue blocked becomes blocked by every part.
+     - the links: each new part is blocked by the narrowed sub-issue and by every issue that blocked it, and each issue that the old sub-issue blocked becomes blocked by every part;
+     - any commits on the branch that belong to a part that moves out, so the user can decide whether they stay.
 
    Wait for "yes". If the user changes something, update the plan and show it again.
 3. **Branch.** Umbrella mode only. Run `gh issue develop --list <n>`. If no branch is linked, run `gh issue develop <n> --base main --name <n>-<slug>`.
