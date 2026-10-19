@@ -50,3 +50,14 @@ Sub-issue of #<umbrella> · Blocked by #<n>
 - The first line is for sub-issues only. Set the parent and "blocked by" as GitHub links where possible, not only as text.
 - `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
 - When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
+
+## Final PR body
+The one PR that takes a feature branch into `main`. GitHub reads closing keywords only on PRs into the default branch, so this PR closes every sub-issue and the umbrella.
+
+```markdown
+<one paragraph: what the feature does>
+
+Closes #<sub-issue>
+Closes #<sub-issue>
+Closes #<umbrella>
+```
