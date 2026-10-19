@@ -3,6 +3,7 @@ name: slice
 description: Split an umbrella issue into sub-issues that each pass the size test, with parent and "blocked by" links, and create the umbrella's feature branch from main. discuss calls it after it writes an umbrella issue.
 argument-hint: <#umbrella issue>
 user-invocable: false
+allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
 ---
 
 # slice
@@ -10,12 +11,11 @@ user-invocable: false
 Umbrella issue: $ARGUMENTS
 
 ## Rules
+!`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - Write nothing to GitHub until the user answers "yes" to the plan.
 - Every umbrella scenario belongs to at least one sub-issue. If a scenario fits no sub-issue, stop before you write anything, name the scenario, and send it back to discuss.
 - If two parts of the umbrella conflict, for example a Design that breaks a decision, stop before you write anything. Name both parts, say why they conflict, and send it back to discuss. Do not settle it in a sub-issue.
 - Every sub-issue passes the size test. Split a sub-issue that fails, and test each part again.
-- Read only this plugin's files, the current repo's files, and GitHub data about the current repo, such as issues or branch protection, through `gh` calls that change nothing. Read `docs/adr/` and `docs/agents/` only if they exist.
-- Add no labels.
 
 ## Steps
 1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Run `gh issue view <n> --json title,body,subIssues`. If the issue has no `## Goal` section, it is not an umbrella issue: stop and say so. If it already has sub-issues, read them. The scenarios they own count as owned. Read the code that the Design section names.

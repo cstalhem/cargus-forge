@@ -1,0 +1,2 @@
+- Read only this plugin's files, the current repo's files, and GitHub data about the current repo, such as issues or branch protection, through `gh` calls that change nothing. Read `docs/adr/` and `docs/agents/` only if they exist.
+- Add no labels.
