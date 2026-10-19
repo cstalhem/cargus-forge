@@ -3,6 +3,7 @@ name: discuss
 description: Shape a request into one GitHub issue through question rounds. Writes a single issue if the request passes the size test, or an umbrella issue with a Design section if it fails.
 argument-hint: <request or #issue>
 disable-model-invocation: true
+allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
 ---
 
 # discuss
@@ -10,10 +11,9 @@ disable-model-invocation: true
 Request: $ARGUMENTS
 
 ## Rules
+!`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - Write nothing to GitHub until the user answers "yes" to the draft.
 - Never ask what the code can answer. Read the code, and ask only what is left.
-- Read only this plugin's files and the current repo's files. Read `docs/adr/` and `docs/agents/` only if they exist.
-- Add no labels.
 
 ## Steps
 1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. If the request is `#<n>`, read the issue with `gh issue view <n>`. Read the code that the request touches.
