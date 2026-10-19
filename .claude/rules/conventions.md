@@ -19,3 +19,9 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 - Branch from `main`; never commit plugin changes directly to `main`.
 - Rebase-merge PRs to keep `main` history linear.
 - Validate with `claude plugin validate ./plugins/<name>` (add `--strict` in CI) before opening a PR.
+
+## Testing plugins
+
+- Run headless skill tests as `env -u CLAUDE_CODE_SESSION_ID claude -p --session-id <new uuid>`, so they do not write into the current session (see skill: plugin-testing).
+- Pass `--allowedTools Skill` when a `claude -p` test calls a skill through the Skill tool (see skill: plugin-testing).
+- When a skill injects a file with `` !`cat …` ``, check in its verify step that the file exists; `claude plugin validate` does not (see skill: plugin-testing).
