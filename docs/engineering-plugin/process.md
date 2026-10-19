@@ -52,6 +52,8 @@ An issue fits one session when all four are true:
 3. After a short read of the code, the agent can name every file it changes.
 4. It has no open design question for you.
 
+If the verify command proves only part of a scenario, for example not its failure case, criterion 2 can still pass. Its verdict then names the part that the command leaves out, so you can accept the gap or change the command.
+
 The test needs scenarios and settled questions, so **discuss always comes first**. The test then runs at three points:
 - **The end of discuss.** If the request passes, discuss writes a single issue and you go to Build. If it fails, discuss writes an umbrella issue and you go on with Shape.
 - **slice.** Each sub-issue must pass. A sub-issue that fails is split again.
