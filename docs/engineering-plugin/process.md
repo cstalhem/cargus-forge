@@ -4,6 +4,8 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
+**Role since v0.** The v0 skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the v0 process, and they win where this file differs. This file stays as the design record for the stages after v0 (research, plan, reflect, next, labels and `status.sh`), and as the design notes that the ADRs link to. It goes once those stages are built.
+
 ## Words
 
 | Term | Meaning |
