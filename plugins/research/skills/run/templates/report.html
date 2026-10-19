@@ -1,0 +1,1891 @@
+<title>Research Report Template</title>
+<!-- Replace the title above with {{REPORT_NAME}}: the report's name, 2 to 4 words. -->
+
+<meta name="claude:viewport-fit-sides" content="cover" />
+<meta name="description" content="{{REPORT_DESCRIPTION}}" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* ------------------------------------------------------------------
+     RESEARCH REPORT TEMPLATE
+     Built for publishing as a Claude Artifact: no doctype, html, head or
+     body tags (the Artifact tool adds them). Filled by the synthesizer
+     agent (agents/synthesizer.md in the research plugin).
+
+     Placeholders: UPPER_SNAKE_CASE in double braces. Replace every one.
+     Blocks: marked <!-- BLOCK: name (required | optional) -->.
+     Delete every optional block you do not use, including its comment.
+     ------------------------------------------------------------------ */
+
+  /* Theme: "Field report". A survey notebook: sage-grey paper, deep
+     green ink for structure and links, ochre for caveats and conflicts.
+     Serif reading text, plain sans labels, mono for data.
+     Layout: fixed left sidebar (contents, facts, tags) beside a single
+     reading column. Below 900px the sidebar becomes a drawer that slides
+     in from the right, opened from a sticky top bar. */
+  :root {
+    --paper: #eef0ea;
+    --panel: #e3e7dd;
+    --panel-2: #dbe0d4;
+    --ink: #1c2420;
+    --ink-2: #2c3630;
+    --ink-3: #435047;
+    --muted: #55605a; /* secondary text, labels */
+    --faint: #9aa59c; /* decorative marks only, never text */
+    --rule: #d3d9cc;
+    --rule-2: #c3cbbb;
+    --accent: #2f5d46; /* structure: rules, markers, section numbers */
+    --cite: #2f5d46; /* links, citations, chart series */
+    --warn: #8f5414; /* caveats, disagreements */
+    --scrim: rgb(20 26 23 / 0.4);
+    --shadow: 0 0 40px rgb(20 26 23 / 0.18);
+
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --ui: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+    --measure: 600px; /* prose line length, about 68 characters */
+    --wide: 840px; /* figures, tables, code, callouts */
+    --sidebar: 272px;
+    --gutter: 64px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141a17;
+      --panel: #1b231f;
+      --panel-2: #212a25;
+      --ink: #e2e8e2;
+      --ink-2: #cdd5ce;
+      --ink-3: #aab4ac;
+      --muted: #8f9a92;
+      --faint: #5d6861;
+      --rule: #2a332e;
+      --rule-2: #36413a;
+      --accent: #7fbf9b;
+      --cite: #7fbf9b;
+      --warn: #e0a458;
+      --scrim: rgb(0 0 0 / 0.55);
+      --shadow: 0 0 40px rgb(0 0 0 / 0.5);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141a17;
+    --panel: #1b231f;
+    --panel-2: #212a25;
+    --ink: #e2e8e2;
+    --ink-2: #cdd5ce;
+    --ink-3: #aab4ac;
+    --muted: #8f9a92;
+    --faint: #5d6861;
+    --rule: #2a332e;
+    --rule-2: #36413a;
+    --accent: #7fbf9b;
+    --cite: #7fbf9b;
+    --warn: #e0a458;
+    --scrim: rgb(0 0 0 / 0.55);
+    --shadow: 0 0 40px rgb(0 0 0 / 0.5);
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+  }
+  a {
+    color: var(--cite);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, var(--cite) 35%, transparent);
+  }
+  a:hover {
+    border-bottom-color: var(--cite);
+  }
+  :focus-visible {
+    outline: 2px solid var(--cite);
+    outline-offset: 2px;
+  }
+  .skip {
+    position: absolute;
+    left: -9999px;
+    top: 8px;
+    z-index: 30;
+    background: var(--paper);
+    padding: 8px 12px;
+    font-family: var(--ui);
+    font-size: 14px;
+  }
+  .skip:focus {
+    left: max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  /* --- shared type ---------------------------------------------------- */
+  .label {
+    font-family: var(--ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  hr {
+    border: none;
+    height: 1px;
+    background: var(--rule);
+    margin: 0;
+  }
+
+  /* --- top bar (narrow screens only) ---------------------------------- */
+  .topbar {
+    display: none;
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 10;
+    align-items: center;
+    gap: 16px;
+    padding-block: 10px;
+    padding-left: max(20px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    background: color-mix(in oklab, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+  }
+  .topbar .name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--ui);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .icon-btn {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--ink);
+    cursor: pointer;
+    padding: 0;
+  }
+  .icon-btn:hover {
+    border-color: var(--rule-2);
+  }
+  .icon-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  /* --- page layout ---------------------------------------------------- */
+  .layout {
+    display: flex;
+    align-items: flex-start;
+    min-height: 100vh;
+  }
+
+  /* --- sidebar / drawer ----------------------------------------------- */
+  .sidebar {
+    width: var(--sidebar);
+    flex: none;
+    align-self: stretch;
+    background: var(--panel);
+    border-right: 1px solid var(--rule);
+  }
+  .sidebar-inner {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    max-height: 100vh;
+    overflow-y: auto;
+    padding: 44px 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 34px;
+  }
+  .drawer-head {
+    display: none;
+  }
+  .scrim {
+    display: none;
+  }
+  .toc {
+    display: flex;
+    flex-direction: column;
+    gap: 13px;
+  }
+  .toc a {
+    font-family: var(--ui);
+    font-size: 13.5px;
+    line-height: 1.4;
+    color: var(--ink-3);
+    border: none;
+    display: flex;
+    gap: 11px;
+    align-items: baseline;
+  }
+  .toc a::before {
+    content: "";
+    width: 2px;
+    height: 15px;
+    background: transparent;
+    flex: none;
+    align-self: center;
+  }
+  .toc a:hover {
+    color: var(--ink);
+  }
+  .toc a[aria-current="true"] {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .toc a[aria-current="true"]::before {
+    background: var(--accent);
+  }
+  .toc .n {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-right: 6px;
+  }
+  .facts {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+  }
+  .fact {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .fact dt {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0;
+  }
+  .fact dd {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 14px;
+  }
+  .tags span {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    border: 1px solid var(--rule-2);
+    background: var(--paper);
+    padding: 4px 8px;
+  }
+
+  /* --- main ------------------------------------------------------------ */
+  main {
+    flex: 1;
+    min-width: 0;
+    padding-block: 56px 96px;
+    padding-left: var(--gutter);
+    padding-right: var(--gutter);
+  }
+  main > * {
+    max-width: var(--measure);
+  }
+  main > .wide,
+  main > figure,
+  main > .callout,
+  main > .panel,
+  main > .sec-rule,
+  main > .grid-2,
+  main > .timeline,
+  main > .stats,
+  main > .chart,
+  main > .wrap-x,
+  main > .code,
+  main > hr,
+  main > .sources {
+    max-width: var(--wide);
+  }
+
+  h1 {
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1.24;
+    letter-spacing: -0.005em;
+    text-wrap: balance;
+    margin: 16px 0 40px;
+  }
+  h1:focus {
+    outline: none;
+  }
+  h2 {
+    font-size: 25px;
+    font-weight: 600;
+    line-height: 1.26;
+    text-wrap: balance;
+    margin: 20px 0 20px;
+    scroll-margin-top: 24px;
+  }
+  h3 {
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  p {
+    font-size: 17.5px;
+    line-height: 1.62;
+    color: var(--ink-2);
+    text-wrap: pretty;
+    margin: 0 0 18px;
+  }
+  em {
+    font-style: italic;
+  }
+  strong {
+    font-weight: 600;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--panel-2);
+    border: 1px solid var(--rule);
+    padding: 1px 5px;
+    overflow-wrap: anywhere;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+  }
+  .caption {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .caption .n {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-3);
+    margin-right: 8px;
+  }
+  section[id],
+  [id^="src-"] {
+    scroll-margin-top: 24px;
+  }
+
+  /* Section divider. The number is the section's reference number and
+     matches the contents list. */
+  .sec-rule {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin: 64px 0 0;
+  }
+  .sec-rule span {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  .sec-rule i {
+    display: block;
+    height: 1px;
+    background: var(--rule-2);
+    flex-grow: 1;
+  }
+
+  /* BLOCK: lead + takeaways ------------------------------------------- */
+  .panel {
+    border-top: 2px solid var(--accent);
+    background: var(--panel);
+    padding: 30px 34px 32px;
+    margin: 0 0 40px;
+  }
+  .panel .lead {
+    font-size: 19.5px;
+    line-height: 1.62;
+    color: var(--ink);
+    max-width: var(--measure);
+    margin: 18px 0 22px;
+  }
+  .takeaways {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: var(--measure);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  /* List items are plain blocks with an inline marker in a hanging
+     indent. Never make an li a flex container: every inline child
+     (code, strong, a citation) would turn into its own column. */
+  .takeaways li {
+    padding-left: 19px;
+    font-size: 16.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .takeaways li::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin: 0 14px 0 -19px;
+    vertical-align: middle;
+    background: var(--accent);
+  }
+
+  /* Each takeaway ends with a link to the section that supports it and
+     the confidence of that claim. */
+  .takeaways .tk-meta {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-left: 6px;
+  }
+  .takeaways .tk-meta a {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .conf::before {
+    content: "\00b7";
+    margin: 0 6px;
+    color: var(--muted);
+  }
+  .conf[data-level="high"] {
+    color: var(--accent);
+  }
+  .conf[data-level="low"] {
+    color: var(--warn);
+  }
+
+  /* BLOCK: list -------------------------------------------------------- */
+  ul.plain,
+  ol.plain {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+    counter-reset: n;
+  }
+  ul.plain li,
+  ol.plain li {
+    padding-left: 18px;
+    font-size: 17.5px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  ul.plain li::before {
+    content: "";
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin: 0 13px 0 -18px;
+    vertical-align: middle;
+    background: var(--faint);
+  }
+  ol.plain li {
+    padding-left: 30px;
+    counter-increment: n;
+  }
+  ol.plain li::before {
+    content: counter(n);
+    display: inline-block;
+    width: 17px;
+    margin: 0 13px 0 -30px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* BLOCK: ref (inline citation) -------------------------------------- */
+  .ref {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    font-weight: 600;
+    vertical-align: super;
+    line-height: 0;
+    color: var(--cite);
+    border: none;
+    padding: 0 1px;
+  }
+  /* .ref-next is set by the script at the end on a marker that directly
+     follows another one. A CSS sibling selector would also match two
+     markers with text between them. */
+  .ref-next::before {
+    content: ",";
+    color: var(--muted);
+    margin-right: 1px;
+  }
+
+  .ref:target {
+    background: color-mix(in oklab, var(--cite) 18%, transparent);
+  }
+  /* Source preview, built by the script at the end when a citation
+     marker is hovered, focused or tapped. */
+  .ref-pop {
+    position: fixed;
+    z-index: 25;
+    width: min(360px, calc(100vw - 32px));
+    padding: 14px 16px;
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    border-top: 2px solid var(--cite);
+    box-shadow: var(--shadow);
+    font-family: var(--serif);
+  }
+  .ref-pop[hidden] {
+    display: none;
+  }
+  .ref-pop .t {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .ref-pop .m {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .ref-pop .go {
+    display: inline-block;
+    font-family: var(--ui);
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+
+  /* BLOCK: quote ------------------------------------------------------- */
+  blockquote {
+    display: flex;
+    gap: 26px;
+    align-items: flex-start;
+    max-width: 780px;
+    margin: 34px 0 12px;
+  }
+  blockquote > i {
+    display: block;
+    width: 3px;
+    background: var(--accent);
+    align-self: stretch;
+    flex: none;
+  }
+  blockquote p {
+    font-size: 23px;
+    font-style: italic;
+    font-weight: 300;
+    line-height: 1.45;
+    color: var(--ink);
+    margin: 4px 0 0;
+  }
+  blockquote cite {
+    display: block;
+    font-family: var(--ui);
+    font-size: 13px;
+    font-style: normal;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+
+  /* BLOCK: figure ------------------------------------------------------ */
+  figure {
+    margin: 30px 0 0;
+  }
+  figure .frame {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 26px 24px;
+    overflow-x: auto;
+  }
+  figure svg,
+  figure .mermaid {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+    background: transparent;
+  }
+  figure figcaption {
+    margin-top: 12px;
+  }
+  /* Mermaid tags node text with class "label"; undo the page's .label style. */
+  figure .mermaid .label {
+    font-size: inherit;
+    letter-spacing: normal;
+    text-transform: none;
+  }
+
+  /* BLOCK: code -------------------------------------------------------- */
+  .code {
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    display: flex;
+    flex-direction: column;
+    margin: 30px 0 0;
+  }
+  .code header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--rule);
+    background: var(--panel-2);
+  }
+  .code header .lang {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .code pre {
+    margin: 0;
+    padding: 20px 18px;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    line-height: 1.68;
+    color: var(--ink-2);
+    overflow-x: auto;
+  }
+  .code .cm {
+    color: var(--muted);
+  }
+  .code .kw {
+    color: var(--cite);
+  }
+  .code .st {
+    color: var(--accent);
+  }
+
+  /* BLOCK: table ------------------------------------------------------- */
+  .wrap-x {
+    overflow-x: auto;
+    margin: 26px 0 12px;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    border: 1px solid var(--rule-2);
+  }
+  th {
+    font-family: var(--ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 12px 16px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--rule-2);
+  }
+  td {
+    padding: 15px 16px;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+  /* Numeric columns: right-aligned, tabular figures. Put units in the
+     column header, not in every cell. */
+  th.num,
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* BLOCK: stats ------------------------------------------------------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    border-top: 1px solid var(--rule);
+    border-left: 1px solid var(--rule);
+    margin: 26px 0 12px;
+  }
+  .stats > div {
+    padding: 22px 24px;
+    border-right: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .stats b {
+    font-family: var(--serif);
+    font-size: 38px;
+    font-weight: 300;
+    line-height: 1;
+    letter-spacing: -0.015em;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* BLOCK: chart ------------------------------------------------------- */
+  .chart {
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    padding: 26px 28px;
+    margin: 26px 0 12px;
+  }
+  .chart p.caption {
+    margin: 0;
+  }
+  .chart .rows {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 22px 0 16px;
+  }
+  .chart .row {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+  }
+  .chart .row > .k {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    width: 108px;
+    flex: none;
+    text-align: right;
+  }
+  .chart .row > .v {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .chart .bar {
+    height: 14px;
+    background: var(--cite);
+    border-radius: 0 4px 4px 0;
+    flex: none;
+    max-width: calc(100% - 64px);
+  }
+  .chart .n {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .chart .axis {
+    display: flex;
+    gap: 16px;
+  }
+  .chart .axis > i {
+    width: 108px;
+    flex: none;
+  }
+  .chart .axis > div {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .chart .axis hr {
+    background: var(--rule);
+  }
+  .chart .axis .ends {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* BLOCK: callout ----------------------------------------------------- */
+  .callout {
+    border: 1px solid var(--rule-2);
+    border-left: 3px solid var(--faint);
+    background: var(--panel);
+    padding: 20px 24px;
+    margin: 34px 0 0;
+  }
+  .callout p {
+    font-size: 16.5px;
+    line-height: 1.62;
+    max-width: 700px;
+    margin: 11px 0 0;
+  }
+  .callout.scope {
+    margin: 0 0 8px;
+    border-left-color: var(--cite);
+  }
+  .callout.scope dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 8px 20px;
+    margin: 14px 0 0;
+  }
+  .callout.scope dt {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    padding-top: 3px;
+  }
+  .callout.scope dd {
+    margin: 0;
+    font-size: 15.5px;
+    line-height: 1.55;
+    color: var(--ink-2);
+  }
+  .callout.caveat,
+  .callout.disagree {
+    border-color: color-mix(in oklab, var(--warn) 30%, var(--rule-2));
+    border-left-color: var(--warn);
+    background: color-mix(in oklab, var(--warn) 6%, var(--paper));
+  }
+  .callout.caveat .label,
+  .callout.disagree .label {
+    color: var(--warn);
+  }
+
+  /* BLOCK: timeline ---------------------------------------------------- */
+  .timeline {
+    display: flex;
+    flex-direction: column;
+    margin: 22px 0 0;
+  }
+  .timeline .ev {
+    display: flex;
+    gap: 22px;
+    align-items: flex-start;
+  }
+  .timeline .when {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--muted);
+    width: 44px;
+    flex: none;
+    padding-top: 1px;
+    font-variant-numeric: tabular-nums;
+  }
+  .timeline .ev:first-child .when {
+    color: var(--accent);
+  }
+  .timeline .spine {
+    width: 9px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    align-self: stretch;
+  }
+  .timeline .spine::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    background: var(--rule-2);
+    margin-top: 6px;
+    flex: none;
+  }
+  .timeline .ev:first-child .spine::before {
+    background: var(--accent);
+  }
+  .timeline .spine::after {
+    content: "";
+    width: 1px;
+    flex-grow: 1;
+    background: var(--rule-2);
+  }
+  .timeline .ev:last-child .spine::after {
+    display: none;
+  }
+  .timeline .what {
+    flex-grow: 1;
+    min-width: 0;
+    padding-bottom: 22px;
+    font-size: 16px;
+    line-height: 1.6;
+    color: var(--ink-2);
+  }
+  .timeline .ev:last-child .what {
+    padding-bottom: 0;
+  }
+
+  /* BLOCK: terms + questions ------------------------------------------- */
+  .grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 44px;
+    margin: 34px 0 0;
+  }
+  .terms {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    margin: 20px 0 0;
+  }
+  .terms div p {
+    font-size: 15.5px;
+    line-height: 1.58;
+    color: var(--ink-3);
+    margin: 0;
+  }
+  .questions {
+    list-style: none;
+    padding: 0;
+    margin: 20px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .questions li {
+    padding-left: 26px;
+    font-size: 15.5px;
+    line-height: 1.58;
+    color: var(--ink-3);
+  }
+  .questions li::before {
+    content: "";
+    display: inline-block;
+    width: 12px;
+    height: 1px;
+    margin: 0 14px 0 -26px;
+    vertical-align: middle;
+    background: var(--accent);
+  }
+
+  /* BLOCK: sources ----------------------------------------------------- */
+  .sources {
+    list-style: none;
+    padding: 0;
+    margin: 24px 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .sources li {
+    display: flex;
+    gap: 18px;
+    align-items: flex-start;
+  }
+  .sources .n {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--muted);
+    width: 22px;
+    flex: none;
+    padding-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .sources li > div {
+    min-width: 0;
+  }
+  .sources .t {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .sources .m {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .sources li:target .t a {
+    background: color-mix(in oklab, var(--cite) 14%, transparent);
+  }
+  /* "Cited in" line, built by the script: links back to the first
+     citation of this source in each section. */
+  .sources .back {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .sources .back a {
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  /* In-body contents, filled by the script from the sidebar. Shown on
+     narrow screens only, where the sidebar is a drawer. */
+  .toc-inline {
+    display: none;
+  }
+
+  /* Back-to-top button, shown by the script after a few screens. */
+  .to-top {
+    position: fixed;
+    z-index: 12;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    font-family: var(--ui);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .to-top[hidden] {
+    display: none;
+  }
+
+  .divider {
+    margin: 72px 0 34px;
+  }
+
+  /* --- narrow screens: drawer ------------------------------------------ */
+  @media (max-width: 900px) {
+    :root {
+      --gutter: 20px;
+    }
+    .topbar {
+      display: flex;
+    }
+    .layout {
+      display: block;
+    }
+    main {
+      padding-block: 32px 64px;
+      padding-left: max(var(--gutter), env(safe-area-inset-left, 0px));
+      padding-right: max(var(--gutter), env(safe-area-inset-right, 0px));
+    }
+    h1 {
+      font-size: 27px;
+      margin-bottom: 28px;
+    }
+    h2 {
+      font-size: 22px;
+      scroll-margin-top: 80px;
+    }
+    section[id],
+    [id^="src-"] {
+      scroll-margin-top: 80px;
+    }
+    p {
+      font-size: 17px;
+    }
+    .panel {
+      padding: 24px 20px 26px;
+    }
+    .panel .lead {
+      font-size: 18px;
+    }
+
+    .sidebar {
+      position: fixed;
+      z-index: 20;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(320px, 86vw);
+      border-right: none;
+      border-left: 1px solid var(--rule);
+      box-shadow: var(--shadow);
+      transform: translateX(100%);
+      visibility: hidden;
+      transition:
+        transform 0.25s ease,
+        visibility 0s linear 0.25s;
+    }
+    .sidebar-inner {
+      position: static;
+      height: 100%;
+      max-height: none;
+      padding-top: calc(16px + env(safe-area-inset-top, 0px));
+      padding-right: calc(24px + env(safe-area-inset-right, 0px));
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+      padding-left: 24px;
+      gap: 28px;
+    }
+    .drawer-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-right: -12px;
+    }
+    .drawer-head .label {
+      font-size: 12px;
+    }
+    .toc > .label {
+      display: none;
+    }
+    .toc a {
+      font-size: 15px;
+      padding-block: 4px;
+    }
+    .scrim {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 15;
+      background: var(--scrim);
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 0.25s ease,
+        visibility 0s linear 0.25s;
+    }
+    html.drawer-open .sidebar {
+      transform: none;
+      visibility: visible;
+      transition: transform 0.25s ease;
+    }
+    html.drawer-open .scrim {
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.25s ease;
+    }
+    html.drawer-open body {
+      overflow: hidden;
+    }
+    /* set briefly by the script when crossing the breakpoint, so the
+       sidebar does not visibly slide away during a window resize */
+    html.no-anim .sidebar,
+    html.no-anim .scrim {
+      transition: none;
+    }
+
+    .toc-inline {
+      display: block;
+      margin: 0 0 32px;
+    }
+    .toc-inline ol {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+      border-top: 1px solid var(--rule);
+    }
+    .toc-inline a {
+      display: block;
+      padding: 10px 0;
+      font-family: var(--ui);
+      font-size: 15px;
+      line-height: 1.4;
+      color: var(--ink-2);
+      border-bottom: 1px solid var(--rule);
+    }
+    .toc-inline .n {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 10px;
+    }
+    /* Keep the row label visible while a wide table scrolls sideways. */
+    .wrap-x th:first-child,
+    .wrap-x td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      box-shadow: inset -1px 0 var(--rule-2);
+    }
+    .wrap-x td:first-child {
+      background: var(--paper);
+    }
+    /* A group row spanning the table: keep its label in view instead. */
+    .wrap-x td[colspan] {
+      position: static;
+      box-shadow: none;
+    }
+    .wrap-x td[colspan] > * {
+      position: sticky;
+      left: 16px;
+    }
+
+    .grid-2 {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 36px;
+    }
+    .chart {
+      padding: 20px 16px;
+    }
+    .chart .row > .k,
+    .chart .axis > i {
+      width: 84px;
+    }
+    blockquote {
+      gap: 18px;
+    }
+    blockquote p {
+      font-size: 20px;
+    }
+    .callout.scope dl {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+    .callout.scope dd {
+      margin-bottom: 8px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sidebar,
+    .scrim,
+    html.drawer-open .sidebar,
+    html.drawer-open .scrim {
+      transition: none;
+    }
+  }
+
+  @media print {
+    .topbar,
+    .scrim,
+    .sidebar,
+    .skip,
+    .toc-inline,
+    .ref-pop,
+    .to-top {
+      display: none !important;
+    }
+    .layout {
+      display: block;
+    }
+    main {
+      padding: 0;
+    }
+    main > * {
+      max-width: none !important;
+    }
+    .sources .t a::after {
+      content: " " attr(href);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    figure,
+    .callout,
+    table,
+    .code,
+    .chart,
+    .timeline {
+      break-inside: avoid;
+    }
+  }
+</style>
+
+<a class="skip" href="#report">Skip to report</a>
+
+<!-- Top bar: shown on narrow screens only. -->
+<header class="topbar">
+  <span class="name">{{REPORT_NAME}}</span>
+  <button
+    class="icon-btn"
+    id="menu-open"
+    type="button"
+    aria-controls="sidebar"
+    aria-expanded="false"
+    aria-label="Open contents"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+      <path d="M4 7h16M4 12h16M4 17h16" />
+    </svg>
+  </button>
+</header>
+
+<div class="layout">
+  <!-- ================= SIDEBAR (required) ================= -->
+  <aside class="sidebar" id="sidebar" aria-label="Contents and report facts">
+    <div class="sidebar-inner">
+      <div class="drawer-head">
+        <span class="label">Contents</span>
+        <button class="icon-btn" id="menu-close" type="button" aria-label="Close contents">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <nav class="toc" aria-label="Contents">
+        <div class="label">Contents</div>
+        <a href="#summary" aria-current="true">Summary</a>
+        <a href="#s1"><span><span class="n">01</span>{{SECTION_1_TITLE}}</span></a>
+        <a href="#s2"><span><span class="n">02</span>{{SECTION_2_TITLE}}</span></a>
+        <!-- one <a> per section, numbered to match the section dividers -->
+        <a href="#terms">Key terms</a>
+        <a href="#questions">Open questions</a>
+        <a href="#sources">Sources</a>
+      </nav>
+
+      <hr />
+
+      <dl class="facts">
+        <div class="label">At a glance</div>
+        <div class="fact">
+          <dt>Researched</dt>
+          <dd>{{RESEARCHED_DATES}}</dd>
+        </div>
+        <div class="fact">
+          <dt>Confidence</dt>
+          <dd>{{CONFIDENCE}}</dd>
+        </div>
+        <div class="fact">
+          <dt>Sources</dt>
+          <dd>{{SOURCE_COUNT}}</dd>
+        </div>
+        <div class="fact">
+          <dt>Research notes</dt>
+          <dd>{{NOTE_COUNT}}</dd>
+        </div>
+        <div class="fact">
+          <dt>Read time</dt>
+          <dd>~{{READ_MINUTES}} min</dd>
+        </div>
+        <div class="fact">
+          <dt>Depth</dt>
+          <dd>{{DEPTH}}</dd>
+        </div>
+      </dl>
+
+      <hr />
+
+      <div>
+        <div class="label">Tags</div>
+        <div class="tags">
+          <span>{{TAG}}</span><span>{{TAG}}</span><span>{{TAG}}</span>
+        </div>
+      </div>
+    </div>
+  </aside>
+  <div class="scrim" id="scrim" aria-hidden="true"></div>
+
+  <!-- ================= REPORT ================= -->
+  <main id="report">
+    <!-- BLOCK: question (required) -->
+    <div class="label">Question researched</div>
+    <h1 tabindex="-1">{{QUESTION}}</h1>
+
+    <!-- BLOCK: lead + takeaways (required). Each takeaway links to the
+         section that supports it (href and number match that section) and
+         states its confidence: High, Medium or Low, with data-level set to
+         high, medium or low. -->
+    <section class="panel" id="summary">
+      <div class="label">Summary</div>
+      <p class="lead">{{LEAD_PARAGRAPH}}</p>
+      <ul class="takeaways">
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s1">&rarr; 01</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s1">&rarr; 01</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s2">&rarr; 02</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
+      </ul>
+    </section>
+
+    <!-- In-body contents for narrow screens. Filled from the sidebar by the
+         script at the end. Keep as is. -->
+    <nav class="toc-inline" id="toc-inline" aria-label="Contents (in page)"></nav>
+
+    <!-- BLOCK: scope (required). What was covered, what was left out and
+         why, and decisions that shape the result. -->
+    <aside class="callout scope">
+      <div class="label">Scope and method</div>
+      <dl>
+        <dt>Covered</dt>
+        <dd>{{SCOPE_COVERED}}</dd>
+        <dt>Not covered</dt>
+        <dd>{{SCOPE_EXCLUDED}}</dd>
+        <dt>Decisions</dt>
+        <dd>{{SCOPE_DECISIONS}}</dd>
+      </dl>
+    </aside>
+
+    <!-- ================= BODY: repeat per section =================
+         The h2 states the section's finding as a short sentence, not a
+         topic label. -->
+    <div class="sec-rule"><span>01</span><i></i></div>
+    <h2 id="s1">{{SECTION_1_TITLE}}</h2>
+    <p>
+      {{SECTION_PROSE}} Cite every sourced claim with a marker like
+      this<a class="ref" href="#src-1" aria-label="Source 1">1</a>. Two sources
+      in a row<a class="ref" href="#src-1" aria-label="Source 1">1</a><a class="ref" href="#src-2" aria-label="Source 2">2</a>
+      get a comma between them automatically.
+    </p>
+
+    <!-- BLOCK: list (optional). ul.plain for bullets, ol.plain for steps. -->
+    <ul class="plain">
+      <li>{{LIST_ITEM}}</li>
+      <li>{{LIST_ITEM}}</li>
+    </ul>
+
+    <!-- BLOCK: quote (optional). Verbatim text only. Delete <cite> and
+         caption it as the report's own reading for a "key claim" variant. -->
+    <blockquote>
+      <i></i>
+      <div>
+        <p>{{VERBATIM_QUOTE}}</p>
+        <cite>{{QUOTE_AUTHOR}} &middot; {{QUOTE_PUBLICATION}}, {{QUOTE_YEAR}}<a class="ref" href="#src-1" aria-label="Source 1">1</a></cite>
+      </div>
+    </blockquote>
+
+    <div class="sec-rule"><span>02</span><i></i></div>
+    <h2 id="s2">{{SECTION_2_TITLE}}</h2>
+    <p>{{SECTION_PROSE}}</p>
+
+    <!-- BLOCK: figure (optional). Mermaid renders natively in a Claude
+         Artifact, and through the mermaid script at the end when the report
+         is opened as a file. For pixel control, put an inline <svg> in .frame
+         instead. -->
+    <figure>
+      <div class="frame">
+        <pre class="mermaid">
+flowchart LR
+  A[{{NODE}}] --> B[{{NODE}}]
+  B --> C[{{NODE}}]
+        </pre>
+      </div>
+      <figcaption class="caption">
+        <span class="n">Fig. 1</span>{{FIGURE_CAPTION}}
+      </figcaption>
+    </figure>
+
+    <!-- BLOCK: code (optional). Short excerpts only. -->
+    <div class="code">
+      <header>
+        <span class="lang">{{CODE_LANGUAGE}}</span>
+        <span class="caption">{{CODE_NOTE}}</span>
+      </header>
+      <pre><span class="cm"># {{CODE_COMMENT}}</span>
+{{CODE}}</pre>
+    </div>
+
+    <!-- BLOCK: table (optional). Give numeric columns class="num" on the
+         th and every td, and put the unit in the header. -->
+    <div class="wrap-x">
+      <table>
+        <thead>
+          <tr>
+            <th>{{COLUMN}}</th>
+            <th>{{COLUMN}}</th>
+            <th class="num">{{NUMERIC_COLUMN_WITH_UNIT}}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><h3>{{ROW_LABEL}}</h3></td>
+            <td>{{CELL}}</td>
+            <td class="num">{{NUMBER}}</td>
+          </tr>
+          <tr>
+            <td><h3>{{ROW_LABEL}}</h3></td>
+            <td>{{CELL}}</td>
+            <td class="num">{{NUMBER}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="caption"><span class="n">Table 1</span>{{TABLE_CAPTION}}</p>
+
+    <!-- BLOCK: stats (optional). Every number needs a source marker. -->
+    <div class="stats">
+      <div><b>{{STAT_VALUE}}</b><span class="caption">{{STAT_MEANING}}<a class="ref" href="#src-1" aria-label="Source 1">1</a></span></div>
+      <div><b>{{STAT_VALUE}}</b><span class="caption">{{STAT_MEANING}}<a class="ref" href="#src-1" aria-label="Source 1">1</a></span></div>
+      <div><b>{{STAT_VALUE}}</b><span class="caption">{{STAT_MEANING}}<a class="ref" href="#src-1" aria-label="Source 1">1</a></span></div>
+    </div>
+
+    <!-- BLOCK: chart (optional). One series, values labelled directly.
+         Set each .bar width as a % of the largest value. -->
+    <div class="chart">
+      <h3>{{CHART_TITLE}}</h3>
+      <p class="caption">{{CHART_UNIT_AND_DIRECTION}}</p>
+      <div class="rows">
+        <div class="row">
+          <div class="k">{{CHART_LABEL}}</div>
+          <div class="v"><div class="bar" style="width: 96%"></div><span class="n">{{CHART_VALUE}}</span></div>
+        </div>
+        <div class="row">
+          <div class="k">{{CHART_LABEL}}</div>
+          <div class="v"><div class="bar" style="width: 58%"></div><span class="n">{{CHART_VALUE}}</span></div>
+        </div>
+        <div class="row">
+          <div class="k">{{CHART_LABEL}}</div>
+          <div class="v"><div class="bar" style="width: 22%"></div><span class="n">{{CHART_VALUE}}</span></div>
+        </div>
+      </div>
+      <div class="axis">
+        <i></i>
+        <div>
+          <hr />
+          <div class="ends"><span>0</span><span>{{CHART_MAX}}</span></div>
+        </div>
+      </div>
+      <p class="caption" style="margin-top: 16px">Source<a class="ref" href="#src-1" aria-label="Source 1">1</a></p>
+    </div>
+
+    <!-- BLOCK: callout (optional). Class: "callout" (note),
+         "callout caveat" (low confidence, single source) or
+         "callout disagree" (sources conflict). -->
+    <aside class="callout disagree">
+      <div class="label">Sources disagree</div>
+      <p>{{DISAGREEMENT}}</p>
+    </aside>
+
+    <!-- BLOCK: timeline (optional). Only if the history matters. -->
+    <div class="label" style="margin-top: 72px">Timeline</div>
+    <div class="timeline">
+      <div class="ev">
+        <div class="when">{{YEAR}}</div>
+        <div class="spine"></div>
+        <div class="what">{{EVENT}}</div>
+      </div>
+      <div class="ev">
+        <div class="when">{{YEAR}}</div>
+        <div class="spine"></div>
+        <div class="what">{{EVENT}}</div>
+      </div>
+    </div>
+
+    <!-- BLOCK: terms (optional) + questions (required). If you drop the
+         terms, keep the grid with questions only. -->
+    <hr class="divider" />
+    <div class="grid-2">
+      <section id="terms">
+        <div class="label">Key terms</div>
+        <div class="terms">
+          <div>
+            <h3>{{TERM}}</h3>
+            <p>{{TERM_DEFINITION}}</p>
+          </div>
+          <div>
+            <h3>{{TERM}}</h3>
+            <p>{{TERM_DEFINITION}}</p>
+          </div>
+        </div>
+      </section>
+      <section id="questions">
+        <div class="label">Open questions</div>
+        <ul class="questions">
+          <li>{{OPEN_QUESTION}}</li>
+          <li>{{OPEN_QUESTION}}</li>
+        </ul>
+      </section>
+    </div>
+
+    <!-- BLOCK: sources (required). Numbered in order of first citation. -->
+    <hr class="divider" />
+    <section id="sources">
+      <div class="label">Source index</div>
+      <ol class="sources">
+        <li id="src-1">
+          <span class="n">1</span>
+          <div>
+            <div class="t"><a href="{{SOURCE_URL}}">{{SOURCE_TITLE}}</a>, {{SOURCE_AUTHOR}}, {{SOURCE_YEAR}}</div>
+            <div class="m">{{SOURCE_DOMAIN}} &middot; {{SOURCE_TYPE}} &middot; accessed {{SOURCE_ACCESSED}}</div>
+          </div>
+        </li>
+        <li id="src-2">
+          <span class="n">2</span>
+          <div>
+            <div class="t"><a href="{{SOURCE_URL}}">{{SOURCE_TITLE}}</a>, {{SOURCE_AUTHOR}}, {{SOURCE_YEAR}}</div>
+            <div class="m">{{SOURCE_DOMAIN}} &middot; {{SOURCE_TYPE}} &middot; accessed {{SOURCE_ACCESSED}}</div>
+          </div>
+        </li>
+      </ol>
+    </section>
+  </main>
+</div>
+
+<!-- Back-to-top button. Shown by the script on long pages. Keep as is. -->
+<button class="to-top" id="to-top" type="button" hidden>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+  Top
+</button>
+
+<script>
+  // Drawer (narrow screens) and contents highlighting. Keep as is.
+  (() => {
+    const root = document.documentElement;
+    const openBtn = document.getElementById("menu-open");
+    const closeBtn = document.getElementById("menu-close");
+    const scrim = document.getElementById("scrim");
+    const sidebar = document.getElementById("sidebar");
+    const narrow = matchMedia("(max-width: 900px)");
+
+    const setOpen = (open) => {
+      const wasOpen = root.classList.contains("drawer-open");
+      root.classList.toggle("drawer-open", open);
+      openBtn.setAttribute("aria-expanded", String(open));
+      if (open) closeBtn.focus();
+      else if (wasOpen && narrow.matches) openBtn.focus();
+    };
+
+    openBtn.addEventListener("click", () => setOpen(true));
+    closeBtn.addEventListener("click", () => setOpen(false));
+    scrim.addEventListener("click", () => setOpen(false));
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && root.classList.contains("drawer-open")) setOpen(false);
+    });
+    sidebar.querySelectorAll(".toc a").forEach((a) =>
+      a.addEventListener("click", () => {
+        if (narrow.matches) setOpen(false);
+      }),
+    );
+    narrow.addEventListener("change", () => {
+      root.classList.add("no-anim");
+      setOpen(false);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => root.classList.remove("no-anim")),
+      );
+    });
+
+    const links = [...document.querySelectorAll(".toc a")];
+    const targets = links
+      .map((a) => document.querySelector(a.getAttribute("href")))
+      .filter(Boolean);
+    if (!targets.length || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        const hit = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (!hit) return;
+        links.forEach((a) => a.removeAttribute("aria-current"));
+        const link = links.find((a) => a.getAttribute("href") === "#" + hit.target.id);
+        if (link) link.setAttribute("aria-current", "true");
+      },
+      { rootMargin: "-10% 0px -70% 0px" },
+    );
+    targets.forEach((t) => io.observe(t));
+  })();
+</script>
+
+<script>
+  // Citations and long-page navigation. Keep as is.
+  // - Commas between citation markers that sit side by side.
+  // - Source preview when a marker is hovered, focused or tapped.
+  // - "Cited in" back-links under each source in the index.
+  // - In-body contents on narrow screens and a back-to-top button.
+  (() => {
+    const main = document.getElementById("report");
+    const refs = [...document.querySelectorAll("a.ref")];
+
+    // Commas: a marker that directly follows another (only whitespace between).
+    refs.forEach((ref) => {
+      let prev = ref.previousSibling;
+      while (prev && prev.nodeType === 3 && !prev.textContent.trim()) prev = prev.previousSibling;
+      if (prev && prev.nodeType === 1 && prev.classList.contains("ref")) ref.classList.add("ref-next");
+    });
+
+    // The section a marker sits in, labelled by its section number.
+    const sectionOf = (el) => {
+      if (el.closest("#summary")) return "Summary";
+      let top = el;
+      while (top.parentElement && top.parentElement !== main) top = top.parentElement;
+      for (let n = top; n; n = n.previousElementSibling) {
+        if (n.tagName === "H2") {
+          const rule = n.previousElementSibling;
+          return rule && rule.classList.contains("sec-rule") ? rule.textContent.trim() : n.textContent.trim();
+        }
+      }
+      return "Intro";
+    };
+
+    // Back-links: the first citation of each source in each section.
+    const firstBySource = new Map();
+    refs.forEach((ref, i) => {
+      const src = (ref.getAttribute("href") || "").slice(1);
+      if (!src) return;
+      ref.id = ref.id || "cite-" + (i + 1);
+      const label = sectionOf(ref);
+      if (!firstBySource.has(src)) firstBySource.set(src, new Map());
+      const seen = firstBySource.get(src);
+      if (!seen.has(label)) seen.set(label, ref.id);
+    });
+    firstBySource.forEach((seen, src) => {
+      const body = document.querySelector("#" + CSS.escape(src) + " > div");
+      if (!body) return;
+      const back = document.createElement("div");
+      back.className = "back";
+      back.textContent = "Cited in";
+      seen.forEach((id, label) => {
+        const a = document.createElement("a");
+        a.href = "#" + id;
+        a.textContent = label;
+        back.appendChild(a);
+      });
+      body.appendChild(back);
+    });
+
+    // Source preview.
+    const pop = document.createElement("div");
+    pop.className = "ref-pop";
+    pop.id = "ref-pop";
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-label", "Source");
+    pop.hidden = true;
+    document.body.appendChild(pop);
+    let current = null;
+    let hideTimer = 0;
+    let lastPointer = "mouse";
+    let quiet = false;
+
+    const show = (ref) => {
+      clearTimeout(hideTimer);
+      const src = document.getElementById((ref.getAttribute("href") || "").slice(1));
+      if (!src) return;
+      const t = src.querySelector(".t");
+      const m = src.querySelector(".m");
+      pop.innerHTML = "";
+      if (t) pop.appendChild(Object.assign(document.createElement("div"), { className: "t", innerHTML: t.innerHTML }));
+      if (m) pop.appendChild(Object.assign(document.createElement("div"), { className: "m", innerHTML: m.innerHTML }));
+      const go = Object.assign(document.createElement("a"), { className: "go", href: "#" + src.id });
+      go.textContent = "Source " + ref.textContent.trim() + " in the index \u2192";
+      go.addEventListener("click", () => hide(true));
+      pop.appendChild(go);
+      if (current) current.removeAttribute("aria-describedby");
+      current = ref;
+      ref.setAttribute("aria-describedby", "ref-pop");
+      pop.hidden = false;
+      const r = ref.getBoundingClientRect();
+      const w = pop.offsetWidth;
+      const h = pop.offsetHeight;
+      const left = Math.min(Math.max(16, r.left - 24), innerWidth - w - 16);
+      let top = r.bottom + 8;
+      if (top + h > innerHeight - 16) top = Math.max(16, r.top - h - 8);
+      pop.style.left = left + "px";
+      pop.style.top = top + "px";
+    };
+    const hide = (now) => {
+      clearTimeout(hideTimer);
+      const run = () => {
+        pop.hidden = true;
+        if (current) current.removeAttribute("aria-describedby");
+        current = null;
+      };
+      if (now) run();
+      else hideTimer = setTimeout(run, 200);
+    };
+
+    document.addEventListener("pointerdown", (e) => {
+      lastPointer = e.pointerType;
+      if (!pop.hidden && !pop.contains(e.target) && !e.target.closest("a.ref")) hide(true);
+    });
+    refs.forEach((ref) => {
+      ref.addEventListener("pointerenter", (e) => {
+        if (e.pointerType === "mouse") show(ref);
+      });
+      ref.addEventListener("pointerleave", (e) => {
+        if (e.pointerType === "mouse") hide();
+      });
+      ref.addEventListener("focus", () => {
+        // Keyboard focus only; taps are handled on click.
+        if (!quiet && ref.matches(":focus-visible")) show(ref);
+      });
+      ref.addEventListener("click", (e) => {
+        // Touch and pen: the first tap shows the preview instead of jumping.
+        if (lastPointer === "mouse") return;
+        if (current === ref && !pop.hidden) return;
+        e.preventDefault();
+        show(ref);
+      });
+    });
+    pop.addEventListener("pointerenter", () => clearTimeout(hideTimer));
+    pop.addEventListener("pointerleave", (e) => {
+      if (e.pointerType === "mouse") hide();
+    });
+    document.addEventListener("focusout", (e) => {
+      if (pop.hidden) return;
+      const to = e.relatedTarget;
+      if (to && (to === current || pop.contains(to))) return;
+      hide();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || pop.hidden) return;
+      const ref = current;
+      const inside = pop.contains(document.activeElement);
+      hide(true);
+      // Return focus from the preview to its marker without reopening it.
+      if (ref && inside) {
+        quiet = true;
+        ref.focus();
+        quiet = false;
+      }
+    });
+    addEventListener("scroll", () => {
+      if (!pop.hidden) hide(true);
+    }, { passive: true });
+
+    // In-body contents, copied from the sidebar (Summary left out: it is
+    // directly above).
+    const inline = document.getElementById("toc-inline");
+    if (inline) {
+      const ol = document.createElement("ol");
+      document.querySelectorAll("#sidebar .toc > a").forEach((a) => {
+        if (a.getAttribute("href") === "#summary") return;
+        const link = a.cloneNode(true);
+        link.removeAttribute("aria-current");
+        const li = document.createElement("li");
+        li.appendChild(link);
+        ol.appendChild(li);
+      });
+      const label = Object.assign(document.createElement("div"), { className: "label", textContent: "Contents" });
+      inline.append(label, ol);
+    }
+
+    // Back to top, after about three screens.
+    const top = document.getElementById("to-top");
+    if (top) {
+      top.setAttribute("aria-label", "Back to top");
+      const update = () => (top.hidden = scrollY < innerHeight * 3);
+      addEventListener("scroll", update, { passive: true });
+      update();
+      top.addEventListener("click", () => {
+        const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+        document.querySelector("#report h1")?.focus({ preventScroll: true });
+      });
+    }
+  })();
+</script>
+
+<script>
+  // Mermaid outside a Claude Artifact. An artifact renders pre.mermaid
+  // natively inside a frame, so the library only loads when the report is
+  // opened directly as a file and has diagrams. Needs a network connection;
+  // without one the diagram source stays visible. Keep as is.
+  (() => {
+    if (window.self !== window.top) return;
+    if (!document.querySelector("pre.mermaid")) return;
+    const s = document.createElement("script");
+    s.src = "https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.min.js";
+    s.onload = () => {
+      const t = document.documentElement.dataset.theme;
+      const dark = t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+      mermaid.initialize({ startOnLoad: false, theme: dark ? "dark" : "neutral" });
+      mermaid.run({ querySelector: "pre.mermaid" });
+    };
+    document.head.appendChild(s);
+  })();
+</script>
