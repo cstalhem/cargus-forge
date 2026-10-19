@@ -19,10 +19,13 @@ Issue: $ARGUMENTS
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop. Name the criterion that fails and what you found, and ask for slice. Do not push or open a PR.
+  5. The issue fails the size test: stop. Name the criterion that fails and what you found. Commit and push the work so far with `git push -u origin <branch>`, but open no PR. Then:
+     - a sub-issue: call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
+     - a single issue: tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md`, `docs/agents/commands.md` and `docs/agents/issue-tracker.md`. Run `gh issue view <n> --json title,body,state,parent,blockedBy`. Stop and say why if the issue is closed, is blocked by an open issue, or has no `## Scenarios` or `## Verify` section.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md`, `docs/agents/commands.md` and `docs/agents/issue-tracker.md`. Run `gh issue view <n> --json title,body,state,parent,blockedBy`. Stop and say why if the issue is closed or has no `## Scenarios` or `## Verify` section.
+   - **Blockers:** if an open issue blocks a single issue, stop. If one blocks a sub-issue, list the blockers and ask the user to confirm that their PRs have merged into the base, because a sub-issue stays open until the final PR.
    - **Base:** for a sub-issue, the branch that `gh issue develop --list <parent>` shows. Stop if the parent has none. For a single issue, the default branch in `issue-tracker.md`, else `main`.
 2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --git-dir`, `git rev-parse --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes` and `gh issue develop --list <n>`. The session is in a worktree when the git dir and the common dir differ.
    - **On the issue's branch:** resume. Read `git log --oneline origin/<base>..HEAD` to see what is done.
