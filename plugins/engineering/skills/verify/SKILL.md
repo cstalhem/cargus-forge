@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Grade a PR against its issue's scenarios, or a feature branch against its umbrella issue's scenarios, with a fresh-context agent. Posts one comment with a verdict, and marks a passing PR ready. execute and ship call it.
-argument-hint: <#PR or #umbrella issue>
+argument-hint: "<#PR or #umbrella issue>"
 user-invocable: false
 allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
 ---
@@ -45,8 +45,8 @@ Target: $ARGUMENTS
      ### Observations (non-blocking)
      ### Verdict: **PASS** or **FAIL**
      ```
-4. **Post.** Post the agent's report as it is, through a quoted heredoc and no temp file. PR scope: `gh pr comment <n> --body-file - <<'REPORT'`. Umbrella scope: `gh issue comment <n> --body-file - <<'REPORT'`.
-5. **Result.**
+4. **Post.** Write the agent's report as it is to a file, as the rules say. PR scope: `gh pr comment <n> --body-file <path>`. Umbrella scope: `gh issue comment <n> --body-file <path>`.
+5. **Result.** Start this step only after the comment from step 4 is posted. If posting failed, stop and say so.
    - **PR scope, PASS:** run `gh pr ready <n>`.
    - **PR scope, FAIL:** leave the PR as a draft, and return each failing scenario with its evidence to the caller.
    - **Umbrella scope:** return the verdict and each gap to the caller.
