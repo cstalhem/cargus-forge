@@ -72,4 +72,18 @@ root=$(fixture)
 printf '\n## Other\n- **Beta** (`plugins/beta`): Something else.\n' >> "$root/README.md"
 check "README lines outside the Plugin Index are ignored" "$root" 0 ""
 
+root=$(fixture)
+jq '.plugins |= map(select(.name != "beta"))' "$root/.claude-plugin/marketplace.json" > "$tmp/m.json"
+mv "$tmp/m.json" "$root/.claude-plugin/marketplace.json"
+check "missing from marketplace.json" "$root" 1 "beta: missing from marketplace.json"
+
+root=$(fixture)
+edit "$root/README.md" '/plugins\/alpha/d'
+check "missing from README" "$root" 1 "alpha: missing from README.md"
+
+root=$(fixture)
+edit "$root/README.md" '/plugins\/alpha/d'
+printf '\n## Other\n- **Alpha** (`plugins/alpha`): The alpha plugin.\n' >> "$root/README.md"
+check "missing from the Plugin Index but listed elsewhere" "$root" 1 "alpha: missing from README.md"
+
 [[ $failures -eq 0 ]] || { echo "$failures failed"; exit 1; }
