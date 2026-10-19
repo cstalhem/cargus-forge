@@ -5,9 +5,9 @@ Plugins for knowledge management, note-taking workflows, and Claude Code product
 
 ## Plugin Index
 - **Obsidian** (`plugins/obsidian`): Daily notes, meeting processing, task management, and note creation for Obsidian vaults.
-- **Knowledge System** (`plugins/knowledge-system`): Bootstrap a three-tier knowledge system (CLAUDE.md, rules, skills) for any project with guided research and adaptive questioning.
-- **Codex Review** (`plugins/codex-review`): Iteratively refine a plan document with feedback from the Codex CLI until it has no blocking concerns left.
-- **ADR Management** (`plugins/adr-management`): Create and maintain Architecture Decision Records (ADRs) as living documents, with a litmus test for what earns a record.
+- **Knowledge System** (`plugins/knowledge-system`): Bootstrap and maintain a three-tier knowledge system (CLAUDE.md, rules, skills) with retrieval, promotion, and self-healing.
+- **Codex Review** (`plugins/codex-review`): Iteratively refine a plan document by looping with the Codex CLI (a second, independent model) until it has no blocking feedback left.
+- **ADR Management** (`plugins/adr-management`): Create and maintain Architecture Decision Records (ADRs) as living documents — with a litmus test for what earns a record and rules for editing, reversing, and deprecating decisions.
 - **Research** (`plugins/research`): Research a question with parallel researcher agents that write sourced, cross-checked notes, then compile them into one HTML report.
 
 ## Plugin Ideas (Todo)
