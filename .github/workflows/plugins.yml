@@ -1,0 +1,46 @@
+# Plugin checks for every PR into main. No path filters: a required check that a
+# path filter skips never reports, and that blocks the PR.
+name: plugins
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install Claude Code
+        run: |
+          curl -fsSL https://claude.ai/install.sh | bash
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Validate each plugin and the marketplace root
+        run: |
+          status=0
+          for dir in plugins/*/ .; do
+            if ! claude plugin validate --strict "$dir"; then
+              echo "::error::claude plugin validate --strict failed for $dir"
+              status=1
+            fi
+          done
+          exit "$status"
+
+  descriptions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: scripts/check-descriptions.sh
+
+  version-bump:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - run: scripts/check-version-bump.sh "origin/$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
