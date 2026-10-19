@@ -17,4 +17,4 @@ The test needs scenarios and settled questions, so it runs only after the questi
 Where it runs:
 - **discuss:** pass gives a single issue, fail gives an umbrella issue.
 - **slice:** each sub-issue must pass. A sub-issue that fails is split again.
-- **execute:** a failure found during the work stops execute, and the issue goes back to slice.
+- **execute:** a failure found during the work stops execute, which pushes the work. A sub-issue goes back to slice, and a single issue goes back to discuss.
