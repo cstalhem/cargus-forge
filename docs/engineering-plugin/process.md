@@ -57,7 +57,7 @@ If the verify command proves only part of a scenario, for example not its failur
 The test needs scenarios and settled questions, so **discuss always comes first**. The test then runs at three points:
 - **The end of discuss.** If the request passes, discuss writes a single issue and you go to Build. If it fails, discuss writes an umbrella issue and you go on with Shape.
 - **slice.** Each sub-issue must pass. A sub-issue that fails is split again.
-- **execute.** If the agent finds a failure, it stops and sends the issue back to slice.
+- **execute.** If the agent finds a failure, it stops and pushes the work. A sub-issue goes back to slice, which narrows it and creates sub-issues for the rest. A single issue goes back to discuss.
 
 An issue that already has scenarios and passes the test skips discuss. Sub-issues from slice are like this.
 
@@ -107,7 +107,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop, and call slice.
+  5. The issue fails the size test: stop, and push the work without a PR. For a sub-issue, call slice. For a single issue, send it back to discuss.
 - **Later:** inject the issue and the commands through scripts (ADR-004), and add `status: in progress`.
 
 ### verify, issue scope (Build; execute calls it)
