@@ -42,4 +42,4 @@ Issue: $ARGUMENTS
    - `## What it delivers`: the changes, file by file;
    - `## Verify`: each command and its result, and what the commands do not prove;
    - `## Deviations`: only if a deviation rule was used, one line for each.
-6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number.
+6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number. If verify fails, fix what its report names and go back to step 4. If it fails a second time, stop and ask.
