@@ -50,10 +50,12 @@ The working folder is laid out like this:
 
 ### 3. Plan the report
 
-1. Write the answer to the research question first, in one paragraph. That becomes the lead.
-2. Pick 3 to 5 takeaways: one-sentence claims, each backed by the notes.
+1. Write the answer to the research question first, in at most 60 words. That becomes the lead. Readers who stop after the summary must still get the answer.
+2. Pick 3 to 5 takeaways: one-sentence claims of at most 25 words, each backed by the notes. Each takeaway names the section that supports it and has its own confidence (see Confidence wording). The lead and takeaways together should fit on one screen.
 3. Group the findings into sections by theme, not by note. A section that only restates one note is a sign the grouping is wrong.
-4. Map note content to report blocks:
+4. Write each section heading as the section's finding, in one short sentence with the key words first: "Evals decide which pilots reach production", not "Evals and quality control". Readers scan the headings first, and a topic label tells them nothing.
+5. Keep to the length budget for the main content (summary through open questions, sources excluded): `Overview` at most 3,000 words, `Deep dive` at most 8,000. Cut repetition and secondary detail to stay within it; the notes keep the full detail.
+6. Map note content to report blocks:
 
 | From the notes | Goes to |
 |---|---|
@@ -78,12 +80,15 @@ The template is artifact-ready: it has no `<!doctype>`, `<html>`, `<head>` or `<
 - **Optional blocks:** list, quote, figure, code, table, stats, chart, callout, timeline, key terms. Use one only when the content calls for it. Delete every block you do not use, including its comment.
 - **Keep as is:** the top bar, the drawer markup (`drawer-head`, `scrim`) and both scripts at the end. They provide the mobile menu, contents highlighting, and diagram rendering when the report is opened as a file. Put the report name in the top bar too.
 - **Scope:** "Covered" and "Not covered" from the notes' Assignment sections, merged. "Decisions" from the notes' Decisions made, merged and shortened to what affects the reader's interpretation.
+- **Takeaways:** after each takeaway's text, set the `.tk-meta` link to the supporting section (`href="#sN"`, text `&rarr; 0N`) and its confidence (`High`, `Medium` or `Low`, with `data-level` `high`, `medium` or `low`).
+- **Lists:** use a list only for parallel items or steps. Reasoning, comparisons and explanations go in prose. Keep each item under about 40 words, and do not use a list with a single item.
+- **Table:** use a table for exact values that readers compare. Give numeric columns `class="num"` on the `th` and every `td`, put the unit in the header, and use the same number of decimals down a column.
 - **Callouts:** `callout disagree` for conflicting sources, `callout caveat` for low confidence, single-source claims and partial notes, plain `callout` for other notes to the reader.
 - **Quote:** only verbatim text that a note records as a direct quote. Never paraphrase inside a quote.
 - **Stats and chart:** every number needs a source marker. One series per chart; set each bar width as a percentage of the maximum value.
 - **Figure:** use a mermaid diagram only when it explains a structure or flow better than prose.
 - **Code:** short illustrative excerpts only. Never paste full code from repositories.
-- **Citations:** every factual claim gets `<a class="ref" href="#src-N" aria-label="Source N">N</a>`, and every `src-N` exists in the source index. Place several markers side by side; the template adds the commas.
+- **Citations:** every factual claim gets `<a class="ref" href="#src-N" aria-label="Source N">N</a>`, and every `src-N` exists in the source index. Place several markers side by side with no space or line break between them; the template adds the commas, a source preview on hover or tap, and back-links from the index.
 - **Source index:** title linked to the URL, then author or publisher and year. Meta line: domain, type (spec, paper, docs, blog, vendor, news, forum, repo) and access date.
 - **Sidebar:** one contents link per section, numbered to match the section dividers. Fill the facts:
   - *Researched:* the date range of the notes' `created` dates (a single date if they match).
@@ -95,7 +100,15 @@ The template is artifact-ready: it has no `<!doctype>`, `<html>`, `<head>` or `<
   - *Tags:* 3 to 6 tags merged from the notes' `tags`.
 - **`<title>`:** replace "Research Report Template" with a short name for the report, 2 to 4 words (e.g. "Azure Landing Zone Networking"), and delete the comment under it. Use the same name in the top bar. The full question goes in the `<h1>`.
 - **Description:** fill the `description` meta tag with one sentence stating the answer.
-- **Writing:** plain, direct English. Short sentences. No em dashes. No filler or hype words. State the answer before the explanation.
+- **Writing:** plain, direct English. No em dashes. No filler or hype words. State the answer before the explanation.
+  - One idea per paragraph. Aim for sentences under 25 words.
+  - Break the text with a heading every 3 to 5 paragraphs; split a longer section in two.
+  - Do not repeat the summary in the body. The body gives the evidence for it.
+  - Use bold sparingly, for a few key words, not as a label on every list item.
+- **Confidence wording:** keep two things apart. *Likelihood* is how probable something is; *confidence* is how strong the evidence is. Never combine them in one phrase.
+  - For likelihood, use only these terms, with the range in brackets the first time each appears: almost no chance (1-5%), very unlikely (5-20%), unlikely (20-45%), roughly even chance (45-55%), likely (55-80%), very likely (80-95%), almost certain (95-99%).
+  - For confidence, use `High`, `Medium` or `Low`: high means several independent, credible sources agree; medium means credible but limited or partly conflicting sources; low means a single source, weak sources or major gaps.
+  - Avoid vague hedges ("may", "could potentially", "there is some uncertainty"). Say what is uncertain and why.
 
 ### 5. Updating an existing report
 
@@ -111,6 +124,8 @@ Run these checks and fix any failure:
 4. Every contents link points to an existing ID.
 5. No unused template blocks or template instruction comments remain in the markup. Comments inside `<style>` and the scripts stay.
 6. No em dashes (`grep -n "—\|&mdash;" <file>`).
+7. Every takeaway links to an existing section and has a confidence level.
+8. The main content is within the length budget for the depth, and every `h2` is a sentence that states a finding.
 
 ### 7. Report back
 

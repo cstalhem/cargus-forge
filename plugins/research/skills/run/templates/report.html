@@ -48,7 +48,7 @@
     --ui: "Public Sans", "Helvetica Neue", Arial, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
 
-    --measure: 680px; /* prose line length */
+    --measure: 600px; /* prose line length, about 68 characters */
     --wide: 840px; /* figures, tables, code, callouts */
     --sidebar: 272px;
     --gutter: 64px;
@@ -132,9 +132,9 @@
   /* --- shared type ---------------------------------------------------- */
   .label {
     font-family: var(--ui);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
   }
@@ -337,6 +337,9 @@
     text-wrap: balance;
     margin: 16px 0 40px;
   }
+  h1:focus {
+    outline: none;
+  }
   h2 {
     font-size: 25px;
     font-weight: 600;
@@ -353,7 +356,7 @@
   }
   p {
     font-size: 17.5px;
-    line-height: 1.72;
+    line-height: 1.62;
     color: var(--ink-2);
     text-wrap: pretty;
     margin: 0 0 18px;
@@ -370,6 +373,9 @@
     background: var(--panel-2);
     border: 1px solid var(--rule);
     padding: 1px 5px;
+    overflow-wrap: anywhere;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   .caption {
     font-family: var(--ui);
@@ -433,8 +439,9 @@
     padding: 0;
     margin: 0;
   }
-  /* List items use a hanging marker, not flex: in a flex item every piece
-     of inline content (text, code, strong, refs) would become a column. */
+  /* List items are plain blocks with an inline marker in a hanging
+     indent. Never make an li a flex container: every inline child
+     (code, strong, a citation) would turn into its own column. */
   .takeaways li {
     padding-left: 19px;
     font-size: 16.5px;
@@ -446,10 +453,34 @@
     display: inline-block;
     width: 5px;
     height: 5px;
-    margin-left: -19px;
-    margin-right: 14px;
-    vertical-align: 3px;
+    margin: 0 14px 0 -19px;
+    vertical-align: middle;
     background: var(--accent);
+  }
+
+  /* Each takeaway ends with a link to the section that supports it and
+     the confidence of that claim. */
+  .takeaways .tk-meta {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    margin-left: 6px;
+  }
+  .takeaways .tk-meta a {
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .conf::before {
+    content: "\00b7";
+    margin: 0 6px;
+    color: var(--muted);
+  }
+  .conf[data-level="high"] {
+    color: var(--accent);
+  }
+  .conf[data-level="low"] {
+    color: var(--warn);
   }
 
   /* BLOCK: list -------------------------------------------------------- */
@@ -465,36 +496,33 @@
   }
   ul.plain li,
   ol.plain li {
+    padding-left: 18px;
     font-size: 17.5px;
     line-height: 1.6;
     color: var(--ink-2);
-  }
-  ul.plain li {
-    padding-left: 18px;
   }
   ul.plain li::before {
     content: "";
     display: inline-block;
     width: 5px;
     height: 5px;
-    margin-left: -18px;
-    margin-right: 13px;
-    vertical-align: 3px;
+    margin: 0 13px 0 -18px;
+    vertical-align: middle;
     background: var(--faint);
   }
   ol.plain li {
+    padding-left: 30px;
     counter-increment: n;
-    padding-left: 27px;
   }
   ol.plain li::before {
     content: counter(n);
     display: inline-block;
-    width: 14px;
-    margin-left: -27px;
-    margin-right: 13px;
+    width: 17px;
+    margin: 0 13px 0 -30px;
     font-family: var(--mono);
     font-size: 12.5px;
     color: var(--accent);
+    font-variant-numeric: tabular-nums;
   }
 
   /* BLOCK: ref (inline citation) -------------------------------------- */
@@ -508,12 +536,52 @@
     border: none;
     padding: 0 1px;
   }
-  /* .ref-next is set by the script on a marker directly after another
-     marker; a CSS sibling selector would also match across text. */
-  .ref.ref-next::before {
+  /* .ref-next is set by the script at the end on a marker that directly
+     follows another one. A CSS sibling selector would also match two
+     markers with text between them. */
+  .ref-next::before {
     content: ",";
     color: var(--muted);
     margin-right: 1px;
+  }
+
+  .ref:target {
+    background: color-mix(in oklab, var(--cite) 18%, transparent);
+  }
+  /* Source preview, built by the script at the end when a citation
+     marker is hovered, focused or tapped. */
+  .ref-pop {
+    position: fixed;
+    z-index: 25;
+    width: min(360px, calc(100vw - 32px));
+    padding: 14px 16px;
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    border-top: 2px solid var(--cite);
+    box-shadow: var(--shadow);
+    font-family: var(--serif);
+  }
+  .ref-pop[hidden] {
+    display: none;
+  }
+  .ref-pop .t {
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink-2);
+    overflow-wrap: anywhere;
+  }
+  .ref-pop .m {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .ref-pop .go {
+    display: inline-block;
+    font-family: var(--ui);
+    font-size: 12.5px;
+    margin-top: 10px;
   }
 
   /* BLOCK: quote ------------------------------------------------------- */
@@ -632,9 +700,9 @@
   }
   th {
     font-family: var(--ui);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--muted);
     text-align: left;
@@ -652,6 +720,13 @@
   }
   tbody tr:last-child td {
     border-bottom: none;
+  }
+  /* Numeric columns: right-aligned, tabular figures. Put units in the
+     column header, not in every cell. */
+  th.num,
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
 
   /* BLOCK: stats ------------------------------------------------------- */
@@ -903,9 +978,8 @@
     display: inline-block;
     width: 12px;
     height: 1px;
-    margin-left: -26px;
-    margin-right: 14px;
-    vertical-align: 5px;
+    margin: 0 14px 0 -26px;
+    vertical-align: middle;
     background: var(--accent);
   }
 
@@ -949,6 +1023,47 @@
   }
   .sources li:target .t a {
     background: color-mix(in oklab, var(--cite) 14%, transparent);
+  }
+  /* "Cited in" line, built by the script: links back to the first
+     citation of this source in each section. */
+  .sources .back {
+    font-family: var(--ui);
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .sources .back a {
+    font-family: var(--mono);
+    font-size: 12px;
+    margin-left: 6px;
+  }
+
+  /* In-body contents, filled by the script from the sidebar. Shown on
+     narrow screens only, where the sidebar is a drawer. */
+  .toc-inline {
+    display: none;
+  }
+
+  /* Back-to-top button, shown by the script after a few screens. */
+  .to-top {
+    position: fixed;
+    z-index: 12;
+    right: max(16px, env(safe-area-inset-right, 0px));
+    bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    font-family: var(--ui);
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule-2);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+  .to-top[hidden] {
+    display: none;
   }
 
   .divider {
@@ -1026,7 +1141,7 @@
       margin-right: -12px;
     }
     .drawer-head .label {
-      font-size: 11px;
+      font-size: 12px;
     }
     .toc > .label {
       display: none;
@@ -1065,6 +1180,52 @@
     html.no-anim .sidebar,
     html.no-anim .scrim {
       transition: none;
+    }
+
+    .toc-inline {
+      display: block;
+      margin: 0 0 32px;
+    }
+    .toc-inline ol {
+      list-style: none;
+      padding: 0;
+      margin: 12px 0 0;
+      border-top: 1px solid var(--rule);
+    }
+    .toc-inline a {
+      display: block;
+      padding: 10px 0;
+      font-family: var(--ui);
+      font-size: 15px;
+      line-height: 1.4;
+      color: var(--ink-2);
+      border-bottom: 1px solid var(--rule);
+    }
+    .toc-inline .n {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--muted);
+      margin-right: 10px;
+    }
+    /* Keep the row label visible while a wide table scrolls sideways. */
+    .wrap-x th:first-child,
+    .wrap-x td:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 1;
+      box-shadow: inset -1px 0 var(--rule-2);
+    }
+    .wrap-x td:first-child {
+      background: var(--paper);
+    }
+    /* A group row spanning the table: keep its label in view instead. */
+    .wrap-x td[colspan] {
+      position: static;
+      box-shadow: none;
+    }
+    .wrap-x td[colspan] > * {
+      position: sticky;
+      left: 16px;
     }
 
     .grid-2 {
@@ -1106,8 +1267,11 @@
     .topbar,
     .scrim,
     .sidebar,
-    .skip {
-      display: none;
+    .skip,
+    .toc-inline,
+    .ref-pop,
+    .to-top {
+      display: none !important;
     }
     .layout {
       display: block;
@@ -1224,18 +1388,25 @@
   <main id="report">
     <!-- BLOCK: question (required) -->
     <div class="label">Question researched</div>
-    <h1>{{QUESTION}}</h1>
+    <h1 tabindex="-1">{{QUESTION}}</h1>
 
-    <!-- BLOCK: lead + takeaways (required) -->
+    <!-- BLOCK: lead + takeaways (required). Each takeaway links to the
+         section that supports it (href and number match that section) and
+         states its confidence: High, Medium or Low, with data-level set to
+         high, medium or low. -->
     <section class="panel" id="summary">
       <div class="label">Summary</div>
       <p class="lead">{{LEAD_PARAGRAPH}}</p>
       <ul class="takeaways">
-        <li>{{TAKEAWAY}}</li>
-        <li>{{TAKEAWAY}}</li>
-        <li>{{TAKEAWAY}}</li>
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s1">&rarr; 01</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s1">&rarr; 01</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
+        <li>{{TAKEAWAY}}<span class="tk-meta"><a href="#s2">&rarr; 02</a><span class="conf" data-level="{{CONFIDENCE_LEVEL}}">{{CONFIDENCE}}</span></span></li>
       </ul>
     </section>
+
+    <!-- In-body contents for narrow screens. Filled from the sidebar by the
+         script at the end. Keep as is. -->
+    <nav class="toc-inline" id="toc-inline" aria-label="Contents (in page)"></nav>
 
     <!-- BLOCK: scope (required). What was covered, what was left out and
          why, and decisions that shape the result. -->
@@ -1251,7 +1422,9 @@
       </dl>
     </aside>
 
-    <!-- ================= BODY: repeat per section ================= -->
+    <!-- ================= BODY: repeat per section =================
+         The h2 states the section's finding as a short sentence, not a
+         topic label. -->
     <div class="sec-rule"><span>01</span><i></i></div>
     <h2 id="s1">{{SECTION_1_TITLE}}</h2>
     <p>
@@ -1308,26 +1481,27 @@ flowchart LR
 {{CODE}}</pre>
     </div>
 
-    <!-- BLOCK: table (optional) -->
+    <!-- BLOCK: table (optional). Give numeric columns class="num" on the
+         th and every td, and put the unit in the header. -->
     <div class="wrap-x">
       <table>
         <thead>
           <tr>
             <th>{{COLUMN}}</th>
             <th>{{COLUMN}}</th>
-            <th>{{COLUMN}}</th>
+            <th class="num">{{NUMERIC_COLUMN_WITH_UNIT}}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><h3>{{ROW_LABEL}}</h3></td>
             <td>{{CELL}}</td>
-            <td>{{CELL}}</td>
+            <td class="num">{{NUMBER}}</td>
           </tr>
           <tr>
             <td><h3>{{ROW_LABEL}}</h3></td>
             <td>{{CELL}}</td>
-            <td>{{CELL}}</td>
+            <td class="num">{{NUMBER}}</td>
           </tr>
         </tbody>
       </table>
@@ -1443,19 +1617,14 @@ flowchart LR
   </main>
 </div>
 
-<script>
-  // Citation commas, drawer (narrow screens) and contents highlighting.
-  // Keep as is.
-  document.querySelectorAll(".ref").forEach((ref) => {
-    let prev = ref.previousSibling;
-    while (prev && prev.nodeType === Node.TEXT_NODE && !prev.textContent.trim()) {
-      prev = prev.previousSibling;
-    }
-    if (prev && prev.nodeType === Node.ELEMENT_NODE && prev.classList.contains("ref")) {
-      ref.classList.add("ref-next");
-    }
-  });
+<!-- Back-to-top button. Shown by the script on long pages. Keep as is. -->
+<button class="to-top" id="to-top" type="button" hidden>
+  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
+  Top
+</button>
 
+<script>
+  // Drawer (narrow screens) and contents highlighting. Keep as is.
   (() => {
     const root = document.documentElement;
     const openBtn = document.getElementById("menu-open");
@@ -1509,6 +1678,195 @@ flowchart LR
       { rootMargin: "-10% 0px -70% 0px" },
     );
     targets.forEach((t) => io.observe(t));
+  })();
+</script>
+
+<script>
+  // Citations and long-page navigation. Keep as is.
+  // - Commas between citation markers that sit side by side.
+  // - Source preview when a marker is hovered, focused or tapped.
+  // - "Cited in" back-links under each source in the index.
+  // - In-body contents on narrow screens and a back-to-top button.
+  (() => {
+    const main = document.getElementById("report");
+    const refs = [...document.querySelectorAll("a.ref")];
+
+    // Commas: a marker that directly follows another (only whitespace between).
+    refs.forEach((ref) => {
+      let prev = ref.previousSibling;
+      while (prev && prev.nodeType === 3 && !prev.textContent.trim()) prev = prev.previousSibling;
+      if (prev && prev.nodeType === 1 && prev.classList.contains("ref")) ref.classList.add("ref-next");
+    });
+
+    // The section a marker sits in, labelled by its section number.
+    const sectionOf = (el) => {
+      if (el.closest("#summary")) return "Summary";
+      let top = el;
+      while (top.parentElement && top.parentElement !== main) top = top.parentElement;
+      for (let n = top; n; n = n.previousElementSibling) {
+        if (n.tagName === "H2") {
+          const rule = n.previousElementSibling;
+          return rule && rule.classList.contains("sec-rule") ? rule.textContent.trim() : n.textContent.trim();
+        }
+      }
+      return "Intro";
+    };
+
+    // Back-links: the first citation of each source in each section.
+    const firstBySource = new Map();
+    refs.forEach((ref, i) => {
+      const src = (ref.getAttribute("href") || "").slice(1);
+      if (!src) return;
+      ref.id = ref.id || "cite-" + (i + 1);
+      const label = sectionOf(ref);
+      if (!firstBySource.has(src)) firstBySource.set(src, new Map());
+      const seen = firstBySource.get(src);
+      if (!seen.has(label)) seen.set(label, ref.id);
+    });
+    firstBySource.forEach((seen, src) => {
+      const body = document.querySelector("#" + CSS.escape(src) + " > div");
+      if (!body) return;
+      const back = document.createElement("div");
+      back.className = "back";
+      back.textContent = "Cited in";
+      seen.forEach((id, label) => {
+        const a = document.createElement("a");
+        a.href = "#" + id;
+        a.textContent = label;
+        back.appendChild(a);
+      });
+      body.appendChild(back);
+    });
+
+    // Source preview.
+    const pop = document.createElement("div");
+    pop.className = "ref-pop";
+    pop.id = "ref-pop";
+    pop.setAttribute("role", "dialog");
+    pop.setAttribute("aria-label", "Source");
+    pop.hidden = true;
+    document.body.appendChild(pop);
+    let current = null;
+    let hideTimer = 0;
+    let lastPointer = "mouse";
+    let quiet = false;
+
+    const show = (ref) => {
+      clearTimeout(hideTimer);
+      const src = document.getElementById((ref.getAttribute("href") || "").slice(1));
+      if (!src) return;
+      const t = src.querySelector(".t");
+      const m = src.querySelector(".m");
+      pop.innerHTML = "";
+      if (t) pop.appendChild(Object.assign(document.createElement("div"), { className: "t", innerHTML: t.innerHTML }));
+      if (m) pop.appendChild(Object.assign(document.createElement("div"), { className: "m", innerHTML: m.innerHTML }));
+      const go = Object.assign(document.createElement("a"), { className: "go", href: "#" + src.id });
+      go.textContent = "Source " + ref.textContent.trim() + " in the index \u2192";
+      go.addEventListener("click", () => hide(true));
+      pop.appendChild(go);
+      if (current) current.removeAttribute("aria-describedby");
+      current = ref;
+      ref.setAttribute("aria-describedby", "ref-pop");
+      pop.hidden = false;
+      const r = ref.getBoundingClientRect();
+      const w = pop.offsetWidth;
+      const h = pop.offsetHeight;
+      const left = Math.min(Math.max(16, r.left - 24), innerWidth - w - 16);
+      let top = r.bottom + 8;
+      if (top + h > innerHeight - 16) top = Math.max(16, r.top - h - 8);
+      pop.style.left = left + "px";
+      pop.style.top = top + "px";
+    };
+    const hide = (now) => {
+      clearTimeout(hideTimer);
+      const run = () => {
+        pop.hidden = true;
+        if (current) current.removeAttribute("aria-describedby");
+        current = null;
+      };
+      if (now) run();
+      else hideTimer = setTimeout(run, 200);
+    };
+
+    document.addEventListener("pointerdown", (e) => {
+      lastPointer = e.pointerType;
+      if (!pop.hidden && !pop.contains(e.target) && !e.target.closest("a.ref")) hide(true);
+    });
+    refs.forEach((ref) => {
+      ref.addEventListener("pointerenter", (e) => {
+        if (e.pointerType === "mouse") show(ref);
+      });
+      ref.addEventListener("pointerleave", (e) => {
+        if (e.pointerType === "mouse") hide();
+      });
+      ref.addEventListener("focus", () => {
+        // Keyboard focus only; taps are handled on click.
+        if (!quiet && ref.matches(":focus-visible")) show(ref);
+      });
+      ref.addEventListener("click", (e) => {
+        // Touch and pen: the first tap shows the preview instead of jumping.
+        if (lastPointer === "mouse") return;
+        if (current === ref && !pop.hidden) return;
+        e.preventDefault();
+        show(ref);
+      });
+    });
+    pop.addEventListener("pointerenter", () => clearTimeout(hideTimer));
+    pop.addEventListener("pointerleave", (e) => {
+      if (e.pointerType === "mouse") hide();
+    });
+    document.addEventListener("focusout", (e) => {
+      if (pop.hidden) return;
+      const to = e.relatedTarget;
+      if (to && (to === current || pop.contains(to))) return;
+      hide();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape" || pop.hidden) return;
+      const ref = current;
+      const inside = pop.contains(document.activeElement);
+      hide(true);
+      // Return focus from the preview to its marker without reopening it.
+      if (ref && inside) {
+        quiet = true;
+        ref.focus();
+        quiet = false;
+      }
+    });
+    addEventListener("scroll", () => {
+      if (!pop.hidden) hide(true);
+    }, { passive: true });
+
+    // In-body contents, copied from the sidebar (Summary left out: it is
+    // directly above).
+    const inline = document.getElementById("toc-inline");
+    if (inline) {
+      const ol = document.createElement("ol");
+      document.querySelectorAll("#sidebar .toc > a").forEach((a) => {
+        if (a.getAttribute("href") === "#summary") return;
+        const link = a.cloneNode(true);
+        link.removeAttribute("aria-current");
+        const li = document.createElement("li");
+        li.appendChild(link);
+        ol.appendChild(li);
+      });
+      const label = Object.assign(document.createElement("div"), { className: "label", textContent: "Contents" });
+      inline.append(label, ol);
+    }
+
+    // Back to top, after about three screens.
+    const top = document.getElementById("to-top");
+    if (top) {
+      top.setAttribute("aria-label", "Back to top");
+      const update = () => (top.hidden = scrollY < innerHeight * 3);
+      addEventListener("scroll", update, { passive: true });
+      update();
+      top.addEventListener("click", () => {
+        const smooth = !matchMedia("(prefers-reduced-motion: reduce)").matches;
+        scrollTo({ top: 0, behavior: smooth ? "smooth" : "auto" });
+        document.querySelector("#report h1")?.focus({ preventScroll: true });
+      });
+    }
   })();
 </script>
 
