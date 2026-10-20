@@ -4,6 +4,8 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
+**Role since v0.** The v0 skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the v0 process, and they win where this file differs. This file stays as the design record for the stages after v0 (research, plan, reflect, next, labels and `status.sh`), and as the design notes that the ADRs link to. It goes once those stages are built.
+
 ## Words
 
 | Term | Meaning |
@@ -52,10 +54,12 @@ An issue fits one session when all four are true:
 3. After a short read of the code, the agent can name every file it changes.
 4. It has no open design question for you.
 
+If the verify command proves only part of a scenario, for example not its failure case, criterion 2 can still pass. Its verdict then names the part that the command leaves out, so you can accept the gap or change the command.
+
 The test needs scenarios and settled questions, so **discuss always comes first**. The test then runs at three points:
 - **The end of discuss.** If the request passes, discuss writes a single issue and you go to Build. If it fails, discuss writes an umbrella issue and you go on with Shape.
 - **slice.** Each sub-issue must pass. A sub-issue that fails is split again.
-- **execute.** If the agent finds a failure, it stops and sends the issue back to slice.
+- **execute.** If the agent finds a failure, it stops and pushes the work. A sub-issue goes back to slice, which narrows it and creates sub-issues for the rest. A single issue goes back to discuss.
 
 An issue that already has scenarios and passes the test skips discuss. Sub-issues from slice are like this.
 
@@ -67,7 +71,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Stores in:** GitHub.
 - **Exit gate:** no open question remains, you confirm the scenarios, and the size test has a result.
 - **Depth fits the request.** A small request needs one or two rounds. discuss stops when the size test can be answered and passes. A request that fails the test gets full rounds.
-- **v0:** question rounds. Each round asks every question whose prerequisites are settled. Each question has a recommended answer that "yes" accepts.
+- **v0:** question rounds. Each round asks at most five questions whose prerequisites are settled, the ones that unblock others first. Each question has a recommended answer that "yes" accepts.
 - **Later:** the unknowns map, ADRs and the glossary.
 
 ### research (Shape, not in v0)
@@ -83,10 +87,11 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **v0:** a `## Design` section in the umbrella issue (modules, seams, data shapes). No page.
 
 ### slice (Shape; plan calls it, and execute calls it under rule 5)
-- **Gets:** the umbrella issue with its design and decisions.
+- **Gets:** the umbrella issue with its design and decisions. From execute under rule 5: a sub-issue that fails the size test, with execute's findings.
 - **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links.
+- **Re-split:** the sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
-- **Stops for:** a scenario that no sub-issue can own. That goes back to plan.
+- **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan (discuss in v0), and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
@@ -105,7 +110,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop, and call slice.
+  5. The issue fails the size test: stop, and push the work without a PR. For a sub-issue, call slice. For a single issue, send it back to discuss.
 - **Later:** inject the issue and the commands through scripts (ADR-004), and add `status: in progress`.
 
 ### verify, issue scope (Build; execute calls it)
@@ -168,6 +173,8 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 
 ## Formats
 
+Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
 ### Umbrella issue
 ```markdown
 ## Goal
@@ -196,12 +203,19 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 ## Scenarios
 - WHEN <condition> THEN <result>
 
+## Decisions                                      ← optional
+- D1 · <decision>
+- #<umbrella> D<n>
+
 ## Files
 <paths>
 
 ## Verify
 <one command that fails before the work and passes after it>
 ```
+
+- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
+- When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
 ### Final PR body
 ```markdown
@@ -223,4 +237,5 @@ Closes #<umbrella>
 - **Evals: parked** until after the skeleton has run end to end. Until then, a skill's verify step is `claude plugin validate --strict` plus one manual run that you check against the scenarios. The end-to-end run on the CI umbrella is the real test.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
 - **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
-- **Worktree cleanup:** worktrees stay after their work merges. On 2026-10-12, feederer had 6 Remote Control worktrees, including one with a detached HEAD and one that was locked. homelab-docker had 3. The proposal for a later stage: `next` lists each worktree whose branch has merged or whose issue is closed, and removes it after you confirm. It never removes a worktree that has uncommitted work.
+- **Worktree cleanup:** worktrees stay after their work merges. On 2026-10-12, feederer had 6 Remote Control worktrees, including one with a detached HEAD and one that was locked. homelab-docker had 3. The proposal for a later stage: `next` lists each worktree whose branch has merged or whose issue is closed, and removes it after you confirm. It never removes a worktree that has uncommitted work. The end-to-end run on #54 confirmed the need: execute leaves the worktree and its local branch behind after the PR merges, and a session cannot remove the worktree it runs in. In v0, execute can only reuse a finished worktree for the next issue.
+- **Finding the feature branch:** execute, verify and ship find an umbrella's feature branch with `gh issue develop --list`. Deleting a branch after its PR merges also removes that link, so running verify or ship again on such an umbrella stops. The proposal for a later stage: `status.sh` derives the branch from git as well, for example from the `<n>-<slug>` name, and `next` reports an umbrella whose branch is gone.

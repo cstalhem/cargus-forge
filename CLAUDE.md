@@ -12,7 +12,7 @@ A marketplace monorepo of Claude Code plugins for knowledge management, note-tak
 - `docs/adr/` — architecture decision records (ADR-NNN, living documents, indexed in `docs/adr/README.md`)
 - `docs/engineering-plugin/` — design workspace for the engineering plugin: research, synthesis, the process contract
 
-Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`.
+Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`, `engineering`.
 
 ## Local development loop
 

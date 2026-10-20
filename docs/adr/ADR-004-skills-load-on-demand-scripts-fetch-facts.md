@@ -20,6 +20,7 @@ status: active
 - **Size and placement:**
   - No skill body is longer than about 150 lines.
   - Critical rules go at the top, because only the start of a skill is restored after compaction.
+  - Rules that several skills share live in `references/rules.md`. Each skill pulls it in with `` !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"` `` as the first line of its Rules section, pre-approved in `allowed-tools`, so the rules are part of the skill body. A missing file stops a typed skill with no output, makes the Skill tool return the error for a called skill, and is not caught by `claude plugin validate`.
   - The plugin has no `CLAUDE.md`, because Claude Code does not load one from a plugin.
   - Facts about a repo live in `docs/agents/`, which skills read on demand.
 

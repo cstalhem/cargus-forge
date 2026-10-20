@@ -15,7 +15,7 @@ The end-to-end workflow for shipping a change to a plugin in this marketplace.
 3. **Sync descriptions** — if the plugin's description changed, update it identically in `plugin.json`, `.claude-plugin/marketplace.json`, and the README plugin index.
 4. **Branch & commit** — branch from `main`; commit the plugin change and the version bump together.
 5. **Push & PR** — push the branch and open the PR against `main`.
-6. **Merge** — rebase-merge to keep `main` linear, and delete the branch.
+6. **Merge** — squash-merge, so the PR becomes one commit and `main` stays linear, and delete the branch. The squash message is the PR title and description, so write the description for `git log`. Do not rebase-merge: it replays each commit and drops merge commits, so a branch that merged `main` in hits the same conflicts again.
 
 ## Anti-Patterns
 

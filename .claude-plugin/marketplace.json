@@ -26,6 +26,11 @@
       "description": "Create and maintain Architecture Decision Records (ADRs) as living documents — with a litmus test for what earns a record and rules for editing, reversing, and deprecating decisions."
     },
     {
+      "name": "engineering",
+      "source": "./plugins/engineering",
+      "description": "Turn a request into GitHub issues and build each one into a verified pull request: discuss, slice, execute, verify, ship."
+    },
+    {
       "name": "research",
       "source": "./plugins/research",
       "description": "Research a question with parallel researcher agents that write sourced, cross-checked notes, then compile them into one HTML report."
