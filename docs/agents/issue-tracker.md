@@ -6,6 +6,9 @@
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
 
+## Merging
+Squash-merge every PR: sub-issue PRs into the feature branch, and single-issue and final PRs into `main`. Each PR becomes one commit, and `main` stays linear. The squash message is the PR title and description. A feature branch takes `main` in by merge, never by rebase (ADR-002); a squash applies only the end result, so those merge commits cause no conflicts.
+
 ## PR targets and `Closes` lines
 GitHub reads closing keywords only on PRs into `main` ([ADR-002](../adr/ADR-002-feature-branch-per-umbrella.md)).
 

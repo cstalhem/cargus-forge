@@ -17,7 +17,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 ## Git workflow
 
 - Branch from `main`; never commit plugin changes directly to `main`.
-- Rebase-merge PRs to keep `main` history linear.
+- Squash-merge every PR, so each PR is one commit and `main` stays linear (see skill: plugin-release).
 - Validate with `claude plugin validate ./plugins/<name>` (add `--strict` in CI) before opening a PR.
 
 ## Testing plugins
