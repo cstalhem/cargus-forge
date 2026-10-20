@@ -16,4 +16,4 @@ Research and design notes for a new, self-contained `engineering` plugin. This f
 | [research/06-practitioner-workflows.md](research/06-practitioner-workflows.md) | Superpowers, HumanLayer, Compound Engineering, Ralph, and others, plus the evidence |
 | [research/07-spec-driven-toolkits.md](research/07-spec-driven-toolkits.md) | Spec Kit, Kiro, BMAD, OpenSpec, Agent OS, Tessl, Cline Memory Bank, and the critiques of spec-driven development |
 
-**Status:** v0, the walking skeleton (#24), is built: discuss, slice, execute, verify and ship. Next: the end-to-end run on the CI request.
+**Status:** v0, the walking skeleton (#24), is built and has run end to end: it took the CI feature (#54) from discuss to `main`. Next: thicken the phases that the run showed to be weakest (stage 5 in [synthesis.md](synthesis.md)).
