@@ -56,8 +56,11 @@ Never give two researchers the same note in one round. Each would overwrite the 
 When the researchers report back:
 
 1. Check each `status` and `confidence`, and skim the notes.
-2. If a sub-topic the answer depends on is `blocked` or `partial`, or a key claim rests on a single source, run one follow-up round: amend the existing note with a researcher focused on the gap. Combine several gaps in one note into one task, so each note gets at most one researcher. Run one round at most unless the user asks for more.
-3. Leave other follow-ups for the report's open questions.
+2. If a sub-topic the answer depends on is `blocked` or `partial`, or a key claim rests on a single source, a follow-up round can close the gap: amend the existing note with a researcher focused on it. Combine several gaps in one note into one task, so each note gets at most one researcher. A follow-up round costs as much usage as the first, so it needs the user's approval:
+   - **Attended run:** show the user the gaps and the follow-up tasks, one line each, and ask whether to run the round. Run it only after they approve. If they decline, go on to the report.
+   - **Unattended run:** the follow-up round never runs unattended. Go on to the report; the gaps go to its open questions, and you list them in your reply.
+3. Run one round at most unless the user asks for more.
+4. Leave other follow-ups for the report's open questions.
 
 ## 5. Delegate the report
 
@@ -67,6 +70,7 @@ Start one `synthesizer` with:
 - **Report path:** from step 1.
 - **Report template:** the absolute path above.
 - **Depth.**
+- **Open gaps:** the gaps from step 4 that no follow-up round closed, so the report lists them as open questions.
 - **Existing report:** say so if the report path already exists, so it is rebuilt in place.
 
 ## 6. Publish the report
@@ -109,7 +113,7 @@ Reply briefly with:
 
 ## Rules
 
-- Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply.
+- Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply. A follow-up round is the exception: it never runs unattended (step 4).
 - Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
 - Commit only the topic folder. Never commit, stash or discard anything else in the working folder.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
