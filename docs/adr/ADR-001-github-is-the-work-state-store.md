@@ -11,7 +11,7 @@ status: active
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
-- A **sub-issue** is one session of work. GitHub parent links and "blocked by" links hold the structure, not text.
+- A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are the `Blocked by #<a>, #<b>` text in its first line, and the link-blocked-by workflow turns them into GitHub "blocked by" links where it runs ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, a linked branch, a draft PR.
 - **Labels show only what GitHub does not show.** Each skill sets one label:
   - `umbrella`: discuss sets it when the size test fails;
@@ -34,8 +34,8 @@ status: active
 - **A GitHub Action that sets labels from events:** it is extra setup in each repo, and the repair script covers the drift. The one workflow the plugin ships closes sub-issues and sets no label.
 
 ## Consequences
-- Each repo must be on GitHub, with `gh` 2.94 or later, which reads parent, sub-issue and dependency data as JSON.
+- Each repo must be on GitHub. Skills read parent, sub-issue and dependency data through `gh api` REST, so they need no minimum `gh` version and work in cloud sessions ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - A different tracker needs a new tracker profile and a new status script.
-- Work can resume from any device that can read GitHub, including Remote Control on a phone.
+- Work can resume from any device that can read GitHub, including Remote Control on a phone and a cloud session.
 - The Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app.
-- `status.sh` reads each issue's `blockedBy` field. GitHub's search API did not return `is:blocked` results.
+- `status.sh` reads each issue's blocked-by links through REST (`issues/<n>/dependencies/blocked_by`). GitHub's search API did not return `is:blocked` results.
