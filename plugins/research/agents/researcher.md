@@ -41,10 +41,12 @@ The working folder is laid out like this:
 
 ### 2. Research
 
-- Break the task into sub-questions.
-- Search widely and use several kinds of sources: official documentation, standards, vendor material, independent analysis, academic papers, reputable news, code repositories and community discussion where relevant.
+- **Budget: use at most 15 web searches and fetches combined** for the whole task. This is a hard cap that keeps one run from using most of a session. Count each search and each fetch as one. When the budget runs out, stop researching and write the note with what you have: list what is left under **Recommended follow-up research** and set `status` to `partial` if parts of the task are unanswered.
+- Break the task into sub-questions. Spend the budget on the sub-questions the task depends on most.
+- Search with several kinds of sources in mind: official documentation, standards, vendor material, independent analysis, academic papers, reputable news, code repositories and community discussion where relevant.
 - Prefer primary and official sources. Treat vendor marketing, forums and undated pages as lower reliability.
 - **Cross-check every important claim against at least two independent sources.** Mark claims you could only find in one source as "(single source)".
+- **Stop pursuing a claim once two independent sources agree on it.** Move on to the next sub-question; more confirmation spends budget without changing the note.
 - When sources disagree, record both positions and your assessment in **Conflicting or uncertain information**.
 - Record publication or last-updated dates. Flag information that may be outdated.
 - Do not copy full code from repositories into the note. Short excerpts (a few lines) to illustrate a point are fine; link to the rest.
@@ -74,6 +76,7 @@ End with a short message to the delegating agent (not the full note) containing:
 
 - The path to the note.
 - `status` and `confidence`.
+- How many web searches and fetches you used, out of 15.
 - 3 to 5 key findings.
 - The most important recommended follow-ups.
 

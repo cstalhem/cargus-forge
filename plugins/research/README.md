@@ -15,7 +15,7 @@ You can also just ask Claude to research something; the skill starts on its own.
 
 1. Claude frames the question, picks a topic folder and splits the question into sub-topics: 2 to 3 for an overview, 4 to 5 with `--deep`.
 2. It shows you the plan and waits for your OK. In an unattended run, such as a scheduled routine, it goes ahead and lists its choices in the reply.
-3. One `researcher` agent per sub-topic searches the web in parallel and writes a cited note. Important claims are cross-checked against at least two sources.
+3. One `researcher` agent per sub-topic searches the web in parallel and writes a cited note. Important claims are cross-checked against at least two sources, and a researcher stops on a claim once two independent sources agree. Each researcher uses at most 15 web searches and fetches combined.
 4. If a key sub-topic comes back thin, Claude runs one follow-up round on the gaps.
 5. A `synthesizer` agent compiles the notes into one HTML report. It works only from the notes and cannot search the web.
 6. Claude publishes the report as a private Claude Artifact when a publishing tool is available.
