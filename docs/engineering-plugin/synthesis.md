@@ -390,12 +390,12 @@ The user prefers that a feature lands on `main` as one item. GitHub supports thi
 The flow:
 - **Feature branch:** `38-export-to-s3`, created by `slice` from `main`.
 - **Sub-issue work:** in its own worktree, on a branch such as `39-export-job` taken from the feature branch. Its PR goes *into the feature branch*. These PRs stay small, so they can still be reviewed on a phone, and they give the verify report a home.
-- **Final PR:** feature branch → `main`. `ship` writes its body with a `Closes #n` line for every sub-issue and for the umbrella.
+- **Final PR:** feature branch → `main`. `ship` writes its body with a `Closes #n` line for each sub-issue that is still open and for the umbrella.
 - **Umbrella-scope verify now runs on the feature branch, before the final PR is ready.** Gaps are caught *before* `main`, not after. This improves on v4, where that check ran on `main` after the fact.
 
 What it costs:
 - The feature branch can drift from `main`. Merge `main` into it regularly (merge, not rebase).
-- **Open detail for the Build contract:** a sub-issue whose PR has merged into the feature branch stays open until the final PR. Its status needs a representation. That is either a derived "merged into feature" state that `status.sh` reads from the merged PR, or a third label. This is settled in the contract, not now.
+- **Closing a merged sub-issue (settled in #82):** a PR into the feature branch closes nothing by keyword, so the close-sub-issue workflow closes the sub-issue when its PR merges. A merged sub-issue therefore needs no status or label of its own ([ADR-002](../adr/ADR-002-feature-branch-per-umbrella.md)).
 
 ### How to start small: a walking skeleton across Shape and Build
 
