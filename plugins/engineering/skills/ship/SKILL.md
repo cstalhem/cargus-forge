@@ -1,6 +1,6 @@
 ---
 name: ship
-description: Take an umbrella issue's feature branch to a ready final PR into main. Checks that every sub-issue PR has merged, merges main into the feature branch, runs verify on the umbrella, then opens the final PR with a Closes line for each sub-issue and the umbrella.
+description: Take an umbrella issue's feature branch to a ready final PR into main. Checks that every sub-issue PR has merged, merges main into the feature branch, runs verify on the umbrella, then opens the final PR with a Closes line for each sub-issue that is still open and for the umbrella.
 argument-hint: "<#umbrella issue>"
 disable-model-invocation: true
 allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
@@ -29,5 +29,5 @@ Umbrella issue: $ARGUMENTS
 5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
 6. **Final PR.** If `gh pr list --head <branch> --base main` shows no PR, run `gh pr create --base main --head <branch> --title "<umbrella title>" --body-file <path>`, with the final PR body from `formats.md` written to a file as the rules say:
    - one paragraph on what the feature does;
-   - one `Closes #<n>` line for each open sub-issue, then one for the umbrella.
+   - one `Closes #<n>` line for each sub-issue that is still open, then one for the umbrella. Run `gh issue view <n> --json subIssues` again for the current state. Where the close-sub-issue workflow runs, it has closed each sub-issue whose PR merged, so often only the umbrella line is left.
 7. **Hand off.** Run `gh pr checks <pr> --watch`. Show the PR URL and the result of its checks, and name any check that fails. The user reviews and merges it.

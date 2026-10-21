@@ -1,7 +1,7 @@
 {
   "name": "engineering",
   "description": "Turn a request into GitHub issues and build each one into a verified pull request: discuss, slice, execute, verify, ship.",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "author": {
     "name": "Carl Stålhem",
     "url": "https://github.com/cstalhem"
