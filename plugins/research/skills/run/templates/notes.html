@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Research note</title>
+<!-- Notes viewer, published as a supporting file of the research report
+     artifact, next to notes/<note-file>.md for every note the report uses.
+     Opened as notes.html#<note-file> (the note's file name without ".md").
+     It fetches the note, strips the frontmatter and the Assignment and
+     Change log sections, and renders the rest. Copy it as is: it has no
+     placeholders. It starts with its own doctype because the artifact
+     wraps only the main page in a document skeleton, and links back to
+     index.html, the path the artifact serves the main page at. -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..700;1,8..60,300..600&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  /* Same "Field report" tokens as templates/report.html. */
+  :root {
+    --paper: #eef0ea;
+    --panel: #e3e7dd;
+    --panel-2: #dbe0d4;
+    --ink: #1c2420;
+    --ink-2: #2c3630;
+    --muted: #55605a;
+    --rule: #d3d9cc;
+    --rule-2: #c3cbbb;
+    --accent: #2f5d46;
+    --cite: #2f5d46;
+
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --ui: "Public Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+
+    --measure: 680px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #141a17;
+      --panel: #1b231f;
+      --panel-2: #212a25;
+      --ink: #e2e8e2;
+      --ink-2: #cdd5ce;
+      --muted: #8f9a92;
+      --rule: #2a332e;
+      --rule-2: #36413a;
+      --accent: #7fbf9b;
+      --cite: #7fbf9b;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #141a17;
+    --panel: #1b231f;
+    --panel-2: #212a25;
+    --ink: #e2e8e2;
+    --ink-2: #cdd5ce;
+    --muted: #8f9a92;
+    --rule: #2a332e;
+    --rule-2: #36413a;
+    --accent: #7fbf9b;
+    --cite: #7fbf9b;
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 16px;
+  }
+  a {
+    color: var(--cite);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, var(--cite) 35%, transparent);
+    overflow-wrap: anywhere;
+  }
+  a:hover {
+    border-bottom-color: var(--cite);
+  }
+  :focus-visible {
+    outline: 2px solid var(--cite);
+    outline-offset: 2px;
+  }
+
+  .bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding: 12px max(16px, env(safe-area-inset-left, 0px));
+    background: color-mix(in oklab, var(--paper) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--ui);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .bar .back {
+    border-bottom: none;
+  }
+
+  main {
+    max-width: calc(var(--measure) + 32px);
+    margin: 0 auto;
+    padding: 40px 16px 96px;
+  }
+  main:focus {
+    outline: none;
+  }
+  .status {
+    font-family: var(--ui);
+    color: var(--muted);
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 600;
+    line-height: 1.24;
+    text-wrap: balance;
+    margin: 0 0 32px;
+  }
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.26;
+    margin: 44px 0 16px;
+    padding-top: 20px;
+    border-top: 1px solid var(--rule);
+  }
+  h3 {
+    font-family: var(--ui);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 28px 0 8px;
+  }
+  h4,
+  h5,
+  h6 {
+    font-family: var(--ui);
+    font-size: 14px;
+    font-weight: 600;
+    margin: 20px 0 6px;
+  }
+  p,
+  li {
+    font-size: 17px;
+    line-height: 1.62;
+    color: var(--ink-2);
+    text-wrap: pretty;
+  }
+  p {
+    margin: 0 0 16px;
+  }
+  ul,
+  ol {
+    padding-left: 24px;
+    margin: 0 0 16px;
+  }
+  li + li {
+    margin-top: 6px;
+  }
+  blockquote {
+    margin: 20px 0;
+    padding-left: 20px;
+    border-left: 3px solid var(--accent);
+  }
+  hr {
+    border: none;
+    height: 1px;
+    background: var(--rule);
+    margin: 32px 0;
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 0.86em;
+    background: var(--panel-2);
+    border: 1px solid var(--rule);
+    padding: 1px 5px;
+    overflow-wrap: anywhere;
+  }
+  pre {
+    background: var(--panel);
+    border: 1px solid var(--rule);
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    overflow-wrap: normal;
+  }
+
+  /* Tables scroll sideways inside their wrapper, never the page. */
+  .table-wrap {
+    overflow-x: auto;
+    margin: 0 0 20px;
+    border: 1px solid var(--rule-2);
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  th {
+    font-family: var(--ui);
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--panel-2);
+    border-bottom: 1px solid var(--rule-2);
+  }
+  td {
+    padding: 10px 12px;
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--ink-2);
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+</style>
+</head>
+<body>
+<header class="bar">
+  <a class="back" href="index.html">&larr; Back to the report</a>
+</header>
+<main id="note" tabindex="-1" aria-live="polite">
+  <p class="status">Loading the note&hellip;</p>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.12/marked.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.2.6/purify.min.js"></script>
+
+<!-- cleanNote has no DOM dependencies, so tests/notes-viewer.test.mjs runs
+     it without a browser. -->
+<script id="clean-note">
+  // Strips the YAML frontmatter and the "## Assignment" and "## Change log"
+  // sections (each up to the next # or ## heading) from a research note.
+  // Headings inside fenced code blocks are ignored.
+  function cleanNote(markdown) {
+    var DROP = /^(assignment|change log)$/i;
+    var lines = markdown.replace(/^﻿/, "").split(/\r?\n/);
+    if (lines[0].trim() === "---") {
+      for (var i = 1; i < lines.length; i++) {
+        if (/^(---|\.\.\.)\s*$/.test(lines[i])) {
+          lines = lines.slice(i + 1);
+          break;
+        }
+      }
+    }
+    var out = [];
+    var fence = null;
+    var dropping = false;
+    lines.forEach(function (line) {
+      var mark = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+      if (!fence) {
+        var heading = /^(#{1,2})\s+(.*?)\s*#*\s*$/.exec(line);
+        if (heading) dropping = heading[1].length === 2 && DROP.test(heading[2]);
+        if (mark) fence = mark[1];
+      } else if (mark && mark[1][0] === fence[0] && mark[1].length >= fence.length) {
+        fence = null;
+      }
+      if (!dropping) out.push(line);
+    });
+    return out.join("\n").trim() + "\n";
+  }
+</script>
+
+<script>
+  (function () {
+    var main = document.getElementById("note");
+    // Note files are kebab-case slugs with a date; anything else could
+    // reach outside notes/.
+    var SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+    // Notes are plain markdown. Raw HTML in one, such as a quoted <title>,
+    // shows as text instead of swallowing the rest of the note.
+    var ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+    marked.use({
+      renderer: {
+        html: function (token) {
+          return token.text.replace(/[&<>"]/g, function (c) {
+            return ESCAPES[c];
+          });
+        },
+      },
+    });
+
+    function status(text) {
+      main.innerHTML = "";
+      var p = document.createElement("p");
+      p.className = "status";
+      p.textContent = text;
+      main.appendChild(p);
+      document.title = "Research note";
+    }
+
+    async function show() {
+      var name = "";
+      try {
+        name = decodeURIComponent(location.hash.slice(1));
+      } catch (e) {}
+      if (!SAFE.test(name)) {
+        status("No note selected. Open a note from the report's \"Full note\" or \"Research notes\" links.");
+        return;
+      }
+      status("Loading the note…");
+      try {
+        var res = await fetch(`notes/${encodeURIComponent(name)}.md`);
+        if (!res.ok) throw new Error(res.status);
+        var html = marked.parse(cleanNote(await res.text()));
+        main.innerHTML = DOMPurify.sanitize(html);
+      } catch (e) {
+        status("The note \"" + name + "\" could not be loaded.");
+        return;
+      }
+      main.querySelectorAll("table").forEach(function (table) {
+        var wrap = document.createElement("div");
+        wrap.className = "table-wrap";
+        table.replaceWith(wrap);
+        wrap.appendChild(table);
+      });
+      main.querySelectorAll('a[href^="http"]').forEach(function (a) {
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+      });
+      var h1 = main.querySelector("h1");
+      document.title = h1 ? h1.textContent : name;
+      window.scrollTo(0, 0);
+      main.focus({ preventScroll: true });
+    }
+
+    window.addEventListener("hashchange", show);
+    show();
+  })();
+</script>
+</body>
+</html>
