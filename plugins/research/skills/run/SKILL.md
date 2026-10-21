@@ -17,6 +17,10 @@ Templates the agents need, passed to them by absolute path:
 - Note template: `${CLAUDE_SKILL_DIR}/templates/research-note.md`
 - Report template: `${CLAUDE_SKILL_DIR}/templates/report.html`
 
+You publish the notes viewer with the report yourself (step 6); no agent needs it:
+
+- Notes viewer: `${CLAUDE_SKILL_DIR}/templates/notes.html`
+
 Request: $ARGUMENTS
 
 ## 1. Frame the research
@@ -75,14 +79,18 @@ Start one `synthesizer` with:
 
 ## 6. Publish the report
 
-The report template is built to be published as a Claude Artifact. If you have a tool that publishes an HTML file as an artifact, publish the report with it. If you have none, skip this step; the report file still works when opened in a browser.
+The report template is built to be published as a Claude Artifact, with the research notes and the notes viewer as supporting files of the same artifact. Each "Full note" link (`notes.html#<note-file>`) then opens the note for anyone who can open the artifact, without access to the repository. If you have a tool that publishes an HTML file as an artifact, publish the report with it. If you have none, skip this step; the report file still works when opened in a browser, but its note links do not.
 
 1. Read the whole report at the report path first. Publishing shares it, so check that it is the report you expect and has no leftover `{{` placeholders.
-2. Look for `<topic-folder>/artifact-url.txt`. If it exists, the report was published before: update that artifact by its URL so the link stays the same. Otherwise publish a new artifact.
-3. Publish with the report's `<title>` as its name, the sentence from its `description` meta tag as the description, and a generic icon such as `report`.
-4. For a new artifact, write its URL to `<topic-folder>/artifact-url.txt`, one line, nothing else.
+2. List the notes the report links to: the names after `notes.html#` in its links. Each is `<topic-folder>/research/<name>.md`. Read each of those notes in full, since publishing shares them too.
+3. If the publishing tool accepts supporting files only from certain folders and the notes viewer is outside them, copy the viewer to the session's scratchpad or temp directory first. Do not copy it into the topic folder.
+4. Look for `<topic-folder>/artifact-url.txt`. If it exists, the report was published before: update that artifact by its URL so the link stays the same, and list its published files first if the tool needs that to replace them. Otherwise publish a new artifact.
+5. Publish the report as the main page, with the report's `<title>` as its name, the sentence from its `description` meta tag as the description, and a generic icon such as `report`. In the same publish, add these supporting files:
+   - `notes.html`: the notes viewer, unchanged.
+   - `notes/<name>.md`: each note from step 2, with content type `text/markdown`. If the tool refuses that type, use `text/plain`.
+6. For a new artifact, write its URL to `<topic-folder>/artifact-url.txt`, one line, nothing else.
 
-If publishing fails, keep going and tell the user why in your reply.
+If publishing fails, keep going and tell the user why in your reply. If the report publishes but its supporting files do not, say that its note links will not open.
 
 ## 7. Merge the research into the default branch
 
@@ -114,7 +122,7 @@ Reply briefly with:
 ## Rules
 
 - Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply. A follow-up round is the exception: it never runs unattended (step 4).
-- Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
+- Only the agents write research notes and reports. The only file you write in the topic folder is `artifact-url.txt`.
 - Commit only the topic folder. Never commit, stash or discard anything else in the working folder.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
 - If an agent reports a missing template or topic folder, fix the input and run it again. Do not work around it.

@@ -92,5 +92,5 @@ test("loads its libraries from cdnjs at exact versions", () => {
 
 test("fetches notes from notes/<note-file>.md and links back to the report", () => {
   assert.match(PAGE, /`notes\/\$\{encodeURIComponent\(name\)\}\.md`/);
-  assert.match(PAGE, /<a class="back" href="[^"#]+">/);
+  assert.match(PAGE, /<a class="back" href="index\.html">/);
 });

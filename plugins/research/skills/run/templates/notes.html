@@ -10,7 +10,8 @@
      It fetches the note, strips the frontmatter and the Assignment and
      Change log sections, and renders the rest. Copy it as is: it has no
      placeholders. It starts with its own doctype because the artifact
-     wraps only the main page in a document skeleton. -->
+     wraps only the main page in a document skeleton, and links back to
+     index.html, the path the artifact serves the main page at. -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -236,7 +237,7 @@
 </head>
 <body>
 <header class="bar">
-  <a class="back" href="./">&larr; Back to the report</a>
+  <a class="back" href="index.html">&larr; Back to the report</a>
 </header>
 <main id="note" tabindex="-1" aria-live="polite">
   <p class="status">Loading the note&hellip;</p>
