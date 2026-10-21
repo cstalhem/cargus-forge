@@ -12,10 +12,11 @@ You orchestrate the research. You plan the work, delegate it to the plugin's age
 - **`researcher`** (`research:researcher`): researches one sub-topic and writes one note to `<topic-folder>/research/`.
 - **`synthesizer`** (`research:synthesizer`): compiles the notes into the report.
 
-Templates the agents need, passed to them by absolute path:
+Files the agents need, passed to them by absolute path:
 
 - Note template: `${CLAUDE_SKILL_DIR}/templates/research-note.md`
 - Report template: `${CLAUDE_SKILL_DIR}/templates/report.html`
+- Check script: `${CLAUDE_SKILL_DIR}/scripts/check_report.py`
 
 You publish the notes viewer with the report yourself (step 6); no agent needs it:
 
@@ -26,6 +27,8 @@ Request: $ARGUMENTS
 ## 1. Frame the research
 
 1. Work out the research question from the request. If there is none, ask the user for it; in an unattended run, stop and report that the question is missing.
+   - Restate it as a concise question of at most 15 words. It becomes the report's heading, so keep the key words and drop the context.
+   - Keep the user's original wording as well. The report shows it in its "Scope and method" block.
 2. Pick the depth: `Deep dive` if the user passed `--deep` or asked for depth, otherwise `Overview`.
 3. Pick the topic folder: a short kebab-case slug of the subject in the working folder, e.g. `azure-landing-zones/`. If a folder for the subject already exists, use it.
 4. Set the report path to `<topic-folder>/<folder-name>.html`, e.g. `azure-landing-zones/azure-landing-zones.html`. If the folder already has a report under another name, keep that name.
@@ -40,7 +43,7 @@ Split the question into sub-topics that can be researched independently and toge
 - Give each sub-topic its note file: `YYYY-MM-DD-<slug>.md` with today's date (run `date +%F` if you do not know it) and a short kebab-case slug, unique within `research/`. When amending, use the existing note's file.
 - Note any context the user gave (constraints, links, files, their situation). Each researcher gets the parts that matter for its task.
 
-Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one, or if the run is unattended (see Rules).
+Show the user the plan: restated research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one, or if the run is unattended (see Rules).
 
 ## 3. Delegate the research
 
@@ -70,11 +73,13 @@ When the researchers report back:
 
 Start one `synthesizer` with:
 
-- **Topic folder** and **research question**.
+- **Topic folder.**
+- **Research question:** the restated question from step 1.
+- **Question as asked:** the user's original wording from step 1.
 - **Report path:** from step 1.
-- **Report template:** the absolute path above.
+- **Report template** and **check script:** the absolute paths above.
 - **Depth.**
-- **Open gaps:** the gaps from step 4 that no follow-up round closed, so the report lists them as open questions.
+- **Open gaps:** the gaps from step 4 that no follow-up round closed, so the report lists them as open questions. Include every key claim that rests on a single source, even in a note marked `complete`.
 - **Existing report:** say so if the report path already exists, so it is rebuilt in place.
 
 ## 6. Publish the report
