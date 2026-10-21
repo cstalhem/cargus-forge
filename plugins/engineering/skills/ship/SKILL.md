@@ -31,3 +31,6 @@ Umbrella issue: $ARGUMENTS
    - one paragraph on what the feature does;
    - one `Closes #<n>` line for each sub-issue that is still open, then one for the umbrella. Run `gh api repos/{owner}/{repo}/issues/<n>/sub_issues` again for the current state. Where the close-sub-issue workflow runs, it has closed each sub-issue whose PR merged, so often only the umbrella line is left.
 7. **Hand off.** Run `gh pr checks <pr> --watch`. Show the PR URL and the result of its checks, and name any check that fails. The user reviews and merges it.
+   - If `gh pr checks` is refused, such as by an HTTP 403 from GraphQL, do not wait for the checks. Read the PR's head SHA with `gh api repos/{owner}/{repo}/pulls/<pr> --jq .head.sha`. Then read its check runs once with `gh api --paginate repos/{owner}/{repo}/commits/<sha>/check-runs --jq '.check_runs[] | {name, status, conclusion}'`.
+   - A run whose `status` is not `completed` is pending. A completed run passed if its `conclusion` is `success`, `neutral` or `skipped`, and failed otherwise.
+   - Show the PR URL and list the checks that passed, failed and are pending, or say that there are none. Then stop. Say that pending checks were not waited for, and that running ship again reports them anew.
