@@ -1443,8 +1443,8 @@
         <a href="#s1"><span><span class="n">01</span>{{FINDING_1_TITLE}}</span></a>
         <a href="#s2"><span><span class="n">02</span>{{FINDING_2_TITLE}}</span></a>
         <!-- one <a> per finding, numbered to match the finding dividers -->
-        <a href="#terms">Key terms</a>
         <a href="#questions">Open questions</a>
+        <a href="#terms">Key terms</a>
         <a href="#sources">Sources</a>
       </nav>
 
@@ -1823,13 +1823,72 @@ flowchart LR
 </script>
 
 <script>
+  // Collapsible blocks. Keep as is.
+  // - Expand all opens every <details> in the report; once all are open,
+  //   the same button closes them.
+  // - A jump to a target inside a closed <details> (a citation, a "Cited
+  //   in" back-link, a contents link or a hash in the URL) opens it first.
+  (() => {
+    const blocks = [...document.querySelectorAll("#report details")];
+    const button = document.getElementById("expand-all");
+
+    const sync = () => {
+      if (!button) return;
+      const allOpen = blocks.length > 0 && blocks.every((d) => d.open);
+      button.textContent = allOpen ? "Collapse all" : "Expand all";
+      button.setAttribute("aria-expanded", String(allOpen));
+    };
+    if (button) {
+      button.addEventListener("click", () => {
+        const open = !blocks.every((d) => d.open);
+        blocks.forEach((d) => (d.open = open));
+        sync();
+      });
+      // toggle does not bubble; listen in the capture phase.
+      document.addEventListener("toggle", sync, true);
+      sync();
+    }
+
+    // Open the target if it is a <details>, and every <details> around it.
+    const reveal = (id) => {
+      if (!id) return null;
+      let target = null;
+      try {
+        target = document.getElementById(decodeURIComponent(id));
+      } catch {
+        target = document.getElementById(id);
+      }
+      for (let n = target; n; n = n.parentElement) {
+        if (n.tagName === "DETAILS") n.open = true;
+      }
+      return target;
+    };
+
+    // Open before the browser follows the link, so it can scroll to the
+    // target. Skip clicks another handler cancelled (a first tap on a
+    // citation marker shows its preview instead of jumping).
+    document.addEventListener("click", (e) => {
+      if (e.defaultPrevented) return;
+      const a = e.target.closest && e.target.closest('a[href^="#"]');
+      if (!a) return;
+      reveal(a.getAttribute("href").slice(1));
+    });
+
+    // A hash in the URL on load, or after back and forward.
+    const fromHash = () => {
+      const target = reveal(location.hash.slice(1));
+      if (target) target.scrollIntoView();
+    };
+    addEventListener("hashchange", fromHash);
+    if (location.hash) fromHash();
+  })();
+
   // Citations and long-page navigation. Keep as is.
   // - Commas between citation markers that sit side by side.
   // - Source preview when a marker is hovered, focused or tapped.
   // - "Cited in" back-links under each source in the index.
   // - In-body contents on narrow screens and a back-to-top button.
   (() => {
-    const main = document.getElementById("report");
     const refs = [...document.querySelectorAll("a.ref")];
 
     // Commas: a marker that directly follows another (only whitespace between).
@@ -1839,18 +1898,15 @@ flowchart LR
       if (prev && prev.nodeType === 1 && prev.classList.contains("ref")) ref.classList.add("ref-next");
     });
 
-    // The section a marker sits in, labelled by its section number.
+    // The finding a marker sits in, labelled by its finding number.
     const sectionOf = (el) => {
       if (el.closest("#summary")) return "Summary";
-      let top = el;
-      while (top.parentElement && top.parentElement !== main) top = top.parentElement;
-      for (let n = top; n; n = n.previousElementSibling) {
-        if (n.tagName === "H2") {
-          const rule = n.previousElementSibling;
-          return rule && rule.classList.contains("sec-rule") ? rule.textContent.trim() : n.textContent.trim();
-        }
-      }
-      return "Intro";
+      if (el.closest("#scope")) return "Scope";
+      const finding = el.closest("section.finding");
+      if (!finding) return "Intro";
+      const rule = finding.querySelector(".sec-rule");
+      const h2 = finding.querySelector("h2");
+      return rule ? rule.textContent.trim() : h2 ? h2.textContent.trim() : "Finding";
     };
 
     // Back-links: the first citation of each source in each section.
