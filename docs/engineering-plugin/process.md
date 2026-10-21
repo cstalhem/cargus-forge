@@ -232,7 +232,7 @@ Closes #<umbrella>
   - **Done:** `gh` 2.101.0 on the host gives `parent`, `subIssues`, `subIssuesSummary`, `blockedBy`, `blocking` and `closedByPullRequestsReferences` as `--json` fields. `gh issue develop --list <n>` gives the linked branches.
   - **Done:** on the private repo feederer, `gh issue list --json parent,subIssuesSummary,blockedBy` works. For example, #138 shows 2 of 2 sub-issues complete. `blockedBy` returns `{nodes, totalCount}`, with no error. No feederer issue uses "blocked by" yet.
   - **Done:** the Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app. That is acceptable.
-  - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads the `blockedBy` field and does not use search.
+  - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads blocked-by links through REST (ADR-006) and does not use search.
   - **Done:** a `!`cmd`` line in a skill ran under Remote Control. The model saw `gh version 2.101.0` and the branch name, not the raw command.
 - **Evals: parked** until after the skeleton has run end to end. Until then, a skill's verify step is `claude plugin validate --strict` plus one manual run that you check against the scenarios. The end-to-end run on the CI umbrella is the real test.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.

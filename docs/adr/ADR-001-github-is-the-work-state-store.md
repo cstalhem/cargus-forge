@@ -20,7 +20,7 @@ status: active
   - `status: needs review`: verify sets it on pass.
 - **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no label.
 - **No label means a request that needs discuss.** An issue made by hand is therefore never mistaken for shaped work.
-- GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label.
+- GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label. A blocker that exists only as first-line text, in a repo without the link-blocked-by workflow, shows no Blocked icon ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - A script (`status.sh`) recomputes every status and repairs labels that differ. It never sets `status: ready`, because only the size test can.
 - Each repo describes its tracker in `docs/agents/issue-tracker.md`. Skills read that file, so the tracker can change without a change to the skills.
 
