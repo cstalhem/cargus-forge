@@ -1,0 +1,53 @@
+# Close a sub-issue as completed when its PR merges into a branch other than the
+# default branch. GitHub reads closing keywords only on PRs into the default
+# branch, so a PR into a feature branch closes nothing on its own.
+#
+# The PR body's first line names the issue, in the form execute writes:
+#   Sub-issue #<n> of #<umbrella>. ...
+# The workflow closes #<n> only if it is a sub-issue of #<umbrella>.
+#
+# Source of truth: plugins/engineering/templates/close-sub-issue.yml in
+# cstalhem/cargus-forge. Copy it to .github/workflows/ unchanged.
+name: close-sub-issue
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  issues: write
+
+jobs:
+  close:
+    if: github.event.pull_request.merged && github.event.pull_request.base.ref != github.event.repository.default_branch
+    runs-on: ubuntu-latest
+    steps:
+      - name: Close the sub-issue named on the PR's first line
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # The body goes through env and is never interpolated into run:,
+          # so a PR body cannot inject shell code.
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          first_line=${PR_BODY%%$'\n'*}
+          first_line=${first_line%$'\r'}
+          re='^Sub-issue #([0-9]+) of #([0-9]+)'
+          if [[ ! $first_line =~ $re ]]; then
+            echo "The first line names no sub-issue. Nothing to close."
+            exit 0
+          fi
+          sub=${BASH_REMATCH[1]}
+          parent=${BASH_REMATCH[2]}
+
+          if ! subs=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$parent/sub_issues" --jq '.[].number'); then
+            echo "::warning::Could not read the sub-issues of #$parent. Nothing closed."
+            exit 0
+          fi
+          if ! grep -qx "$sub" <<<"$subs"; then
+            echo "#$sub is not a sub-issue of #$parent. Nothing to close."
+            exit 0
+          fi
+
+          gh api --method PATCH "repos/$GITHUB_REPOSITORY/issues/$sub" \
+            -f state=closed -f state_reason=completed --silent
+          echo "Closed #$sub as completed."
