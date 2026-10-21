@@ -36,12 +36,12 @@ flowchart TD
   V -- fail --> E
   V -- pass --> M1[You merge the PR]
   M1 -- single issue, into main --> C1([Issue closed])
-  M1 -- sub-issue, into feature branch --> Q{All sub-issues merged?}
+  M1 -- sub-issue, into feature branch --> C3([Sub-issue closed by the workflow]) --> Q{All sub-issues merged?}
   Q -- no: next sub-issue --> E
   Q -- yes --> SH[ship]
   SH -- gap --> S
   SH --> M2[You merge the final PR into main]
-  M2 --> C2([Umbrella and sub-issues closed])
+  M2 --> C2([Umbrella closed])
   E -. too big .-> S
 ```
 
@@ -122,7 +122,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Later:** `status: needs review` on pass.
 
 ### merge (you)
-You review the PR and merge it. A sub-issue PR merges into the feature branch, and its issue stays open until the final PR. A single-issue PR merges into `main`, and `Closes #n` closes the issue.
+You review the PR and merge it. A sub-issue PR merges into the feature branch, and the close-sub-issue workflow closes its issue (ADR-002). A single-issue PR merges into `main`, and `Closes #n` closes the issue.
 
 ### ship (Build, for an umbrella issue)
 - **Gets:** an umbrella issue whose sub-issue PRs have all merged into the feature branch.
@@ -130,9 +130,9 @@ You review the PR and merge it. A sub-issue PR merges into the feature branch, a
   1. Merges `main` into the feature branch, by merge and not rebase.
   2. Runs verify on the umbrella scope (below).
   3. Opens the final PR from the feature branch into `main`.
-- **Gives:** a ready final PR. Its body has one `Closes #n` line for each sub-issue and one for the umbrella.
+- **Gives:** a ready final PR. Its body has one `Closes #n` line for each sub-issue that is still open and one for the umbrella.
 - **Exit gate:** umbrella verify passes and CI passes.
-- **Then:** you merge the final PR, and GitHub closes the umbrella and every sub-issue.
+- **Then:** you merge the final PR, and GitHub closes the umbrella and any sub-issue that is still open.
 - **Later:** delete the plan page after you confirm, and reflect (below).
 
 ### verify, umbrella scope (Build; ship calls it)
@@ -163,13 +163,13 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 | a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status: ready` label stays | — |
 | a linked branch or a draft PR | in progress | `status: in progress` | execute |
 | a ready PR (not a draft) | needs review | `status: needs review` | verify, on pass |
-| its PR merged into the feature branch | merged | `status: merged` | `status.sh` |
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
 - **Each new status label replaces the one before it.**
 - **`status.sh` repairs labels from facts:** branches, PRs and merges. It never sets `status: ready`, because only the size test can do that.
 - **`next` lists unlabelled open issues as requests,** and suggests `discuss` for each one.
 - A closed issue is done. Its labels do no harm.
+- **A merged sub-issue is closed,** by the close-sub-issue workflow when its PR merges into the feature branch (ADR-002). So it needs no status of its own, and the Blocked icon clears as soon as its blocker merges.
 
 ## Formats
 
@@ -221,8 +221,7 @@ Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub lin
 ```markdown
 <one paragraph: what the feature does>
 
-Closes #<sub-issue>
-Closes #<sub-issue>
+Closes #<open sub-issue>
 Closes #<umbrella>
 ```
 
@@ -233,7 +232,6 @@ Closes #<umbrella>
   - **Done:** the Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app. That is acceptable.
   - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads the `blockedBy` field and does not use search.
   - **Done:** a `!`cmd`` line in a skill ran under Remote Control. The model saw `gh version 2.101.0` and the branch name, not the raw command.
-- **The `status: merged` label:** keep it, or show the state only in `next`.
 - **Evals: parked** until after the skeleton has run end to end. Until then, a skill's verify step is `claude plugin validate --strict` plus one manual run that you check against the scenarios. The end-to-end run on the CI umbrella is the real test.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
 - **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
