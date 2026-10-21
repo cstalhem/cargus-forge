@@ -6,6 +6,7 @@
   - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
+  - In a session with a designated branch it must push to, such as a Claude Code cloud session, the issue branch is that designated branch, whatever its name. execute creates no `<n>-<slug>` branch there. The PR's first line ties the branch to its issue, and execute finds earlier work through the open PR whose head is the designated branch ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
 
 ## Merging
 Squash-merge every PR: sub-issue PRs into the feature branch, and single-issue and final PRs into `main`. Each PR becomes one commit, and `main` stays linear. The squash message is the PR title and description. A feature branch takes `main` in by merge, never by rebase (ADR-002); a squash applies only the end result, so those merge commits cause no conflicts.
