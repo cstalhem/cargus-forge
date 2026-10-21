@@ -13,7 +13,7 @@ Works in Claude Code and Claude Cowork.
 
 You can also just ask Claude to research something; the skill starts on its own.
 
-1. Claude frames the question, picks a topic folder and splits the question into sub-topics: 2 to 4 for an overview, 4 to 7 with `--deep`.
+1. Claude frames the question, picks a topic folder and splits the question into sub-topics: 2 to 3 for an overview, 4 to 5 with `--deep`.
 2. It shows you the plan and waits for your OK. In an unattended run, such as a scheduled routine, it goes ahead and lists its choices in the reply.
 3. One `researcher` agent per sub-topic searches the web in parallel and writes a cited note. Important claims are cross-checked against at least two sources.
 4. If a key sub-topic comes back thin, Claude runs one follow-up round on the gaps.

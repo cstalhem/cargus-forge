@@ -31,7 +31,7 @@ Request: $ARGUMENTS
 
 Split the question into sub-topics that can be researched independently and together answer it.
 
-- `Overview`: 2 to 4 sub-topics. `Deep dive`: 4 to 7.
+- `Overview`: 2 to 3 sub-topics. `Deep dive`: 4 to 5. These are caps: each researcher costs a share of the session's usage, so plan the fewest sub-topics that answer the question.
 - Each sub-topic is one clear task with its own scope. Avoid overlap; two researchers covering the same ground waste effort and produce conflicting source lists.
 - Give each sub-topic its note file: `YYYY-MM-DD-<slug>.md` with today's date (run `date +%F` if you do not know it) and a short kebab-case slug, unique within `research/`. When amending, use the existing note's file.
 - Note any context the user gave (constraints, links, files, their situation). Each researcher gets the parts that matter for its task.
