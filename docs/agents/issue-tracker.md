@@ -2,6 +2,7 @@
 
 - **Repo:** GitHub, `cstalhem/cargus-forge`. Default branch: `main`.
 - **Branch pattern:** `<n>-<slug>`, the form `gh issue develop` makes. Create every branch with `gh issue develop <n> --name <n>-<slug> --base <base>`, so it is linked to its issue.
+  - Skills find a branch by its name, not by its link, because the link cannot be read or made on every surface. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
   - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.

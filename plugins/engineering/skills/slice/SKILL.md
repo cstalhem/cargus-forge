@@ -18,9 +18,9 @@ Issue: $ARGUMENTS
 - Every sub-issue passes the size test. Split a sub-issue that fails, and test each part again.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Use the bare number, without `#`, in commands. Run `gh issue view <n> --json title,body,parent,subIssues,blockedBy,blocking`.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>`, and the same path with `/parent`, `/sub_issues`, `/dependencies/blocked_by` and `/dependencies/blocking` added.
    - **Umbrella mode:** the issue has a `## Goal` section. If it already has sub-issues, read them. The scenarios they own count as owned. Read the code that the Design section names.
-   - **Re-split mode:** the issue has a `parent` and no `## Goal` section. Read the umbrella with `gh issue view <parent> --json title,body,subIssues`. The rest of the arguments are execute's findings: the criterion that fails and why. Read the work so far: the branch from `gh issue develop --list <n>`, and its `git log` and `git diff` against the feature branch from `gh issue develop --list <parent>`.
+   - **Re-split mode:** the issue has a `parent` and no `## Goal` section. Read the umbrella with `gh api repos/{owner}/{repo}/issues/<parent>` and its `/sub_issues`. The rest of the arguments are execute's findings: the criterion that fails and why. Read the work so far: the branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists, and its `git log` and `git diff` against the feature branch that `git ls-remote --heads origin 'refs/heads/<parent>-*'` lists.
    - Anything else: stop and say why.
 2. **Plan.** Each body uses the issue format in `formats.md` exactly, including its Decisions rules.
    - **Umbrella mode:** split the umbrella into sub-issues with one behaviour each. Show each sub-issue (its title, its draft body and the four size-test verdicts), a table of each umbrella scenario and the sub-issues that own it, and which sub-issue blocks which.
@@ -31,7 +31,7 @@ Issue: $ARGUMENTS
      - any commits on the branch that belong to a part that moves out, so the user can decide whether they stay.
 
    Wait for "yes". If the user changes something, update the plan and show it again.
-3. **Branch.** Umbrella mode only. Run `gh issue develop --list <n>`. If no branch is linked, run `gh issue develop <n> --base main --name <n>-<slug>`.
+3. **Branch.** Umbrella mode only. Run `git ls-remote --heads origin 'refs/heads/<n>-*'`. If it lists no branch, run `gh issue develop <n> --base main --name <n>-<slug>`.
 4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then use one command for each: `gh issue create --title "<title>" --parent <umbrella> --blocked-by <a>,<b> --body-file <path>`. Leave out `--blocked-by` when nothing blocks the sub-issue.
    - **Re-split mode:** first rewrite the narrowed sub-issue with `gh issue edit <n> --title "<title>" --body-file <path>`, then create the new parts. Then, for each issue `<x>` that the old sub-issue blocked, run `gh issue edit <x> --add-blocked-by <a>,<b>` with the new parts. If `gh` does not know that flag, add each link with `gh api -X POST repos/{owner}/{repo}/issues/<x>/dependencies/blocked_by -F issue_id=<id>`, where `<id>` comes from `gh api repos/{owner}/{repo}/issues/<a> --jq .id`.
 5. **Hand off.** Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.

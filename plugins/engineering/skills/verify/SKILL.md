@@ -17,13 +17,13 @@ Target: $ARGUMENTS
 - Change no code, and push nothing. verify reports, and the caller fixes.
 
 ## Steps
-1. **Scope.** Use the bare number, without `#`, in every command. Run `gh pr view <n> --json number,title,body,headRefName`.
-   - **PR scope:** it is a PR. Its issue is the `#<n>` on the first line of the body ("Sub-issue #<n> of …" or "Closes #<n>"). The branch is `headRefName`.
-   - **Umbrella scope:** it is not a PR. Run `gh issue view <n> --json title,body`. The issue must have a `## Goal` section, and the branch is the one that `gh issue develop --list <n>` shows.
+1. **Scope.** Use the bare number, without `#`, in every command. Run `gh api repos/{owner}/{repo}/pulls/<n>`.
+   - **PR scope:** it is a PR. Its issue is the `#<n>` on the first line of the body ("Sub-issue #<n> of …" or "Closes #<n>"). The branch is `head.ref`.
+   - **Umbrella scope:** it is not a PR (the call returns 404). Run `gh api repos/{owner}/{repo}/issues/<n>`. The issue must have a `## Goal` section. The branch is the one that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists, by the branch pattern in `docs/agents/issue-tracker.md`. Stop if it lists none, or more than one.
    - Anything else: stop and say why.
 2. **Code.** Run `git fetch origin <branch>`, and in umbrella scope also `git fetch origin main`. Then run `git rev-parse HEAD` and `git rev-parse origin/<branch>`. If they differ, stop and say so, because the checks must run on the code they grade.
 3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, and this task:
-   - Read the issue with `gh issue view`. For PR scope, read `gh pr view` and `gh pr diff`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues.
+   - Read GitHub only with `gh api` REST and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api repos/{owner}/{repo}/issues/<issue>/sub_issues`.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.
    - For each scenario, record three things with evidence (`file:line`, command output, or run output):
      - **Exists:** the code or text that the scenario needs is there.
