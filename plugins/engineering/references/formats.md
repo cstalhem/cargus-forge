@@ -28,7 +28,7 @@ The one record of a feature that needs more than one session.
 One session of work.
 
 ```markdown
-Sub-issue of #<umbrella> · Blocked by #<n>
+Sub-issue of #<umbrella> · Blocked by #<a>, #<b>
 
 ## What it delivers
 <one behaviour>
@@ -47,7 +47,7 @@ Sub-issue of #<umbrella> · Blocked by #<n>
 <one command that fails before the work and passes after it>
 ```
 
-- The first line is for sub-issues only. Set the parent and "blocked by" as GitHub links where possible, not only as text.
+- The first line is for sub-issues only. Leave out ` · Blocked by …` when nothing blocks the sub-issue. Set the parent as a GitHub link too. Each blocker is only text here: the link-blocked-by workflow turns it into a "blocked by" link where it runs.
 - `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
 - When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 

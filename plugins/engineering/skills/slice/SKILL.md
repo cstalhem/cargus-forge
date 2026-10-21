@@ -1,6 +1,6 @@
 ---
 name: slice
-description: Split an umbrella issue into sub-issues that each pass the size test, with parent and "blocked by" links, and create the umbrella's feature branch from main. Also re-splits a sub-issue that fails the size test. discuss calls it after it writes an umbrella issue, and execute calls it on a sub-issue that is too big.
+description: Split an umbrella issue into sub-issues that each pass the size test, with parent links and "blocked by" first lines, and create the umbrella's feature branch from main. Also re-splits a sub-issue that fails the size test. discuss calls it after it writes an umbrella issue, and execute calls it on a sub-issue that is too big.
 argument-hint: "<#umbrella issue | #sub-issue findings>"
 user-invocable: false
 allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
@@ -32,6 +32,6 @@ Issue: $ARGUMENTS
 
    Wait for "yes". If the user changes something, update the plan and show it again.
 3. **Branch.** Umbrella mode only. Run `git ls-remote --heads origin 'refs/heads/<n>-*'`. If it lists no branch, run `gh issue develop <n> --base main --name <n>-<slug>`.
-4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then use one command for each: `gh issue create --title "<title>" --parent <umbrella> --blocked-by <a>,<b> --body-file <path>`. Leave out `--blocked-by` when nothing blocks the sub-issue.
-   - **Re-split mode:** first rewrite the narrowed sub-issue with `gh issue edit <n> --title "<title>" --body-file <path>`, then create the new parts. Then, for each issue `<x>` that the old sub-issue blocked, run `gh issue edit <x> --add-blocked-by <a>,<b>` with the new parts. If `gh` does not know that flag, add each link with `gh api -X POST repos/{owner}/{repo}/issues/<x>/dependencies/blocked_by -F issue_id=<id>`, where `<id>` comes from `gh api repos/{owner}/{repo}/issues/<a> --jq .id`.
-5. **Hand off.** Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.
+4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then use one command for each: `gh issue create --title "<title>" --parent <umbrella> --body-file <path>`. Write each blocker only as the `Blocked by #<a>, #<b>` part of the body's first line, as in `formats.md`. Set no "blocked by" link: the link-blocked-by workflow adds them where it runs.
+   - **Re-split mode:** first rewrite the narrowed sub-issue with `gh issue edit <n> --title "<title>" --body-file <path>`, then create the new parts. Then, for each issue `<x>` that the old sub-issue blocked, read its body with `gh api repos/{owner}/{repo}/issues/<x> --jq .body`, add the new parts to the `Blocked by` part of its first line, and write the body back with `gh issue edit <x> --body-file <path>`.
+5. **Hand off.** For each sub-issue that step 4 created or edited, read `gh api repos/{owner}/{repo}/issues/<s>/dependencies/blocked_by` and compare it with the blockers in its first line. Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. Name each blocker that has no link as text only, and do not report it as linked. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.
