@@ -17,16 +17,15 @@ allowed-tools: Read Write Edit Glob Grep Bash Task AskUserQuestion TodoWrite
 - Memory rules live in `llm-context/memory-system.md` (entry point; read the detail files it points to).
 - Ask questions with the AskUserQuestion tool when needed.
 
-# Dates
+# Date
 
 - Today: !`date +%Y-%m-%d`
-- Yesterday: !`date -v-1d +%Y-%m-%d`
 
 # Workflow
 
 Before dispatching any sub-agent prompt below, substitute `yesterday_path` and `today_path` with the absolute paths resolved in step 1.
 
-1. **Resolve paths.** Locate yesterday's daily note and today's target path following the daily-note path convention in `llm-context/`. If no note exists for yesterday, use the latest available daily note as `yesterday_path`.
+1. **Resolve paths.** Following the daily-note path convention in `llm-context/`, find today's target path and use the latest daily note dated before today as `yesterday_path` (after a weekend or holiday, that is the last day with a note).
 2. **Close the previous day's note** (parallel sub-agents):
    - **task-manager agent**: "Process the daily note at `yesterday_path` and its linked meeting notes per `llm-context/tasks.md`: create task notes from meeting action items and from checkbox lines Calle wrote that are not yet task notes. Do not change the status of existing tasks."
    - Add any meeting notes for that day that are missing from the Meetings table, linking the meeting name to the note.
