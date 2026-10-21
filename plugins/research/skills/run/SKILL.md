@@ -12,16 +12,23 @@ You orchestrate the research. You plan the work, delegate it to the plugin's age
 - **`researcher`** (`research:researcher`): researches one sub-topic and writes one note to `<topic-folder>/research/`.
 - **`synthesizer`** (`research:synthesizer`): compiles the notes into the report.
 
-Templates the agents need, passed to them by absolute path:
+Files the agents need, passed to them by absolute path:
 
 - Note template: `${CLAUDE_SKILL_DIR}/templates/research-note.md`
 - Report template: `${CLAUDE_SKILL_DIR}/templates/report.html`
+- Check script: `${CLAUDE_SKILL_DIR}/scripts/check_report.py`
+
+You publish the notes viewer with the report yourself (step 6); no agent needs it:
+
+- Notes viewer: `${CLAUDE_SKILL_DIR}/templates/notes.html`
 
 Request: $ARGUMENTS
 
 ## 1. Frame the research
 
 1. Work out the research question from the request. If there is none, ask the user for it; in an unattended run, stop and report that the question is missing.
+   - Restate it as a concise question of at most 15 words. It becomes the report's heading, so keep the key words and drop the context.
+   - Keep the user's original wording as well. The report shows it in its "Scope and method" block.
 2. Pick the depth: `Deep dive` if the user passed `--deep` or asked for depth, otherwise `Overview`.
 3. Pick the topic folder: a short kebab-case slug of the subject in the working folder, e.g. `azure-landing-zones/`. If a folder for the subject already exists, use it.
 4. Set the report path to `<topic-folder>/<folder-name>.html`, e.g. `azure-landing-zones/azure-landing-zones.html`. If the folder already has a report under another name, keep that name.
@@ -31,12 +38,12 @@ Request: $ARGUMENTS
 
 Split the question into sub-topics that can be researched independently and together answer it.
 
-- `Overview`: 2 to 4 sub-topics. `Deep dive`: 4 to 7.
+- `Overview`: 2 to 3 sub-topics. `Deep dive`: 4 to 5. These are caps: each researcher costs a share of the session's usage, so plan the fewest sub-topics that answer the question.
 - Each sub-topic is one clear task with its own scope. Avoid overlap; two researchers covering the same ground waste effort and produce conflicting source lists.
 - Give each sub-topic its note file: `YYYY-MM-DD-<slug>.md` with today's date (run `date +%F` if you do not know it) and a short kebab-case slug, unique within `research/`. When amending, use the existing note's file.
 - Note any context the user gave (constraints, links, files, their situation). Each researcher gets the parts that matter for its task.
 
-Show the user the plan: research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one, or if the run is unattended (see Rules).
+Show the user the plan: restated research question, topic folder, depth and the sub-topics, one line each. Say whether the research will be merged into the default branch at the end (step 7). Ask them to confirm or adjust before delegating. Skip the confirmation if the user already said to go ahead without one, or if the run is unattended (see Rules).
 
 ## 3. Delegate the research
 
@@ -56,29 +63,39 @@ Never give two researchers the same note in one round. Each would overwrite the 
 When the researchers report back:
 
 1. Check each `status` and `confidence`, and skim the notes.
-2. If a sub-topic the answer depends on is `blocked` or `partial`, or a key claim rests on a single source, run one follow-up round: amend the existing note with a researcher focused on the gap. Combine several gaps in one note into one task, so each note gets at most one researcher. Run one round at most unless the user asks for more.
-3. Leave other follow-ups for the report's open questions.
+2. If a sub-topic the answer depends on is `blocked` or `partial`, or a key claim rests on a single source, a follow-up round can close the gap: amend the existing note with a researcher focused on it. Combine several gaps in one note into one task, so each note gets at most one researcher. A follow-up round costs as much usage as the first, so it needs the user's approval:
+   - **Attended run:** show the user the gaps and the follow-up tasks, one line each, and ask whether to run the round. Run it only after they approve. If they decline, go on to the report.
+   - **Unattended run:** the follow-up round never runs unattended. Go on to the report; the gaps go to its open questions, and you list them in your reply.
+3. Run one round at most unless the user asks for more.
+4. Leave other follow-ups for the report's open questions.
 
 ## 5. Delegate the report
 
 Start one `synthesizer` with:
 
-- **Topic folder** and **research question**.
+- **Topic folder.**
+- **Research question:** the restated question from step 1.
+- **Question as asked:** the user's original wording from step 1.
 - **Report path:** from step 1.
-- **Report template:** the absolute path above.
+- **Report template** and **check script:** the absolute paths above.
 - **Depth.**
+- **Open gaps:** the gaps from step 4 that no follow-up round closed, so the report lists them as open questions. Include every key claim that rests on a single source, even in a note marked `complete`.
 - **Existing report:** say so if the report path already exists, so it is rebuilt in place.
 
 ## 6. Publish the report
 
-The report template is built to be published as a Claude Artifact. If you have a tool that publishes an HTML file as an artifact, publish the report with it. If you have none, skip this step; the report file still works when opened in a browser.
+The report template is built to be published as a Claude Artifact, with the research notes and the notes viewer as supporting files of the same artifact. Each "Full note" link (`notes.html#<note-file>`) then opens the note for anyone who can open the artifact, without access to the repository. If you have a tool that publishes an HTML file as an artifact, publish the report with it. If you have none, skip this step; the report file still works when opened in a browser, but its note links do not.
 
 1. Read the whole report at the report path first. Publishing shares it, so check that it is the report you expect and has no leftover `{{` placeholders.
-2. Look for `<topic-folder>/artifact-url.txt`. If it exists, the report was published before: update that artifact by its URL so the link stays the same. Otherwise publish a new artifact.
-3. Publish with the report's `<title>` as its name, the sentence from its `description` meta tag as the description, and a generic icon such as `report`.
-4. For a new artifact, write its URL to `<topic-folder>/artifact-url.txt`, one line, nothing else.
+2. List the notes the report links to: the names after `notes.html#` in its links. Each is `<topic-folder>/research/<name>.md`. Read each of those notes in full, since publishing shares them too.
+3. If the publishing tool accepts supporting files only from certain folders and the notes viewer is outside them, copy the viewer to the session's scratchpad or temp directory first. Do not copy it into the topic folder.
+4. Look for `<topic-folder>/artifact-url.txt`. If it exists, the report was published before: update that artifact by its URL so the link stays the same, and list its published files first if the tool needs that to replace them. Otherwise publish a new artifact.
+5. Publish the report as the main page, with the report's `<title>` as its name, the sentence from its `description` meta tag as the description, and a generic icon such as `report`. In the same publish, add these supporting files:
+   - `notes.html`: the notes viewer, unchanged.
+   - `notes/<name>.md`: each note from step 2, with content type `text/markdown`. If the tool refuses that type, use `text/plain`.
+6. For a new artifact, write its URL to `<topic-folder>/artifact-url.txt`, one line, nothing else.
 
-If publishing fails, keep going and tell the user why in your reply.
+If publishing fails, keep going and tell the user why in your reply. If the report publishes but its supporting files do not, say that its note links will not open.
 
 ## 7. Merge the research into the default branch
 
@@ -109,8 +126,8 @@ Reply briefly with:
 
 ## Rules
 
-- Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply.
-- Only the agents write research notes and reports. The only file you write is `artifact-url.txt`.
+- Unattended runs: when no one can answer, such as a scheduled routine or a request that says to proceed without confirmation, never stop to wait for input. Make the reasonable choice, carry on, and list the choices you made in your reply. A follow-up round is the exception: it never runs unattended (step 4).
+- Only the agents write research notes and reports. The only file you write in the topic folder is `artifact-url.txt`.
 - Commit only the topic folder. Never commit, stash or discard anything else in the working folder.
 - Never invent findings to fill a gap. Gaps go to the user as open questions.
 - If an agent reports a missing template or topic folder, fix the input and run it again. Do not work around it.
