@@ -16,4 +16,7 @@ GitHub reads closing keywords only on PRs into `main` ([ADR-002](../adr/ADR-002-
 |---|---|---|
 | Sub-issue PR | the umbrella's feature branch | none; it would close nothing |
 | Single-issue PR | `main` | `Closes #<issue>` |
-| Final PR of an umbrella | `main` | one `Closes #<n>` for each sub-issue, and one for the umbrella |
+| Final PR of an umbrella | `main` | one `Closes #<n>` for each sub-issue that is still open, and one for the umbrella |
+
+## Closing sub-issues
+`.github/workflows/close-sub-issue.yml` closes a sub-issue as completed when its PR merges into a branch other than `main`. It reads the `Sub-issue #<n> of #<umbrella>` first line that execute writes, and closes `#<n>` only if it is a sub-issue of `#<umbrella>`. The file is a byte-identical copy of `plugins/engineering/templates/close-sub-issue.yml`: change the template, then copy it.

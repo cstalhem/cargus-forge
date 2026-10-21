@@ -17,8 +17,8 @@ status: active
   - `umbrella`: discuss sets it when the size test fails;
   - `status: ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
   - `status: in progress`: execute sets it;
-  - `status: needs review`: verify sets it on pass;
-  - `status: merged`: `status.sh` sets it when a sub-issue PR has merged into the feature branch.
+  - `status: needs review`: verify sets it on pass.
+- **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no label.
 - **No label means a request that needs discuss.** An issue made by hand is therefore never mistaken for shaped work.
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label.
 - A script (`status.sh`) recomputes every status and repairs labels that differ. It never sets `status: ready`, because only the size test can.
@@ -31,7 +31,7 @@ status: active
 - **Labels for blocked and done:** GitHub shows both already.
 - **No label means ready:** an issue made by hand then looks ready before discuss has shaped it.
 - **A "new" label from an issue template:** a template labels only the issues made through it. It misses issues made with `gh`, the API or a blank form, so those would look ready again.
-- **A GitHub Action that sets labels from events:** it is extra setup in each repo, and the repair script covers the drift.
+- **A GitHub Action that sets labels from events:** it is extra setup in each repo, and the repair script covers the drift. The one workflow the plugin ships closes sub-issues and sets no label.
 
 ## Consequences
 - Each repo must be on GitHub, with `gh` 2.94 or later, which reads parent, sub-issue and dependency data as JSON.
