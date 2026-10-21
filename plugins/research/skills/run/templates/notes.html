@@ -286,6 +286,18 @@
     // Note files are kebab-case slugs with a date; anything else could
     // reach outside notes/.
     var SAFE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+    // Notes are plain markdown. Raw HTML in one, such as a quoted <title>,
+    // shows as text instead of swallowing the rest of the note.
+    var ESCAPES = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" };
+    marked.use({
+      renderer: {
+        html: function (token) {
+          return token.text.replace(/[&<>"]/g, function (c) {
+            return ESCAPES[c];
+          });
+        },
+      },
+    });
 
     function status(text) {
       main.innerHTML = "";
