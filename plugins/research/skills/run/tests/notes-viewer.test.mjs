@@ -37,7 +37,18 @@ test("drops the frontmatter, Assignment and Change log from the fixture note", (
   assert.doesNotMatch(out, /^slug:/m);
   assert.doesNotMatch(out, /## Assignment|Task as delegated/);
   assert.doesNotMatch(out, /## Change log|Fixture created/);
-  assert.match(out, /## Summary\n\n- Fixture note\. A heat pump uses less electricity/);
+  assert.deepEqual(headings(out), [
+    "# Running costs of air-source heat pumps",
+    "## Summary",
+    "## Findings",
+    "### Electricity use",
+    "### Running cost",
+    "## Conflicting or uncertain information",
+    "## Sources",
+    "## Comments",
+    "## Decisions made",
+    "## Recommended follow-up research",
+  ]);
 });
 
 test("keeps every other section of a note built from the template", () => {
