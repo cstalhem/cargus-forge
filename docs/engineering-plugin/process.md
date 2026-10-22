@@ -8,18 +8,7 @@ The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0*
 
 ## Words
 
-| Term | Meaning |
-|---|---|
-| **Request** | A sentence, an issue or a bug report that starts work. |
-| **Size test** | The test of whether one issue fits one session (see below). |
-| **Shape** | discuss → research → plan → slice. It turns a request into issues. |
-| **Build** | execute → verify → merge, once for each issue. For an umbrella, ship comes last. |
-| **Issue** | One session of work. It is either a single issue (no umbrella) or a sub-issue. |
-| **Umbrella issue** | The one record of a feature that needs more than one session: goal, scenarios, decisions, out of scope. |
-| **Sub-issue** | An issue under an umbrella issue. |
-| **Scenario** | One acceptance criterion as `WHEN … THEN …`. Each scenario becomes a test. |
-| **Feature branch** | The branch of an umbrella issue. Sub-issue PRs merge into it. |
-| **Final PR** | The one PR that takes a feature branch into `main`. ship opens it. |
+The terms of this process are defined in [docs/glossary.md](../glossary.md).
 
 ## Flow
 
