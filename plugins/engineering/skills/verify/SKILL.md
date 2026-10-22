@@ -48,6 +48,6 @@ Target: $ARGUMENTS
      ```
 4. **Post.** Write the agent's report as it is to a file, as the rules say. In both scopes, run `gh api -X POST repos/{owner}/{repo}/issues/<n>/comments -F body=@<path>`: a PR takes comments on the issues path. Read the comment back with `gh api repos/{owner}/{repo}/issues/comments/<id>`, where `<id>` is the `id` that the post returns.
 5. **Result.** Start this step only after the comment from step 4 is posted. If posting failed, stop and say so.
-   - **PR scope, PASS:** run `gh pr ready <n>`. If it gets a GraphQL 403, run `gh api -X POST repos/{owner}/{repo}/pulls/<n>/ccr/ready_for_review`. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<n>`, and stop and say so if `draft` is not false.
+   - **PR scope, PASS:** mark PR `<n>` ready as the rules say.
    - **PR scope, FAIL:** leave the PR as a draft, and return each failing scenario with its evidence to the caller.
    - **Umbrella scope:** return the verdict and each gap to the caller.
