@@ -5,7 +5,7 @@ argument-hint: "<#umbrella issue | #sub-issue findings>"
 user-invocable: false
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(cat docs/glossary.md 2>/dev/null || true)
+  - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
 ---
 
 # slice
@@ -18,7 +18,7 @@ Issue: $ARGUMENTS
 - Every umbrella scenario belongs to at least one sub-issue. In a re-split, every umbrella scenario that the old sub-issue owned is still owned. If a scenario fits no sub-issue, stop before you write anything, name the scenario, and send it back to discuss.
 - If two parts of the umbrella conflict, for example a Design that breaks a decision, stop before you write anything. Name both parts, say why they conflict, and send it back to discuss. Do not settle it in a sub-issue.
 - Every sub-issue passes the size test. Split a sub-issue that fails, and test each part again.
-- Every `Term` decision of the umbrella is pointed to as `#<umbrella> D<n>` by at least one sub-issue: the one whose work writes or names that term.
+- Every `Term` decision of the umbrella is pointed to as `#<umbrella> D<n>` by at least one sub-issue: the one whose work writes or names that term. In a re-split, the pointer moves with that work.
 - Write sub-issue titles and scenarios with the terms of the Glossary section at the end of this skill, and not with a word that it lists under `_Avoid_`.
 
 ## Steps
@@ -43,4 +43,4 @@ Issue: $ARGUMENTS
 5. **Hand off.** For each issue that step 4 created or edited, read `gh api 'repos/{owner}/{repo}/issues/<s>/dependencies/blocked_by?per_page=100'` and compare it with the blockers in its first line. Stop and name each blocker in the first line that has no link, and each link that has no blocker in the first line. Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.
 
 ## Glossary
-!`cat docs/glossary.md 2>/dev/null || true`
+!`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`

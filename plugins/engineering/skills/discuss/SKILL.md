@@ -5,7 +5,7 @@ argument-hint: "<request or #issue>"
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(cat docs/glossary.md 2>/dev/null || true)
+  - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
 ---
 
 # discuss
@@ -30,4 +30,4 @@ Request: $ARGUMENTS
    - Fail: show the issue URL, then call the Skill tool with `engineering:slice` and the issue number.
 
 ## Glossary
-!`cat docs/glossary.md 2>/dev/null || true`
+!`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`

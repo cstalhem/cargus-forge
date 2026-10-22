@@ -27,7 +27,7 @@ A `claude -p` started from inside a Claude Code session inherits `CLAUDE_CODE_SE
 
 ## Test a skill that another skill calls
 
-In `claude -p`, the Skill tool needs approval. Pass `--allowedTools Skill`, or the call is denied and the run only reports that the skill did not load.
+In `claude -p` (2.1.308), a Skill call needs approval only when the called skill has an `allowed-tools` line, from the prompt and from inside a typed skill alike. Without approval the call is denied, and the run only reports that the skill did not load. Pass `--allowedTools=Skill`. Write it with `=`: the flag takes several values, so `--allowedTools Skill "<prompt>"` swallows the prompt.
 
 ## Inject a file into a skill body
 
@@ -38,6 +38,7 @@ In `claude -p`, the Skill tool needs approval. Pass `--allowedTools Skill`, or t
 - If the command fails or is blocked:
   - a typed skill stops with 0 turns, an empty result and `is_error: false` in `claude -p`;
   - a skill called through the Skill tool gets the error as the tool result, and the model reports it.
+- An output that is empty or only whitespace shows as `(Bash completed with no output)`. For a section that should look empty, print a zero-width space instead, for example `cat <file> 2>/dev/null || printf '\342\200\213'`.
 - `claude plugin validate --strict` does not catch a missing injected file. Check it in the verify step, for example with `test -f`.
 
 ## Anti-Patterns

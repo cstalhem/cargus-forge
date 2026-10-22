@@ -5,7 +5,7 @@ argument-hint: "<#issue>"
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(cat docs/glossary.md 2>/dev/null || true)
+  - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
 ---
 
 # execute
@@ -48,7 +48,7 @@ Issue: $ARGUMENTS
      3. Ask the user to name the session with `/rename <branch>`.
    - **In a worktree on `<base>`, the feature branch from step 1, with no changes and no commits that are not on a remote:** this happens after discuss turned a single issue with work so far into an umbrella, because the issue's own branch became the feature branch. Go on as in the case of a worktree on its own new branch, but skip its `git branch -D`: the feature branch is not a throwaway branch.
    - **Anything else** (changes, commits, another issue's branch, or a `git switch` that fails): stop, show what the worktree holds, and ask.
-3. **Implement.** Read the code that the Files section names. Work one scenario at a time, and commit as you go with messages that say what changed and why. Follow the deviation rules. Write each `Term` decision into `docs/glossary.md` as `domain-model` says. The Glossary section at the end of this skill loaded before step 2, so read `docs/glossary.md` on the issue branch, if it exists, before you judge that no entry covers a name, and before you write an entry.
+3. **Implement.** Read the code that the Files section names. Work one scenario at a time, and commit as you go with messages that say what changed and why. Follow the deviation rules. Write each `Term` decision into `docs/glossary.md` as `domain-model` says. The Glossary section at the end of this skill holds the file as it was when the skill loaded, and step 2 can switch or update the branch after that, so read `docs/glossary.md` on the issue branch, if it exists, before you judge that no entry covers a name, and before you write an entry.
 4. **Check.** Run the issue's Verify command and the pre-PR checks in `commands.md`. If one fails, go back to step 3.
 5. **PR.** Run `git push -u origin <branch>`. If the branch has no open PR yet (`gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&state=open&per_page=100'`), run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<issue title>" -f head=<branch> -f base=<base> -F draft=true -F body=@<path>`. If it has one, as after deviation 5, rewrite its title and body with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -f title="<issue title>" -F body=@<path>`. Write the body to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `<base>`, it is not a draft, or its title or body is not the one you wrote. The body has:
    - a first line: for a sub-issue, "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."; for a single issue, `Closes #<n>`;
@@ -58,4 +58,4 @@ Issue: $ARGUMENTS
 6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number. If verify fails, fix what its report names and go back to step 4. If it fails a second time, stop and ask.
 
 ## Glossary
-!`cat docs/glossary.md 2>/dev/null || true`
+!`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`

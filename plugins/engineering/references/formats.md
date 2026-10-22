@@ -48,7 +48,7 @@ Sub-issue of #<umbrella> · Blocked by #<a>, #<b>
 ```
 
 - The first line is for sub-issues only. Leave out ` · Blocked by …` when nothing blocks the sub-issue. Set the parent and each blocker as GitHub links too. The `Blocked by` text mirrors the "blocked by" links for readers.
-- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
+- `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state, or points to an umbrella decision.
 - When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
 ## Term decision
