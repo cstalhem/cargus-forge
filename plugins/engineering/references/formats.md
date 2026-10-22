@@ -58,7 +58,7 @@ A decision that settles one domain term, in the `## Decisions` section of an umb
 - D<n> · Term: **<Term>**: <definition> _Avoid_: <words>
 ```
 
-Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line.
+Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. An issue whose work writes a `Term` entry lists `docs/glossary.md` under `## Files`.
 
 ## Final PR body
 The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch.
