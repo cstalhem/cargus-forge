@@ -3,7 +3,9 @@ name: slice
 description: Split an umbrella issue into sub-issues that each pass the size test, with parent links and "blocked by" links, and create the umbrella's feature branch from main, or from the work so far on the current branch. Also re-splits a sub-issue that fails the size test. discuss calls it after it writes an umbrella issue, and execute calls it on a sub-issue that is too big.
 argument-hint: "<#umbrella issue | #sub-issue findings>"
 user-invocable: false
-allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+allowed-tools:
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(cat docs/glossary.md 2>/dev/null || true)
 ---
 
 # slice
@@ -16,6 +18,7 @@ Issue: $ARGUMENTS
 - Every umbrella scenario belongs to at least one sub-issue. In a re-split, every umbrella scenario that the old sub-issue owned is still owned. If a scenario fits no sub-issue, stop before you write anything, name the scenario, and send it back to discuss.
 - If two parts of the umbrella conflict, for example a Design that breaks a decision, stop before you write anything. Name both parts, say why they conflict, and send it back to discuss. Do not settle it in a sub-issue.
 - Every sub-issue passes the size test. Split a sub-issue that fails, and test each part again.
+- Write sub-issue titles and scenarios with the terms of the Glossary section at the end of this skill, and not with a word that it lists under `_Avoid_`.
 
 ## Steps
 1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>`, and the same path with `/parent`, `/sub_issues?per_page=100`, `/dependencies/blocked_by?per_page=100` and `/dependencies/blocking?per_page=100` added, reading those lists page by page as the rules say.
@@ -37,3 +40,6 @@ Issue: $ARGUMENTS
 4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then create each with `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`. Set its parent with `gh api -X POST repos/{owner}/{repo}/issues/<umbrella>/sub_issues -F sub_issue_id=<id>`, where `<id>` is the `id` field of the new issue, not its number. Read the parent back with `gh api repos/{owner}/{repo}/issues/<s>/parent --jq .number`, with the new issue's number as `<s>`, and stop if it is not the umbrella. For each blocker `#<a>`, read its `id` with `gh api repos/{owner}/{repo}/issues/<a> --jq .id` and set the link with `gh api -X POST repos/{owner}/{repo}/issues/<s>/dependencies/blocked_by -F issue_id=<id>`. The `id` is not the number. Write the same blockers as the `Blocked by #<a>, #<b>` part of the body's first line, as in `formats.md`.
    - **Re-split mode:** first rewrite the narrowed sub-issue with `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`. Its first line keeps every blocker from step 1. For a blocker that was only in the old first line, with no link, set the link the same way as above. Then create the new parts as above. Each new part gets the narrowed sub-issue's parent as its parent, with the same `sub_issues` call and read-back, and a "blocked by" link for each of its blockers. Then, for each issue `<x>` that the old sub-issue blocked, as step 1 found them, read its body with `gh api repos/{owner}/{repo}/issues/<x> --jq .body` and its links with `gh api 'repos/{owner}/{repo}/issues/<x>/dependencies/blocked_by?per_page=100'`. Add the new parts to the `Blocked by` part of its first line, and each blocker it is linked to but does not name, such as `#<n>`, and write the body back with `gh api -X PATCH repos/{owner}/{repo}/issues/<x> -F body=@<path>`. Set a "blocked by" link from `<x>` to each new part the same way, and to each other blocker in its first line that has no link, such as `#<n>`, so its links match its first line.
 5. **Hand off.** For each issue that step 4 created or edited, read `gh api 'repos/{owner}/{repo}/issues/<s>/dependencies/blocked_by?per_page=100'` and compare it with the blockers in its first line. Stop and name each blocker in the first line that has no link, and each link that has no blocker in the first line. Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.
+
+## Glossary
+!`cat docs/glossary.md 2>/dev/null || true`

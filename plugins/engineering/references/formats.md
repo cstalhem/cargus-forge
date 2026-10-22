@@ -51,6 +51,15 @@ Sub-issue of #<umbrella> · Blocked by #<a>, #<b>
 - `## Decisions` is optional. Add it only if the issue settles something that its scenarios do not state.
 - When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
+## Term decision
+A decision that settles one domain term, in the `## Decisions` section of an umbrella issue or an issue. It holds the whole glossary entry for `docs/glossary.md`, in the format of `engineering:domain-model`:
+
+```markdown
+- D<n> · Term: **<Term>**: <definition> _Avoid_: <words>
+```
+
+Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line.
+
 ## Final PR body
 The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch.
 
