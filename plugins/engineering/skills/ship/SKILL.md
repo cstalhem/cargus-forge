@@ -27,7 +27,7 @@ Umbrella issue: $ARGUMENTS
    - Run the checks in `commands.md`. If one fails, stop and report it.
    - Run `git push origin <branch>`. verify grades only a pushed head.
 5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
-6. **Final PR.** If `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&base=main&state=open'` shows no PR, run `gh pr create --base main --head <branch> --title "<umbrella title>" --body-file <path>`, with the final PR body from `formats.md` written to a file as the rules say:
+6. **Final PR.** If `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&base=main&state=open'` shows no PR, run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<umbrella title>" -f head=<branch> -f base=main -F body=@<path>`, with the final PR body from `formats.md` written to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `main` or it is a draft. The body has:
    - one paragraph on what the feature does;
    - one `Closes #<n>` line for each sub-issue that is still open, then one for the umbrella. Run `gh api repos/{owner}/{repo}/issues/<n>/sub_issues` again for the current state. Where the close-sub-issue workflow runs, it has closed each sub-issue whose PR merged, so often only the umbrella line is left.
 7. **Hand off.** Run `gh pr checks <pr> --watch`. Show the PR URL and the result of its checks, and name any check that fails. The user reviews and merges it.
