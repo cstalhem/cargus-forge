@@ -8,13 +8,14 @@ status: active
 
 - **Decision:** Every engineering skill runs end to end in a Claude Code cloud session, where the agent proxy refuses GraphQL and `git/refs` writes. Skills read and write GitHub through `gh api` REST on every surface, use a fallback for the two operations that exist only in GraphQL, and find branches by their names in git.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-002](ADR-002-feature-branch-per-umbrella.md)
-- **Records:** #78 D1, D4, D5, D7 and D9 to D14. D2, D3 and D6 are replaced (see Rejected alternatives).
+- **Records:** #78 D1, D4, D5, D7 and D9 to D15. D2, D3 and D6 are replaced (see Rejected alternatives).
 - **Design notes:** [process.md, execute](../engineering-plugin/process.md#execute-build)
 
 ## Details
 - **What the cloud refuses:** GraphQL, with HTTP 403 and a message that points to REST and to the CCR routes `POST pulls/<n>/ccr/ready_for_review`, `POST pulls/<n>/ccr/convert_to_draft`, `PUT` and `DELETE pulls/<n>/ccr/auto_merge`, and `GET pulls/<n>/ccr/review_threads`. Also `POST` and `DELETE git/refs` (HTTP 403), and deleting a branch with `git push`. That breaks `gh issue develop`, `gh pr ready`, and every `gh issue` and `gh pr` command that reads or writes through GraphQL.
 - **What the cloud allows:** REST writes to issues, comments, `sub_issues`, `dependencies` and pulls, and creating a branch with `git push`.
 - **Reads** go through `gh api` REST on every surface, local and cloud: `issues/<n>`, `/parent`, `/sub_issues`, `/dependencies/blocked_by`, `pulls/<n>` and `pulls?base=<base>`. No skill reads with `gh issue view`, `gh pr view`, `gh pr list` or `gh issue develop --list`, so reads need no minimum `gh` version (D1).
+- **Lists** are read page by page (D15). Each list call passes `per_page=100` on the `repos/{owner}/{repo}` path, and reads `page=2` and onward while a page holds 100 items. No skill uses `gh api --paginate`, because it follows GitHub's next-page link, which uses a numeric-ID path (`repositories/<id>/…`) that the cloud proxy refuses. The close-sub-issue workflow keeps `--paginate`, because it runs in GitHub Actions.
 - **Writes** go through `gh api` REST on every surface, like reads (D9). Each body is written to a file first and passed as `-F body=@<path>`. No skill calls a GitHub MCP tool, `gh issue create`, `gh issue edit`, `gh issue comment`, `gh pr create` or `gh pr comment`.
   - discuss creates an issue with `POST issues` and rewrites it with `PATCH issues/<n>`. execute and ship open a PR with `POST pulls`, execute with `draft: true`. verify posts with `POST issues/<n>/comments`.
   - Every write is read back through REST. If a required fact is missing (a sub-issue's parent, a blocked-by link, a PR's base and draft state, a posted comment, a created branch), the skill stops and names the gap.

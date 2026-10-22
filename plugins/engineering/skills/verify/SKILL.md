@@ -23,7 +23,7 @@ Target: $ARGUMENTS
    - Anything else: stop and say why.
 2. **Code.** Run `git fetch origin <branch>`, and in umbrella scope also `git fetch origin main`. Then run `git rev-parse HEAD` and `git rev-parse origin/<branch>`. If they differ, stop and say so, because the checks must run on the code they grade.
 3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, and this task:
-   - Read GitHub only with `gh api` REST and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api repos/{owner}/{repo}/issues/<issue>/sub_issues`.
+   - Read GitHub only with `gh api` REST and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`. While a page holds 100 items, read the next one with `&page=2`, then `&page=3`, and so on. Do not let `gh api` follow GitHub's next-page link, which the cloud proxy refuses.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.
    - For each scenario, record three things with evidence (`file:line`, command output, or run output):
      - **Exists:** the code or text that the scenario needs is there.
