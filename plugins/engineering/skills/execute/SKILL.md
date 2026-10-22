@@ -19,9 +19,9 @@ Issue: $ARGUMENTS
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop. Name the criterion that fails and what you found. Commit and push the work so far with `git push -u origin <branch>`, but open no PR. Then:
-     - a sub-issue: call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
-     - a single issue: tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
+  5. The issue fails the size test: stop. Name the criterion that fails and what you found. Commit and push the work so far with `git push -u origin <branch>`. Then:
+     - a sub-issue: if the branch has no open PR, open a draft PR as in step 5, with the same title, first line, base and read-back. Its body is the first line and one line that names the failing criterion. A later run on the narrowed sub-issue then resumes, from this PR in a cloud session and from the issue branch locally, and its step 5 rewrites the PR's title and body. Then call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
+     - a single issue: open no PR, because its branch becomes the feature branch. Tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
 
 ## Steps
 1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md`, `docs/agents/commands.md` and `docs/agents/issue-tracker.md`. Run `gh api repos/{owner}/{repo}/issues/<n>`, `gh api repos/{owner}/{repo}/issues/<n>/parent` and `gh api 'repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by?per_page=100'`. Stop and say why if the issue is closed or has no `## Scenarios` or `## Verify` section.
@@ -43,7 +43,7 @@ Issue: $ARGUMENTS
    - **Anything else** (changes, commits, another issue's branch, or a `git switch` that fails): stop, show what the worktree holds, and ask.
 3. **Build.** Read the code that the Files section names. Work one scenario at a time, and commit as you go with messages that say what changed and why. Follow the deviation rules.
 4. **Check.** Run the issue's Verify command and the pre-PR checks in `commands.md`. If one fails, go back to step 3.
-5. **PR.** Run `git push -u origin <branch>`. If the branch has no open PR yet (`gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&state=open&per_page=100'`), run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<issue title>" -f head=<branch> -f base=<base> -F draft=true -F body=@<path>`, with the body written to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `<base>` or it is not a draft. The body has:
+5. **PR.** Run `git push -u origin <branch>`. If the branch has no open PR yet (`gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&state=open&per_page=100'`), run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<issue title>" -f head=<branch> -f base=<base> -F draft=true -F body=@<path>`. If it has one, as after deviation 5, rewrite its title and body with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -f title="<issue title>" -F body=@<path>`. Write the body to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `<base>`, it is not a draft, or its title or body is not the one you wrote. The body has:
    - a first line: for a sub-issue, "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."; for a single issue, `Closes #<n>`;
    - `## What it delivers`: the changes, file by file;
    - `## Verify`: each command and its result, and what the commands do not prove;
