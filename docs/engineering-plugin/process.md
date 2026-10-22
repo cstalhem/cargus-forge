@@ -115,7 +115,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop, and push the work without a PR. For a sub-issue, call slice. For a single issue, send it back to discuss.
+  5. The issue fails the size test: stop, and push the work. For a sub-issue, open a draft PR whose first line names it, then call slice. A later run on the narrowed sub-issue resumes from that work and rewrites the PR's title and body (ADR-006). For a single issue, open no PR, because its branch becomes the feature branch, and send it back to discuss.
 - **Later:** inject the issue and the commands through scripts (ADR-004), and add `status: in progress`.
 
 ### verify, issue scope (Build; execute calls it)
