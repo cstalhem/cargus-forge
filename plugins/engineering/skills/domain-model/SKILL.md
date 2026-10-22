@@ -1,7 +1,7 @@
 ---
 name: domain-model
-description: Keep a repo's domain terms in one glossary, `docs/glossary.md`. Holds the entry format and the gate a term must pass, and in discuss, challenges and settles each domain term as a numbered question, so an accepted term becomes a `Term` decision in the draft issue. discuss calls it in its Load step.
-argument-hint: "<calling skill>"
+description: Keep a repo's domain terms in one glossary, `docs/glossary.md`. Holds the entry format and the gate a term must pass. In discuss, it challenges and settles each domain term as a numbered question, so an accepted term becomes a `Term` decision in the draft issue. In execute, it writes each `Term` decision and each new or renamed domain name into the glossary in the issue's PR. discuss and execute call it in their Load step.
+argument-hint: "<discuss | execute>"
 user-invocable: false
 ---
 
@@ -44,3 +44,14 @@ discuss never writes the glossary. A term reaches it only as a `Term` decision i
 - **Ask it as a numbered question** in the round, with the other questions. Say which of the cases above it is. Write out the full entry that you recommend, in the format above: the term, the definition and the `_Avoid_` words. Do this also when the entry already exists, so the user sees what the word means. Write `_Avoid_: none` when no other word is in use, and the entry then has no `_Avoid_` line.
 - **Record each accepted term** in the draft's `## Decisions` section as `D<n> · Term: **<Term>**: <definition> _Avoid_: <words>`, the shape in `formats.md`. Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. For a changed entry, the decision holds the whole new entry, and a rename puts the old word into `_Avoid_`. An answer that keeps an entry as it is adds no decision.
 - Change no file in the repo, `docs/glossary.md` included.
+
+## In execute
+execute writes the glossary in the issue's PR. The PR review is the human approval of each entry that no `Term` decision holds.
+
+- **Write each `Term` decision**, the issue's own and each one it points to as `#<umbrella> D<n>`. Add its entry to `docs/glossary.md`, or edit the entry for that term in place. The entry is the decision's text: `**<Term>**: <definition>`, with the decision's `_Avoid_` words on a line under it. If the file does not exist, create it with the `# Glossary` heading.
+- **Add a missing term.** If the code needs a new domain name that passes the gate, and no `Term` decision and no entry covers it, add an entry for it. This is deviation rule 6.
+- **Record a rename.** If the work renames a domain name, edit its entry in place, or add one if it has none and passes the gate. The entry gets the new term, and the old word goes into its `_Avoid_` line. Unless a `Term` decision holds the rename, this is deviation rule 6.
+- **Use the terms.** Name new code and doc text with the glossary's terms, and not with a word that it lists under `_Avoid_`.
+- **Check each entry** against the format and the gate before you commit it. If a `Term` decision does not fit them, stop and ask. Do not change the decision, because it is the user's.
+- Put a new entry at the end of the file. Commit each entry with the code that uses its term.
+- **Name it in the PR.** Under `## What it delivers`, list `docs/glossary.md` with each entry that the PR adds or edits. Under `## Deviations`, name each entry from deviation rule 6. If the issue's `## Files` does not list `docs/glossary.md`, name the file under `## Deviations` too.

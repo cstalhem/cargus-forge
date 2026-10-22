@@ -3,7 +3,9 @@ name: execute
 description: Take one ready issue to a draft PR, in the session's worktree locally or on the session's designated branch in a cloud session. Gets onto the issue branch, builds until the issue's verify command passes, opens the draft PR, then calls verify.
 argument-hint: "<#issue>"
 disable-model-invocation: true
-allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+allowed-tools:
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(cat docs/glossary.md 2>/dev/null || true)
 ---
 
 # execute
@@ -22,11 +24,13 @@ Issue: $ARGUMENTS
   5. The issue fails the size test: stop. Name the criterion that fails and what you found. Commit and push the work so far with `git push -u origin <branch>`. Then:
      - a sub-issue: if the branch has no open PR, open a draft PR as in step 5, with the same title, first line, base and read-back. Its body is the first line and one line that names the failing criterion. A later run on the narrowed sub-issue then resumes, from this PR in a cloud session and from the issue branch locally, and its step 5 rewrites the PR's title and body. Then call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
      - a single issue: open no PR, because its branch becomes the feature branch. Tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
+  6. A new domain name that the code needs and that no `Term` decision and no glossary entry covers, or a rename of a domain name: add or edit its entry in `docs/glossary.md` in the same PR, as `domain-model` says, and name the entry under the PR's `## Deviations`.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md`, `docs/agents/commands.md` and `docs/agents/issue-tracker.md`. Run `gh api repos/{owner}/{repo}/issues/<n>`, `gh api repos/{owner}/{repo}/issues/<n>/parent` and `gh api 'repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by?per_page=100'`. Stop and say why if the issue is closed or has no `## Scenarios` or `## Verify` section.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md`, `docs/agents/commands.md` and `docs/agents/issue-tracker.md`. Run `gh api repos/{owner}/{repo}/issues/<n>`, `gh api repos/{owner}/{repo}/issues/<n>/parent` and `gh api 'repos/{owner}/{repo}/issues/<n>/dependencies/blocked_by?per_page=100'`. Stop and say why if the issue is closed or has no `## Scenarios` or `## Verify` section. Call the Skill tool with `engineering:domain-model` and `execute`, every time, not only when a term comes up.
    - **Base:** for a sub-issue, the parent's feature branch: the one branch that `git ls-remote --heads origin 'refs/heads/<parent>-*'` lists, by the branch pattern in `issue-tracker.md`. Stop if it lists none, or more than one. For a single issue, the default branch in `issue-tracker.md`, else `main`.
    - **Blockers:** read the issue's blockers, and their state, from its `dependencies/blocked_by` links only. The `Blocked by` part of the first line is for readers. If an open issue blocks a single issue, stop. If one blocks a sub-issue, list the merged PRs into the base with `gh api 'repos/{owner}/{repo}/pulls?base=<base>&state=closed&per_page=100' --jq 'length, (.[] | select(.merged_at) | {number, body})'`, page by page as the rules say. A repo without the close-sub-issue workflow leaves a merged sub-issue open, so an open blocker counts as merged when a merged PR's first line names it as its issue ("Sub-issue #<b> of" or "for #<b>"). A mention elsewhere in a body does not count. Name each such PR and go on. Stop and name each open blocker that has no such PR.
+   - **Terms:** the issue's `Term` decisions are its own `D<n> · Term:` lines, and each `#<parent> D<n>` line in its `## Decisions` whose decision in the parent is a `Term` decision. Read that decision's text in the body that the `/parent` call returns.
 2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes` and `git ls-remote --heads origin 'refs/heads/<n>-*'`, which lists the issue's branch. The session is in a worktree when the git dir and the common dir differ.
    - **Sync:** the cases below that say "sync" run these on the issue branch `<branch>`:
      1. Run `git fetch origin <base> <branch>`. If it fails, for example because `<branch>` is not on the remote, stop and ask.
@@ -44,7 +48,7 @@ Issue: $ARGUMENTS
      3. Ask the user to name the session with `/rename <branch>`.
    - **In a worktree on `<base>`, the feature branch from step 1, with no changes and no commits that are not on a remote:** this happens after discuss turned a single issue with work so far into an umbrella, because the issue's own branch became the feature branch. Go on as in the case of a worktree on its own new branch, but skip its `git branch -D`: the feature branch is not a throwaway branch.
    - **Anything else** (changes, commits, another issue's branch, or a `git switch` that fails): stop, show what the worktree holds, and ask.
-3. **Implement.** Read the code that the Files section names. Work one scenario at a time, and commit as you go with messages that say what changed and why. Follow the deviation rules.
+3. **Implement.** Read the code that the Files section names. Work one scenario at a time, and commit as you go with messages that say what changed and why. Follow the deviation rules. Write each `Term` decision into `docs/glossary.md` as `domain-model` says, against the Glossary section at the end of this skill.
 4. **Check.** Run the issue's Verify command and the pre-PR checks in `commands.md`. If one fails, go back to step 3.
 5. **PR.** Run `git push -u origin <branch>`. If the branch has no open PR yet (`gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&state=open&per_page=100'`), run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<issue title>" -f head=<branch> -f base=<base> -F draft=true -F body=@<path>`. If it has one, as after deviation 5, rewrite its title and body with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -f title="<issue title>" -F body=@<path>`. Write the body to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `<base>`, it is not a draft, or its title or body is not the one you wrote. The body has:
    - a first line: for a sub-issue, "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."; for a single issue, `Closes #<n>`;
@@ -52,3 +56,6 @@ Issue: $ARGUMENTS
    - `## Verify`: each command and its result, and what the commands do not prove;
    - `## Deviations`: only if a deviation rule was used, one line for each.
 6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number. If verify fails, fix what its report names and go back to step 4. If it fails a second time, stop and ask.
+
+## Glossary
+!`cat docs/glossary.md 2>/dev/null || true`
