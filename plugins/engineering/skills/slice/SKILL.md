@@ -18,6 +18,7 @@ Issue: $ARGUMENTS
 - Every umbrella scenario belongs to at least one sub-issue. In a re-split, every umbrella scenario that the old sub-issue owned is still owned. If a scenario fits no sub-issue, stop before you write anything, name the scenario, and send it back to discuss.
 - If two parts of the umbrella conflict, for example a Design that breaks a decision, stop before you write anything. Name both parts, say why they conflict, and send it back to discuss. Do not settle it in a sub-issue.
 - Every sub-issue passes the size test. Split a sub-issue that fails, and test each part again.
+- Every `Term` decision of the umbrella is pointed to as `#<umbrella> D<n>` by at least one sub-issue: the one whose work writes or names that term.
 - Write sub-issue titles and scenarios with the terms of the Glossary section at the end of this skill, and not with a word that it lists under `_Avoid_`.
 
 ## Steps
