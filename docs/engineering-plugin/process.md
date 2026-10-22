@@ -104,8 +104,9 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Worktree:** outside a cloud session, execute uses the session's worktree and does not make a second one.
   1. The session is in a worktree on its own new branch, with no commits and no changes. Remote Control names these `.claude/worktrees/bridge-cse_<id>` on the branch `worktree-bridge-cse_<id>`. execute switches that worktree to the issue branch, fast-forwards a local copy that is behind with `git merge --ff-only` (stopping to ask if it has diverged), and deletes the unused branch.
   2. The session is already on `<n>-<slug>` for this issue. execute resumes the work. It first fetches the base and the branch, fast-forwards the local branch with `git merge --ff-only` if it is behind, and stops and asks you if they have diverged or the fetch fails.
-  3. The session is in a worktree that holds other work. execute stops and asks you.
-  4. The session is not in a worktree. execute enters a new one, then follows step 1.
+  3. The session is on the umbrella's feature branch, with no commits and no changes, as after discuss turns a single issue with work so far into an umbrella. execute goes on as in step 1, but keeps the feature branch.
+  4. The session is in a worktree that holds other work. execute stops and asks you.
+  5. The session is not in a worktree. execute enters a new one, then follows step 1.
   - The directory name stays the same, because moving the directory of a running session breaks it.
   - execute asks you to name the session with `/rename <n>-<slug>`, which also works from the phone.
 - **Exit gate:** the issue's verify command passes, then execute calls verify.
