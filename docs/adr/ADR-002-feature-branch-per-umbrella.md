@@ -11,7 +11,8 @@ status: active
 - **Design notes:** [process.md, ship](../engineering-plugin/process.md#ship-build-for-an-umbrella-issue)
 
 ## Details
-- **Branch names:** the feature branch is `38-export-to-s3`, taken from `main`. A sub-issue branch is `39-export-job`, taken from the feature branch, with one worktree for each active sub-issue.
+- **Branch names:** the feature branch is `38-export-to-s3`, taken from `main`. When a single issue with work so far becomes an umbrella, the feature branch starts from that work instead ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)). A sub-issue branch is `39-export-job`, taken from the feature branch, with one worktree for each active sub-issue. In a cloud session, the sub-issue branch is the session's designated branch instead ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
+- **Finding the feature branch:** execute, verify and ship take the one remote branch whose name matches the pattern for the umbrella's number. They need no link between the branch and the issue. A skill creates a branch with `gh issue develop`, which links it, or with `git push` and no link where GraphQL is refused ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **Closing keywords:** GitHub reads them only on PRs into the default branch, so a sub-issue PR into the feature branch closes nothing on its own.
 - **The close-sub-issue workflow** closes the sub-issue instead. It runs when a PR merges into a branch other than the default branch, reads the `Sub-issue #<n> of #<umbrella>` first line, and closes `#<n>` as completed if it is a sub-issue of `#<umbrella>`. It uses only `gh` and the repo's token, with `issues: write`.
   - It is optional for each repo: the file being in `.github/workflows/` is the setting. The plugin ships it as `plugins/engineering/templates/close-sub-issue.yml`, the source of truth, and this repo runs a byte-identical copy.

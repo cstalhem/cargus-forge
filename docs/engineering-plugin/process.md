@@ -88,20 +88,25 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ### slice (Shape; plan calls it, and execute calls it under rule 5)
 - **Gets:** the umbrella issue with its design and decisions. From execute under rule 5: a sub-issue that fails the size test, with execute's findings.
-- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links.
-- **Re-split:** the sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
+- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links that slice sets through REST. The `Blocked by` text in a sub-issue's first line mirrors the links for readers ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
+- **Feature branch:** slice creates it with `gh issue develop`, or with `git push` and no link where GraphQL is refused. When a single issue with work so far becomes an umbrella, the branch starts from the current branch's head, not `main`, and the plan lists those commits so you can drop them (ADR-006).
+- **Re-split:** slice reads the work so far from the current branch (ADR-006). The sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
 - **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan (discuss in v0), and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
-- **Gives:** a branch linked to the issue with `gh issue develop`, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue.
+- **Gives:** an issue branch, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue. execute finds the feature branch by its name in git, as the one remote branch that matches the pattern for the umbrella's number (ADR-006).
+- **Blockers:** execute reads them from the issue's "blocked by" links only (ADR-006).
+- **Issue branch:** outside a cloud session, execute makes the branch with `gh issue develop`, which links it to the issue. If that gets a GraphQL 403, execute makes it with `git push`, without a link. In a cloud session, the issue branch is the session's designated branch (ADR-006).
+- **Cloud session:** execute uses the designated branch, enters no worktree and creates no `<n>-<slug>` branch. On resume, it finds the open PR whose head is the current branch and whose first line names the issue. It then fetches the base and the branch, fast-forwards the local branch with `git merge --ff-only` if it is behind, and stops and asks you if they have diverged or the fetch or fast-forward fails.
 - **Branch name:** `docs/agents/issue-tracker.md` sets the pattern for each repo, for example `feature/<n>-<slug>`. The default is `<n>-<slug>`, which is the form `gh issue develop` makes.
-- **Worktree:** execute uses the session's worktree and does not make a second one.
-  1. The session is in a worktree on its own new branch, with no commits and no changes. Remote Control names these `.claude/worktrees/bridge-cse_<id>` on the branch `worktree-bridge-cse_<id>`. execute switches that worktree to the issue branch and deletes the unused branch.
-  2. The session is already on `<n>-<slug>` for this issue. execute resumes the work.
-  3. The session is in a worktree that holds other work. execute stops and asks you.
-  4. The session is not in a worktree. execute enters a new one, then follows step 1.
+- **Worktree:** outside a cloud session, execute uses the session's worktree and does not make a second one.
+  1. The session is in a worktree on its own new branch, with no changes and no commits that are not on a remote. Remote Control names these `.claude/worktrees/bridge-cse_<id>` on the branch `worktree-bridge-cse_<id>`. execute switches that worktree to the issue branch, fast-forwards a local copy that is behind with `git merge --ff-only` (stopping to ask if it has diverged or the fetch or fast-forward fails), and deletes the unused branch.
+  2. The session is already on `<n>-<slug>` for this issue. execute resumes the work. It first fetches the base and the branch, fast-forwards the local branch with `git merge --ff-only` if it is behind, and stops and asks you if they have diverged or the fetch or fast-forward fails.
+  3. The session is on the umbrella's feature branch, with no changes and no commits that are not on a remote, as after discuss turns a single issue with work so far into an umbrella. execute goes on as in step 1, but keeps the feature branch.
+  4. The session is in a worktree that holds other work. execute stops and asks you.
+  5. The session is not in a worktree. execute enters a new one, then follows step 1.
   - The directory name stays the same, because moving the directory of a running session breaks it.
   - execute asks you to name the session with `/rename <n>-<slug>`, which also works from the phone.
 - **Exit gate:** the issue's verify command passes, then execute calls verify.
@@ -110,13 +115,13 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
   2. A missing guard that the issue needs: add it, and name it in the PR.
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
-  5. The issue fails the size test: stop, and push the work without a PR. For a sub-issue, call slice. For a single issue, send it back to discuss.
+  5. The issue fails the size test: stop, and push the work. For a sub-issue, open a draft PR whose first line names it, then call slice. A later run on the narrowed sub-issue resumes from that work and rewrites the PR's title and body (ADR-006). For a single issue, open no PR, because its branch becomes the feature branch, and send it back to discuss.
 - **Later:** inject the issue and the commands through scripts (ADR-004), and add `status: in progress`.
 
 ### verify, issue scope (Build; execute calls it)
 - **Gets:** the PR and the scenarios of its issue.
 - **Gives:** one PR comment. For each scenario it records exists, substantive and wired, with evidence, then gives a verdict.
-- **On pass:** it marks the PR ready.
+- **On pass:** it marks the PR ready with `gh pr ready`. If that gets a GraphQL 403, it uses `POST pulls/<n>/ccr/ready_for_review` (ADR-006).
 - **On fail:** it returns to execute with the report.
 - **Rule:** a fresh-context agent that did not write the code. A summary is a claim, not evidence.
 - **Later:** `status: needs review` on pass.
@@ -131,7 +136,7 @@ You review the PR and merge it. A sub-issue PR merges into the feature branch, a
   2. Runs verify on the umbrella scope (below).
   3. Opens the final PR from the feature branch into `main`.
 - **Gives:** a ready final PR. Its body has one `Closes #n` line for each sub-issue that is still open and one for the umbrella.
-- **Exit gate:** umbrella verify passes and CI passes.
+- **Exit gate:** umbrella verify passes and CI passes. Where `gh pr checks --watch` is refused, ship reports the checks once and stops without waiting (ADR-006).
 - **Then:** you merge the final PR, and GitHub closes the umbrella and any sub-issue that is still open.
 - **Later:** delete the plan page after you confirm, and reflect (below).
 
@@ -149,7 +154,7 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 ### next (not in v0)
 - **Gets:** GitHub and git, through `status.sh`, which runs before the model reads the skill.
 - **Gives:** the current issue, the ready, review and blocked issues, and one suggested command. It also repairs any label that differs from the derived status.
-- **v0:** `gh issue list` is enough.
+- **v0:** a list of open issues from `gh api` REST is enough.
 
 ## Status
 
@@ -161,7 +166,7 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 | discuss found that it fails the size test | umbrella | `umbrella` | discuss |
 | it passed the size test | ready | `status: ready` | discuss (single issue), slice (sub-issues) |
 | a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status: ready` label stays | — |
-| a linked branch or a draft PR | in progress | `status: in progress` | execute |
+| an issue branch or a draft PR | in progress | `status: in progress` | execute |
 | a ready PR (not a draft) | needs review | `status: needs review` | verify, on pass |
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
@@ -174,6 +179,8 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 ## Formats
 
 Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
+GitHub reads and writes go through `gh api` REST on every surface, with each body passed as `-F body=@<path>` (ADR-006). In a cloud session, the server adds a `---` line and a `_Generated by Claude Code_` footer to each body. The footer is not part of the last section: readers ignore it.
 
 ### Umbrella issue
 ```markdown
@@ -195,7 +202,7 @@ Use exactly the sections of the format, in its order, and add no other section. 
 
 ### Issue (single issue or sub-issue)
 ```markdown
-Sub-issue of #<umbrella> · Blocked by #<n>      ← sub-issues only; GitHub links, not text, where possible
+Sub-issue of #<umbrella> · Blocked by #<a>, #<b>      ← sub-issues only; mirrors the links that slice sets (ADR-006)
 
 ## What it delivers
 <one behaviour>
@@ -230,10 +237,10 @@ Closes #<umbrella>
   - **Done:** `gh` 2.101.0 on the host gives `parent`, `subIssues`, `subIssuesSummary`, `blockedBy`, `blocking` and `closedByPullRequestsReferences` as `--json` fields. `gh issue develop --list <n>` gives the linked branches.
   - **Done:** on the private repo feederer, `gh issue list --json parent,subIssuesSummary,blockedBy` works. For example, #138 shows 2 of 2 sub-issues complete. `blockedBy` returns `{nodes, totalCount}`, with no error. No feederer issue uses "blocked by" yet.
   - **Done:** the Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app. That is acceptable.
-  - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads the `blockedBy` field and does not use search.
+  - **Done:** the REST search API returned 0 results for `is:blocked`, minutes after the link was set. `status.sh` reads blocked-by links through REST (ADR-006) and does not use search.
   - **Done:** a `!`cmd`` line in a skill ran under Remote Control. The model saw `gh version 2.101.0` and the branch name, not the raw command.
 - **Evals: parked** until after the skeleton has run end to end. Until then, a skill's verify step is `claude plugin validate --strict` plus one manual run that you check against the scenarios. The end-to-end run on the CI umbrella is the real test.
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
 - **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
 - **Worktree cleanup:** worktrees stay after their work merges. On 2026-10-12, feederer had 6 Remote Control worktrees, including one with a detached HEAD and one that was locked. homelab-docker had 3. The proposal for a later stage: `next` lists each worktree whose branch has merged or whose issue is closed, and removes it after you confirm. It never removes a worktree that has uncommitted work. The end-to-end run on #54 confirmed the need: execute leaves the worktree and its local branch behind after the PR merges, and a session cannot remove the worktree it runs in. In v0, execute can only reuse a finished worktree for the next issue.
-- **Finding the feature branch:** execute, verify and ship find an umbrella's feature branch with `gh issue develop --list`. Deleting a branch after its PR merges also removes that link, so running verify or ship again on such an umbrella stops. The proposal for a later stage: `status.sh` derives the branch from git as well, for example from the `<n>-<slug>` name, and `next` reports an umbrella whose branch is gone.
+- **Finding the feature branch: decided** in [ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md). execute, verify and ship take the one remote branch that matches the `<n>-<slug>` pattern for the umbrella's number, from `git ls-remote --heads origin`. A deleted feature branch makes them stop with a reason. The proposal for a later stage: `status.sh` derives the branch the same way, and `next` reports an umbrella whose branch is gone.
