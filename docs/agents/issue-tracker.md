@@ -1,9 +1,9 @@
 # Issue tracker
 
 - **Repo:** GitHub, `cstalhem/cargus-forge`. Default branch: `main`.
-- **Branch pattern:** `<n>-<slug>`, the form `gh issue develop` makes. Create every branch with `gh issue develop <n> --name <n>-<slug> --base <base>`, so it is linked to its issue. Where that gets a GraphQL 403, as in a Claude Code cloud session, run `git fetch origin <base>`, then `git push origin <sha>:refs/heads/<n>-<slug>` with `origin/<base>` as `<sha>`. That branch has no link.
+- **Branch pattern:** `<n>-<slug>`, the form `gh issue develop` makes. Create every branch with `gh issue develop <n> --name <n>-<slug> --base <base>`, so it is linked to its issue. Where that gets a GraphQL 403, as in a Claude Code cloud session, run `git fetch origin <base>`, then `git push origin <sha>:refs/heads/<n>-<slug>` with `origin/<base>` as `<sha>`, or `HEAD` when the branch starts from the current branch's head and the current branch is `<base>`. That branch has no link.
   - Skills find a branch by its name, not by its link, because the link cannot be read or made on every surface. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
-  - Feature branch of an umbrella issue: base `main`.
+  - Feature branch of an umbrella issue: base `main`. When a single issue with work so far becomes an umbrella and the user keeps those commits, slice starts it from the current branch's head instead, with the current branch as base.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
   - In a session with a designated branch it must push to, such as a Claude Code cloud session, the issue branch is that designated branch, whatever its name. execute creates no `<n>-<slug>` branch there. The PR's first line ties the branch to its issue, and execute finds earlier work through the open PR whose head is the designated branch ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
