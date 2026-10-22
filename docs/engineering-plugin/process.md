@@ -88,15 +88,17 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ### slice (Shape; plan calls it, and execute calls it under rule 5)
 - **Gets:** the umbrella issue with its design and decisions. From execute under rule 5: a sub-issue that fails the size test, with execute's findings.
-- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links. Each blocker is the `Blocked by` text in a sub-issue's first line. The link-blocked-by workflow turns that text into "blocked by" links where it runs ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
-- **Re-split:** the sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
+- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links that slice sets through REST. The `Blocked by` text in a sub-issue's first line mirrors the links for readers ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
+- **Feature branch:** slice creates it with `gh issue develop`, or with `git push` and no link where GraphQL is refused. When a single issue with work so far becomes an umbrella, the branch starts from the current branch's head, not `main`, and the plan lists those commits so you can drop them (ADR-006).
+- **Re-split:** slice reads the work so far from the current branch (ADR-006). The sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
 - **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan (discuss in v0), and slice does not settle them in a sub-issue.
 
 ### execute (Build)
 - **Gets:** one ready issue and `docs/agents/commands.md`.
 - **Gives:** an issue branch, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue. execute finds the feature branch by its name in git, as the one remote branch that matches the pattern for the umbrella's number (ADR-006).
-- **Issue branch:** outside a cloud session, execute makes the branch with `gh issue develop`, which links it to the issue. In a cloud session, the issue branch is the session's designated branch (ADR-006).
+- **Blockers:** execute reads them from the issue's "blocked by" links only (ADR-006).
+- **Issue branch:** outside a cloud session, execute makes the branch with `gh issue develop`, which links it to the issue. If that gets a GraphQL 403, execute makes it with `git push`, without a link. In a cloud session, the issue branch is the session's designated branch (ADR-006).
 - **Cloud session:** execute uses the designated branch, enters no worktree and creates no `<n>-<slug>` branch. On resume, it finds the open PR whose head is the current branch and whose first line names the issue.
 - **Branch name:** `docs/agents/issue-tracker.md` sets the pattern for each repo, for example `feature/<n>-<slug>`. The default is `<n>-<slug>`, which is the form `gh issue develop` makes.
 - **Worktree:** outside a cloud session, execute uses the session's worktree and does not make a second one.
@@ -118,7 +120,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 ### verify, issue scope (Build; execute calls it)
 - **Gets:** the PR and the scenarios of its issue.
 - **Gives:** one PR comment. For each scenario it records exists, substantive and wired, with evidence, then gives a verdict.
-- **On pass:** it marks the PR ready.
+- **On pass:** it marks the PR ready with `gh pr ready`. If that gets a GraphQL 403, it uses `POST pulls/<n>/ccr/ready_for_review` (ADR-006).
 - **On fail:** it returns to execute with the report.
 - **Rule:** a fresh-context agent that did not write the code. A summary is a claim, not evidence.
 - **Later:** `status: needs review` on pass.
@@ -151,7 +153,7 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 ### next (not in v0)
 - **Gets:** GitHub and git, through `status.sh`, which runs before the model reads the skill.
 - **Gives:** the current issue, the ready, review and blocked issues, and one suggested command. It also repairs any label that differs from the derived status.
-- **v0:** `gh issue list` is enough.
+- **v0:** a list of open issues from `gh api` REST is enough.
 
 ## Status
 
@@ -163,7 +165,7 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 | discuss found that it fails the size test | umbrella | `umbrella` | discuss |
 | it passed the size test | ready | `status: ready` | discuss (single issue), slice (sub-issues) |
 | a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status: ready` label stays | — |
-| a linked branch or a draft PR | in progress | `status: in progress` | execute |
+| an issue branch or a draft PR | in progress | `status: in progress` | execute |
 | a ready PR (not a draft) | needs review | `status: needs review` | verify, on pass |
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
@@ -176,6 +178,8 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 ## Formats
 
 Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+
+GitHub reads and writes go through `gh api` REST on every surface, with each body passed as `-F body=@<path>` (ADR-006). In a cloud session, the server adds a `---` line and a `_Generated by Claude Code_` footer to each body. The footer is not part of the last section: readers ignore it.
 
 ### Umbrella issue
 ```markdown
@@ -197,7 +201,7 @@ Use exactly the sections of the format, in its order, and add no other section. 
 
 ### Issue (single issue or sub-issue)
 ```markdown
-Sub-issue of #<umbrella> · Blocked by #<a>, #<b>      ← sub-issues only; a workflow adds the GitHub links (ADR-006)
+Sub-issue of #<umbrella> · Blocked by #<a>, #<b>      ← sub-issues only; mirrors the links that slice sets (ADR-006)
 
 ## What it delivers
 <one behaviour>

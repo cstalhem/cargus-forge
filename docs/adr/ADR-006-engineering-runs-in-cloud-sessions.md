@@ -6,38 +6,44 @@ status: active
 
 # ADR-006: Engineering runs in cloud sessions
 
-- **Decision:** Every engineering skill runs end to end in a Claude Code cloud session, where the agent proxy refuses GraphQL and many `gh` writes. Skills read GitHub through `gh api` REST, try each write with `gh` and fall back to the GitHub MCP tools, and find branches and blockers from git and issue text instead of from links that they cannot set there.
+- **Decision:** Every engineering skill runs end to end in a Claude Code cloud session, where the agent proxy refuses GraphQL and `git/refs` writes. Skills read and write GitHub through `gh api` REST on every surface, use a fallback for the two operations that exist only in GraphQL, and find branches by their names in git.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-002](ADR-002-feature-branch-per-umbrella.md)
+- **Records:** #78 D1, D4, D5, D7 and D9 to D14. D2, D3 and D6 are replaced (see Rejected alternatives).
 - **Design notes:** [process.md, execute](../engineering-plugin/process.md#execute-build)
 
 ## Details
-- **What the cloud refuses:** GraphQL (HTTP 403), and REST writes through `gh api` such as `POST git/refs` and `issues/<n>/dependencies/blocked_by`. That breaks `gh issue develop`, `gh pr ready` and the `parent`, `subIssues` and `blockedBy` fields of `gh issue view`. The GitHub MCP tools work there, but they have no dependency tool and cannot link a branch to an issue.
-- **Reads** go through `gh api` REST on every surface, local and cloud: `issues/<n>`, `/parent`, `/sub_issues`, `/dependencies/blocked_by`, `pulls/<n>` and `pulls?base=<base>`. No skill reads with `gh issue view`, `gh pr view`, `gh pr list` or `gh issue develop --list`.
-- **Writes** try `gh` first. After the first refusal (a GraphQL 403 or a proxy refusal), the skill loads the GitHub MCP tools with ToolSearch, does the same operation through MCP, and uses MCP for the rest of the run. When every `gh` write succeeds, the skill calls no MCP tool.
-  - One rule in `references/rules.md` names the fallback. The tools' own descriptions pick the tool.
-  - A body or comment written through MCP goes in the tool's text parameter. The `--body-file` rule applies only to `gh`.
-  - Every write is read back through REST, on either path. If a required fact is missing (a sub-issue's parent, a PR's base and draft state, a posted comment, a created branch), the skill stops and names the gap.
-- **The feature branch** is found by its name in git. execute, verify and ship take the one remote branch from `git ls-remote --heads origin` that matches the `issue-tracker.md` pattern for the umbrella's number. They stop if none or more than one match. slice creates the branch with `gh issue develop`, or through MCP when that is refused.
-- **The issue branch in a cloud session** is the session's designated branch. execute enters no worktree, creates no `<n>-<slug>` branch, and opens the draft PR against the base. The PR's first line ties the branch to the issue (ADR-002). On resume, execute finds the open PR whose head is the current branch and whose first line names the issue.
-- **Blockers** are written only as text, in the sub-issue's first line: `Sub-issue of #<umbrella> · Blocked by #<a>, #<b>`. No skill sets a dependency link.
-  - The link-blocked-by workflow turns that text into GitHub "blocked by" links. It runs on `issues: opened, edited`, so every write from slice or discuss triggers it, and no skill calls it. It only adds links.
-  - The workflow is optional for each repo, like close-sub-issue (ADR-002). execute takes the union of the API's blocked-by links and the first-line text, so it works in a repo without the workflow.
-  - slice reads each sub-issue's blocked-by links back through REST, and names each missing link instead of reporting it as set.
-- **Checks:** where `gh pr checks --watch` is refused, ship reads `commits/<sha>/check-runs` once through REST, shows which checks passed, failed or are pending, and stops without waiting.
+- **What the cloud refuses:** GraphQL, with HTTP 403 and a message that points to REST and to the CCR routes `POST pulls/<n>/ccr/ready_for_review`, `POST pulls/<n>/ccr/convert_to_draft`, `PUT` and `DELETE pulls/<n>/ccr/auto_merge`, and `GET pulls/<n>/ccr/review_threads`. Also `POST` and `DELETE git/refs` (HTTP 403), and deleting a branch with `git push`. That breaks `gh issue develop`, `gh pr ready`, and every `gh issue` and `gh pr` command that reads or writes through GraphQL.
+- **What the cloud allows:** REST writes to issues, comments, `sub_issues`, `dependencies` and pulls, and creating a branch with `git push`.
+- **Reads** go through `gh api` REST on every surface, local and cloud: `issues/<n>`, `/parent`, `/sub_issues`, `/dependencies/blocked_by`, `pulls/<n>` and `pulls?base=<base>`. No skill reads with `gh issue view`, `gh pr view`, `gh pr list` or `gh issue develop --list`, so reads need no minimum `gh` version (D1).
+- **Writes** go through `gh api` REST on every surface, like reads (D9). Each body is written to a file first and passed as `-F body=@<path>`. No skill calls a GitHub MCP tool, `gh issue create`, `gh issue edit`, `gh issue comment`, `gh pr create` or `gh pr comment`.
+  - discuss creates an issue with `POST issues` and rewrites it with `PATCH issues/<n>`. execute and ship open a PR with `POST pulls`, execute with `draft: true`. verify posts with `POST issues/<n>/comments`.
+  - Every write is read back through REST. If a required fact is missing (a sub-issue's parent, a blocked-by link, a PR's base and draft state, a posted comment, a created branch), the skill stops and names the gap.
+- **Two operations exist only in GraphQL** (D10). Each tries `gh` first, and on the GraphQL 403 does the following:
+  - Mark a PR ready: `gh pr ready`, else `POST pulls/<n>/ccr/ready_for_review`.
+  - Create a branch linked to its issue: `gh issue develop`, else `git push origin <sha>:refs/heads/<n>-<slug>`. The pushed branch has no link, because no REST route links a branch to an issue.
+- **The feature branch** is found by its name in git (D4). execute, verify and ship take the one remote branch from `git ls-remote --heads origin` that matches the `issue-tracker.md` pattern for the umbrella's number. They stop if none or more than one match.
+- **The issue branch in a cloud session** is the session's designated branch (D5). execute enters no worktree, creates no `<n>-<slug>` branch, and opens the draft PR against the base. The PR's first line ties the branch to the issue (ADR-002). On resume, execute finds the open PR whose head is the current branch and whose first line names the issue.
+- **Blockers** are GitHub "blocked by" links (D11). slice sets each parent link with `POST issues/<umbrella>/sub_issues` and each blocked-by link with `POST issues/<n>/dependencies/blocked_by`, both with the other issue's `id`, and reads them back. The `Blocked by #<a>, #<b>` text in a sub-issue's first line mirrors the links for readers. execute reads blockers from the links only.
+- **The work so far** is found on the current branch (D12). execute's size-test stop hands off to slice or discuss in the same session, so the current branch is the issue branch locally and the designated branch in the cloud. A re-split reads the work from there.
+- **A single issue that becomes an umbrella** keeps its work so far as the start of the feature branch, on both surfaces (D13). slice creates the feature branch from the current branch's head, not `main`, and its plan lists those commits, so you can drop them.
+- **Checks:** where `gh pr checks --watch` is refused, ship reads `commits/<sha>/check-runs` once through REST, shows which checks passed, failed or are pending, and stops without waiting (D7).
+- **The cloud footer** (D14): in a cloud session, every issue, PR and comment body written through REST gets a `---` line and a `_Generated by Claude Code_` footer. The server adds it and never stacks it on a rewrite. The footer is not part of the body's last section: readers ignore it, and read-backs compare without it.
 
 ## Rejected alternatives
-- **MCP first whenever its tools are present:** `gh` works on every local surface without an MCP server. MCP is needed only where `gh` is refused.
+- **Write with `gh` first and fall back to the GitHub MCP tools after the first refusal, with each body in the tool's text parameter** (#78 D2 and D3, replaced by D9): the proxy allows the REST writes the skills need. Only GraphQL and `git/refs` writes are refused, and D10 covers the two GraphQL operations. A second write path doubles what each skill must handle, and the MCP tools can neither link a branch nor set a blocked-by link.
+- **Blockers only as first-line text, with a link-blocked-by workflow that turns the text into links, and execute reading the union of links and text** (#78 D6, replaced by D11): the proxy allows `POST issues/<n>/dependencies/blocked_by`, so slice sets the links itself. A workflow is extra setup in each repo, and two sources can disagree.
+- **Link a cloud-created branch to its issue:** no REST route links a branch, and the lookup by name makes the link unneeded.
 - **A user token to authenticate `gh` in the cloud:** the refusals come from the proxy's policy, not from missing authentication, so a token does not lift them.
-- **A table that maps each `gh` command to an MCP tool name:** it goes stale when a tool changes. The tools' descriptions pick the tool, and the REST read-back proves the result.
 - **Find the feature branch with `gh issue develop --list`:** it needs GraphQL, a cloud session cannot link a branch to an issue, and deleting a merged branch also removes the link.
 - **A line in the umbrella body that names the feature branch:** it is hand-written state (ADR-001), and `formats.md` allows no extra section.
-- **Set blockers from the skill with `--blocked-by` or the REST dependency API:** `gh issue create` 2.89 has no `--blocked-by` flag, the proxy refuses the dependency write, and the MCP server has no dependency tool.
+- **Strip the cloud footer before a write, or remove it after:** the server adds it to every body written through REST, and it does not stack. Readers ignoring it is enough.
 - **Wait for checks in the cloud:** the session stays busy for the whole CI run. A report and a stop let you run ship again when CI is done.
 
 ## Consequences
 - discuss, slice, execute, verify and ship work the same on the desktop, under Remote Control and in a cloud session, including one driven from the phone.
-- Reads need no minimum `gh` version.
-- A cloud session needs the GitHub MCP tools. Without them, a refused write cannot complete.
-- In a cloud session, no branch is linked to its issue. The PR's first line and the branch name carry that tie.
-- In a repo without the link-blocked-by workflow, blockers exist only as text. GitHub's Blocked icon does not show for them, but execute still waits for them.
+- A cloud session needs no GitHub MCP tools, and reads and writes need no minimum `gh` version.
+- Every blocker is a GitHub link on every surface, so the Blocked icon shows for it.
+- A branch created in a cloud session is not linked to its issue. The branch name and the PR's first line carry that tie.
+- A cloud session cannot delete a branch. A merged branch stays until GitHub or a person deletes it.
+- Bodies written in a cloud session end with the footer, and any skill that reads a body must skip it.
 - A deleted feature branch makes execute, verify and ship stop with a reason, because no remote branch matches.
