@@ -9,7 +9,7 @@ user-invocable: false
 
 Caller: $ARGUMENTS
 
-The glossary is the one list of domain terms that developers and agents share. The calling skill loads `docs/glossary.md` into its own body. Check terms against that text. The format and the gate apply in every caller. Then follow the section for your caller.
+The glossary is the one list of domain terms that developers and agents share. The calling skill loads `docs/glossary.md` into its own body. Check terms against that text, except where your caller's section says to read the file again. The format and the gate apply in every caller. Then follow the section for your caller.
 
 ## Format
 - The file starts with a `# Glossary` heading. Then comes one entry per term: `**<Term>**: <definition>`, with an optional `_Avoid_: <words>` line under it. A blank line separates entries.
@@ -46,7 +46,7 @@ discuss never writes the glossary. A term reaches it only as a `Term` decision i
 - Change no file in the repo, `docs/glossary.md` included.
 
 ## In execute
-execute writes the glossary in the issue's PR. The PR review is the human approval of each entry that no `Term` decision holds.
+execute writes the glossary in the issue's PR. The PR review is the human approval of each entry that no `Term` decision holds. execute loads the glossary before it switches to the issue branch, so read `docs/glossary.md` on the issue branch, if it exists, before you judge that no entry covers a name, and before you write an entry.
 
 - **Write each `Term` decision**, the issue's own and each one it points to as `#<umbrella> D<n>`. Add its entry to `docs/glossary.md`, or edit the entry for that term in place. The entry is the decision's text: `**<Term>**: <definition>`, with the decision's `_Avoid_` words on a line under it. If the file does not exist, create it with the `# Glossary` heading.
 - **Add a missing term.** If the code needs a new domain name that passes the gate, and no `Term` decision and no entry covers it, add an entry for it. This is deviation rule 6.
