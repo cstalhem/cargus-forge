@@ -36,7 +36,7 @@ Issue: $ARGUMENTS
    - **In a worktree on another issue's branch whose PR has merged, with no changes and `HEAD` at that PR's last commit (`head.sha` from `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<that branch>&state=closed' --jq '.[] | select(.merged_at) | .head.sha'`):** say so, and ask whether to reuse this worktree for #<n>. On yes, go on as in the case of a worktree on its own new branch, and delete the old issue's local branch. On no, stop.
    - **Not in a worktree:** enter a new one with the EnterWorktree tool, then go on as in the next case.
    - **In a worktree on its own new branch (Remote Control names it `worktree-…`), with no changes and no commits that are not on a remote:**
-     1. If `git ls-remote` lists no branch for the issue, run `gh issue develop <n> --base <base> --name <n>-<slug>`, with the branch pattern from `issue-tracker.md`.
+     1. If `git ls-remote` lists no branch for the issue, create `<n>-<slug>` from `<base>` as the rules say, with the branch pattern from `issue-tracker.md`.
      2. Run `git fetch origin <branch>`, then `git switch <branch>`, then `git branch -D <the worktree's old branch>`.
      3. Ask the user to name the session with `/rename <branch>`.
    - **Anything else** (changes, commits, another issue's branch, or a `git switch` that fails): stop, show what the worktree holds, and ask.
