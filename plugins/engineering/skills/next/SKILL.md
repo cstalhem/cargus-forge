@@ -5,6 +5,18 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/*/labels -f 'labels[]=status:in-progress')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/*/labels -f 'labels[]=status:needs-review')
+  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/status:ready)
+  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/status:in-progress)
+  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/status:needs-review)
+  - Bash(gh api 'repos/{owner}/{repo}/issues/*/labels?per_page=100' --jq '[.[].name] | sort | tojson')
+hooks:
+  PreToolUse:
+    - matcher: Bash
+      hooks:
+        - type: command
+          command: bash "${CLAUDE_PLUGIN_ROOT}/skills/next/label-guard.sh"
 ---
 
 # next
@@ -13,6 +25,7 @@ allowed-tools:
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - The Facts section below is the output of `status.sh`, which read GitHub and git when this skill loaded. Do not fetch the facts again, other than the label read-back in step 2, and do not change them.
 - Run none of the suggested commands. The user picks what to run. The `gh api` calls under `## Repairs` are not suggestions: step 2 runs them. The `git` calls under `### Finished worktrees` run only in step 5, after the user's yes.
+- The `gh api` calls under `## Repairs` and the read-back in step 2 are pre-approved only exactly as written. `label-guard.sh` makes Claude Code ask for any other spelling of them. The `git` calls are not pre-approved, so Claude Code may ask before each one.
 - Delete no remote branch. `### Merged remote branches` is a list for the user to read.
 - A repair follows the label rule above. `status.sh` read the labels, which stands for its step 1, and it removes only labels that it read.
 
@@ -27,7 +40,7 @@ allowed-tools:
    2. Only if step 2 ran a repair: a `## Repairs` heading, then the `- #<n> · …` line of each entry, as printed, one per line, without its calls and its `labels after:` line.
    3. Only if the `## Cleanup` part of the Facts lists a worktree or a branch, so that not both of its lists are `- none`: the `## Cleanup` part as printed, with its two `###` headings and their `- ` lines, without the indented `git` lines under each worktree.
    4. Only if `### Finished worktrees` lists a worktree: one last line, exactly `Remove these finished worktrees and their local branches? git worktree remove also deletes their ignored files. (yes/no)`
-   Add no text before, between or after them: no summary, no read-back result and no comment. If the reply has no question, the skill ends here, and nothing is removed.
+   Add no text before, between or after them: no summary, no read-back result and no comment. The reply's first line is the `## Report` heading. If the reply has no question, the skill ends here, and nothing is removed.
 4. **Confirm.** The user's next message answers the question. If it says yes, such as `yes` or `y`, go to step 5. Otherwise run nothing, reply exactly `No worktree removed.`, and end.
 5. **Clean up.** Take the worktrees under `### Finished worktrees` one at a time, in the order printed. Finish one worktree before you start the next, and never put two calls in one message. For each worktree:
    1. Run its two indented lines, `git worktree remove '<path>'` and then `git branch -D '<branch>'`, each as its own Bash call, exactly as printed, one at a time. Add nothing to a call: no `--force`, no `-C`, no `cd`, no `>/dev/null`, no `&&` or `;` chain and no pipe. Run no other git command.

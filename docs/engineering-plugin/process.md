@@ -148,9 +148,9 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
   - A blocked issue lists each open blocker, one level deep, with its status and suggestion. A blocker counts while its issue is open. A blocker in another repo shows as `owner/repo#n` with no status.
   - At most 20 issues show, in group order. Each group that the limit cuts gets one "and N more" line.
   - The last line is one suggestion, the first that applies: review and merge a PR that needs review, execute an issue in progress, ship an umbrella whose sub-issues are all closed, execute the lowest ready issue, discuss the lowest request.
-  - An in-progress or needs-review line whose issue has no PR and no branch notes "no branch or PR". An issue with several status labels and neither is grouped by its highest label.
-- **Repairs:** next repairs each label that the facts contradict, by the rules in [Status](#status), without asking. It reads the labels back after each repair, and lists each change after the report.
-- **Cleanup:** next lists the finished worktrees and the merged remote branches after the report, and asks once, for the whole list, before it removes the finished worktrees. It asks nothing when no worktree is finished, as in a cloud session. Cleanup is local: it never deletes a remote branch, because the cloud refuses deletes and `delete_branch_on_merge` covers most of them.
+  - An in-progress or needs-review line whose issue has no PR and no branch notes "no branch or PR". A branch whose PR has merged does not count. An issue with several status labels and neither is grouped by its highest label.
+- **Repairs:** next repairs each label that the facts contradict, by the rules in [Status](#status), without asking. It reads the labels back after each repair, and lists each change after the report. Its `allowed-tools` pre-approve the label calls and the read-back, with `*` for the issue number. A `*` in a Bash rule matches any text, flags included, so next also registers `label-guard.sh`, a `PreToolUse` hook that makes Claude Code ask for any command those rules match that is not exactly a printed call or the read-back. Claude Code keeps a skill's hooks for the rest of the session, and the hook decides nothing for any other command.
+- **Cleanup:** next lists the finished worktrees and the merged remote branches after the report, and asks once, for the whole list, before it removes the finished worktrees. It asks nothing when no worktree is finished, as in a cloud session. Cleanup is local: it never deletes a remote branch, because the cloud refuses deletes and `delete_branch_on_merge` covers most of them. The removals are not pre-approved, because a pattern for them would also allow `--force`.
   - A finished worktree is a local worktree on an issue branch, `<n>-*`, whose PR has merged, with no open PR, or whose issue is closed. It has no uncommitted work (`git status --porcelain` lists nothing) and no unpushed work (each commit is on a remote branch, or in the merged PR's head, which a squash merge keeps after GitHub deletes the remote branch).
   - Never finished: the main worktree, the worktree next runs in, a locked, bare, detached or prunable worktree, and a worktree on a `worktree-*` branch.
   - After a yes, next runs `git worktree remove '<path>'`, never with `--force`, then `git branch -D '<branch>'`, for each worktree in turn, and stops at the first call that fails. `git worktree remove` refuses a worktree with changes or untracked files, and deletes its ignored files.
@@ -167,14 +167,15 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 | discuss found that it fails the size test | umbrella | `umbrella` | discuss |
 | it passed the size test | ready | `status:ready` | discuss (single issue), slice (sub-issues) |
 | a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status:ready` label stays | — |
-| an issue branch or a draft PR | in progress | `status:in-progress` | execute, when it gets onto the issue branch |
+| an issue branch with no merged PR, or a draft PR | in progress | `status:in-progress` | execute, when it gets onto the issue branch |
 | a ready PR (not a draft) | needs review | `status:needs-review` | verify, on pass |
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
 - **Each new status label replaces the one before it,** and `umbrella` replaces every status label. A skill adds a label with `POST issues/<n>/labels`, removes each one it replaces with `DELETE issues/<n>/labels/<name>`, reads the labels back, and leaves every other label as it was. It never uses the `labels` field of a `PATCH`, which replaces every label.
 - **`next` repairs each label that the facts contradict,** from the list that `status.sh` prints. A repair touches only an issue that carries a plugin label, and acts only on a fact that exists:
   - an open ready PR whose first line names the issue gives `status:needs-review`;
-  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch, gives `status:in-progress`;
+  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch with no merged PR, gives `status:in-progress`;
+  - a remote branch whose PR has merged is finished work, so it gives nothing;
   - the new status label replaces the issue's other status labels, and an umbrella loses its status labels and keeps `umbrella`;
   - with no such PR and no such branch, the labels stay as they are, because a cloud session's issue is in progress before its draft PR exists;
   - a repair never adds `status:ready`, because only the size test can, and never adds `umbrella`. It touches no other label.
