@@ -15,13 +15,15 @@ status: active
 - **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, an issue branch, a draft PR.
 - **Labels show only what GitHub does not show.** Each skill sets one label:
   - `umbrella`: discuss sets it when the size test fails;
-  - `status: ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
-  - `status: in progress`: execute sets it;
-  - `status: needs review`: verify sets it on pass.
+  - `status:ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
+  - `status:in-progress`: execute sets it when it gets onto the issue branch;
+  - `status:needs-review`: verify sets it when it passes a PR.
+- **Each status label replaces the one before it,** and `umbrella` replaces every status label. A skill adds a label with `POST issues/<n>/labels`, removes each one it replaces with `DELETE issues/<n>/labels/<name>`, reads the labels back, and leaves every other label as it was. It never uses the `labels` field of a `PATCH`, which replaces every label.
+- **The label names are fixed** in the plugin's `references/rules.md`. A name holds no space, so no path needs encoding. Adding a label that the repo lacks creates it, so no skill has a create step.
 - **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no label.
 - **No label means a request that needs discuss.** An issue made by hand is therefore never mistaken for shaped work.
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label. slice sets every blocker as a link, so the Blocked icon shows for each one ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
-- A script (`status.sh`) recomputes every status and repairs labels that differ. It never sets `status: ready`, because only the size test can.
+- A script (`status.sh`) recomputes every status and repairs labels that differ. It never sets `status:ready`, because only the size test can.
 - Each repo describes its tracker in `docs/agents/issue-tracker.md`. Skills read that file, so the tracker can change without a change to the skills.
 
 ## Rejected alternatives
