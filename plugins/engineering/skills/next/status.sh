@@ -10,7 +10,8 @@
 #   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
 #   ## Repairs  `- none`, or one entry per issue whose labels the facts contradict (#69 D5):
 #               a line `- #<n> · <change> · <fact>`, then one indented `gh api` call per
-#               line, then `  labels after: <labels>`, the labels the calls leave.
+#               line, then `  labels after: <JSON array>`, the labels the calls leave,
+#               sorted, in the form of `--jq '[.[].name] | sort | tojson'`.
 
 set -u
 
@@ -198,7 +199,8 @@ out=$(jq -n -r \
         else "  - blocked by #\($b.number)"
         end;
     # One entry per repair: the change and its fact, the calls in order (add, then each
-    # remove, as the label rule in rules.md says), then the labels they leave.
+    # remove, as the label rule in rules.md says), then the labels they leave as a sorted JSON
+    # array, which no label name can make ambiguous.
     def repair_lines:
       . as $x
       | $x.repair as $r
@@ -209,7 +211,7 @@ out=$(jq -n -r \
         (if $r.add then "  gh api -X POST repos/{owner}/{repo}/issues/\($x.number)/labels -f '\''labels[]=\($r.add)'\''"
          else empty end),
         ($r.remove[] | "  gh api -X DELETE repos/{owner}/{repo}/issues/\($x.number)/labels/\(.)"),
-        "  labels after: \(if ($r.after | length) == 0 then "none" else ($r.after | join(", ")) end)";
+        "  labels after: \($r.after | sort | tojson)";
 
     [ {name: "Needs review", status: "needs-review"},
       {name: "In progress", status: "in-progress"},
