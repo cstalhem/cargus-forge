@@ -19,7 +19,8 @@ for tool in gh jq git; do
 done
 
 # Reads a list page by page, 100 items a page, without following GitHub's next-page link.
-# $1 is the path. Prints one JSON array with every item.
+# $1 is the path. Sets `items` to one JSON array with every item. Call it in the main shell,
+# not in a pipe or `$(…)`, so that its `fail` ends the script and its error text is printed.
 read_list() {
   local path=$1 sep='?' page=1 out count all='[]'
   case $path in *\?*) sep='&' ;; esac
@@ -30,13 +31,14 @@ read_list() {
     [ "$count" -lt 100 ] && break
     page=$((page + 1))
   done
-  printf '%s' "$all"
+  items=$all
 }
 
 repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot read the current repo with gh api: $repo"
 
 # Open issues, without PRs: the issues endpoint lists PRs too.
-issues=$(read_list 'repos/{owner}/{repo}/issues?state=open' | jq '
+read_list 'repos/{owner}/{repo}/issues?state=open'
+issues=$(printf '%s' "$items" | jq '
   map(select(has("pull_request") | not) | {
     number, title,
     labels: [.labels[].name],
@@ -47,7 +49,8 @@ issues=$(read_list 'repos/{owner}/{repo}/issues?state=open' | jq '
 
 # Open PRs, with the issue that the first line of the body names:
 # "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR).
-pulls=$(read_list 'repos/{owner}/{repo}/pulls?state=open' | jq '
+read_list 'repos/{owner}/{repo}/pulls?state=open'
+pulls=$(printf '%s' "$items" | jq '
   map({
     number,
     draft: (.draft // false),
@@ -70,7 +73,8 @@ for n in $(printf '%s' "$issues" | jq -r --argjson s "$plugin_status" '
         | select((.labels | index("umbrella")) | not)
         | select([.labels[] | select(. as $l | $s | index($l))] | length > 0)
         | .number'); do
-  list=$(read_list "repos/{owner}/{repo}/issues/$n/dependencies/blocked_by" | jq --arg repo "$repo" '
+  read_list "repos/{owner}/{repo}/issues/$n/dependencies/blocked_by"
+  list=$(printf '%s' "$items" | jq --arg repo "$repo" '
     map(select(.state == "open") | {
       number,
       repo: (.repository_url | sub("^.*/repos/"; ""))
@@ -82,7 +86,8 @@ done
 # Closed and total sub-issues of each umbrella that has any.
 subs='{}'
 for n in $(printf '%s' "$issues" | jq -r '.[] | select(.labels | index("umbrella")) | select(.sub_total > 0) | .number'); do
-  count=$(read_list "repos/{owner}/{repo}/issues/$n/sub_issues" | jq '
+  read_list "repos/{owner}/{repo}/issues/$n/sub_issues"
+  count=$(printf '%s' "$items" | jq '
     {total: length, closed: (map(select(.state == "closed")) | length)}') \
     || fail "cannot read the sub-issues of #$n."
   subs=$(jq -n --argjson all "$subs" --argjson c "$count" --arg n "$n" '$all + {($n): $c}')
