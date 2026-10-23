@@ -4,7 +4,7 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
-**Role since v0.** The v0 skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the v0 process, and they win where this file differs. This file stays as the design record for the stages after v0 (research, plan, reflect, next and `status.sh`), and as the design notes that the ADRs link to. It goes once those stages are built.
+**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills and next, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan, reflect, and the label repair and worktree cleanup of next), and as the design notes that the ADRs link to. It goes once those stages are built.
 
 ## Words
 
@@ -140,10 +140,16 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 - **Evidence:** each proposal names its evidence from this work. That is a repeated correction, a failed check that a rule could have stopped, or a command that the agent had to find twice.
 - **No evidence means no proposal.** "No setup change" is a normal result, not a failure.
 
-### next (not in v0)
-- **Gets:** GitHub and git, through `status.sh`, which runs before the model reads the skill.
-- **Gives:** the current issue, the ready, review and blocked issues, and one suggested command. It also repairs any label that differs from the derived status.
-- **v0:** a list of open issues from `gh api` REST is enough.
+### next (you type it)
+- **Gets:** GitHub and git, through `status.sh`, which the skill injects, so it runs before the model reads the skill (ADR-004). It reads the open issues and the open PRs through `gh api` REST, page by page, the remote branches with `git ls-remote --heads origin`, the "blocked by" links of each issue with a status label, and the sub-issues of each umbrella. It changes nothing, exits 0 and prints errors as text.
+- **Gives:** the open issues, and no PRs, in the groups Needs review, In progress, Ready to build, Blocked, Umbrellas and To shape. Each issue is in one group, by the status that the facts give (see [Status](#status)), so the report is right before any label is repaired. Within a group, the lowest number comes first.
+  - Each line shows one suggested command, and a sub-issue's line names its umbrella.
+  - An umbrella's line shows closed of total sub-issues, or "not sliced" when it has none, and its feature branch, found by name as execute finds it: the name for one match, "no feature branch" for none, "N feature branches: …" for several.
+  - A blocked issue lists each open blocker, one level deep, with its status and suggestion. A blocker counts while its issue is open. A blocker in another repo shows as `owner/repo#n` with no status.
+  - At most 20 issues show, in group order. Each group that the limit cuts gets one "and N more" line.
+  - The last line is one suggestion, the first that applies: review and merge a PR that needs review, execute an issue in progress, ship an umbrella whose sub-issues are all closed, execute the lowest ready issue, discuss the lowest request.
+- **Output of `status.sh`:** `## Report`, with one `### <group>` per group and a last line `Next: <suggestion>`. Label repairs and worktree cleanup come in later parts under their own headings.
+- **Later:** repair each label that differs from the status that the facts give.
 
 ## Status
 
@@ -232,4 +238,4 @@ Closes #<umbrella>
 - **html-plan install:** test whether the `claude-community` marketplace must be added first.
 - **Worktree commands:** Claude Code blocks git commands that it cannot confirm stay inside the worktree. execute must use plain, separate git commands. Test this in the skeleton.
 - **Worktree cleanup:** worktrees stay after their work merges. On 2026-10-12, feederer had 6 Remote Control worktrees, including one with a detached HEAD and one that was locked. homelab-docker had 3. The proposal for a later stage: `next` lists each worktree whose branch has merged or whose issue is closed, and removes it after you confirm. It never removes a worktree that has uncommitted work. The end-to-end run on #54 confirmed the need: execute leaves the worktree and its local branch behind after the PR merges, and a session cannot remove the worktree it runs in. In v0, execute can only reuse a finished worktree for the next issue.
-- **Finding the feature branch: decided** in [ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md). execute, verify and ship take the one remote branch that matches the `<n>-<slug>` pattern for the umbrella's number, from `git ls-remote --heads origin`. A deleted feature branch makes them stop with a reason. The proposal for a later stage: `status.sh` derives the branch the same way, and `next` reports an umbrella whose branch is gone.
+- **Finding the feature branch: decided** in [ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md). execute, verify and ship take the one remote branch that matches the `<n>-<slug>` pattern for the umbrella's number, from `git ls-remote --heads origin`. A deleted feature branch makes them stop with a reason. `status.sh` derives the branch the same way, and `next` shows "no feature branch" on the line of an umbrella whose branch is gone.

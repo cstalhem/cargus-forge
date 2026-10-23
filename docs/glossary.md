@@ -23,3 +23,8 @@ _Avoid_: test case, user story
 **Feature branch**: The branch of an umbrella issue, which its sub-issue PRs merge into.
 
 **Final PR**: The one PR that takes a feature branch into `main`; ship opens it.
+
+**Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. A label shows it, and `next` repairs a label that the facts contradict.
+_Avoid_: state
+
+**Request**: An open GitHub issue with none of the plugin's labels, so discuss has not shaped it yet.
