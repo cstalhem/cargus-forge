@@ -12,6 +12,12 @@
 #               a line `- #<n> · <change> · <fact>`, then one indented `gh api` call per
 #               line, then `  labels after: <JSON array>`, the labels the calls leave,
 #               sorted, in the form of `--jq '[.[].name] | sort | tojson'`.
+#   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
+#               `### Finished worktrees`: a line `- <path> · <branch> · <fact>` per finished
+#               worktree, then its two indented calls, `git worktree remove '<path>'` and
+#               `git branch -D '<branch>'`, which next runs only after the user's yes;
+#               `### Merged remote branches`: a line `- <branch> · PR #<n> merged` per remote
+#               issue branch whose PR has merged. These are listed, never deleted.
 
 set -u
 
@@ -104,13 +110,121 @@ for n in $(printf '%s' "$issues" | jq -r '.[] | select(.labels | index("umbrella
     || fail "cannot read the sub-issues of #$n."
 done
 
+# Cleanup (#69 D8, D12). An issue branch is a branch whose name starts with `<n>-`, as above,
+# so a `worktree-*` branch is never one.
+#
+# The PRs of branch $1, open and closed. Sets `open_pr` to true or false, and `merged` to
+# null, or to {number, sha} of the branch's last merged PR, with the PR's head SHA. Caches
+# each branch's result in `prs_of`, because a worktree's branch can also be a remote one.
+prs_of='{}'
+branch_prs() {
+  local enc prs
+  prs=$(printf '%s' "$prs_of" | jq -c --arg b "$1" '.[$b]' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+  if [ "$prs" = null ]; then
+    enc=$(jq -rn --arg b "$1" '$b | @uri' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+    read_list "repos/{owner}/{repo}/pulls?state=all&head={owner}:$enc"
+    prs=$(printf '%s' "$items" | jq -c '{
+      open: any(.[]; .state == "open"),
+      merged: ([.[] | select(.merged_at)] | sort_by(.merged_at) | last
+               | if . then {number, sha: .head.sha} else null end)
+    }' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+    prs_of=$(jq -n --argjson all "$prs_of" --argjson p "$prs" --arg b "$1" '$all + {($b): $p}' 2>/dev/null) \
+      || fail "cannot read the PRs of branch $1."
+  fi
+  open_pr=$(printf '%s' "$prs" | jq -r '.open' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+  merged=$(printf '%s' "$prs" | jq -c '.merged' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+}
+
+# Merged remote branches: each remote issue branch with a merged PR and no open one.
+merged_branches='[]'
+for b in $(printf '%s' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))' 2>/dev/null); do
+  branch_prs "$b"
+  [ "$open_pr" = false ] && [ "$merged" != null ] || continue
+  merged_branches=$(jq -n --argjson all "$merged_branches" --argjson m "$merged" --arg b "$b" \
+    '$all + [{branch: $b, pr: $m.number}]' 2>/dev/null) || fail "cannot read the PRs of branch $b."
+done
+
+# Finished worktrees: every local worktree except the main one, a bare one, a detached one,
+# a locked one, a prunable one (its directory is gone) and the one this script runs in. Its
+# branch is an issue branch whose PR has merged, with no open PR, or whose issue is closed.
+# It has no uncommitted work: `git status --porcelain` lists no tracked change and no
+# untracked file, the same check `git worktree remove` makes without `--force`. It has no
+# unpushed work: every commit is on a remote branch or in the merged PR's head, which the
+# squash merge keeps after GitHub deletes the remote branch.
+here=$(git rev-parse --show-toplevel 2>&1) || fail "git rev-parse --show-toplevel: $here"
+here=$(cd "$here" 2>/dev/null && pwd -P) || fail "cannot read the current worktree's path."
+open_numbers=$(printf '%s' "$issues" | jq -c '[.[].number]' 2>/dev/null) || fail "cannot read the open issues."
+err=$(git worktree list --porcelain -z 2>&1 >/dev/null) || fail "git worktree list: $err"
+
+finished='[]'
+check_worktree() {
+  local real n st ahead out closed fact=''
+  [ "$wt_main" = 1 ] && return
+  [ "$wt_bare$wt_locked$wt_prunable" = 000 ] || return
+  [ -n "$wt_branch" ] || return
+  case $wt_branch in [0-9]*-*) ;; *) return ;; esac
+  n=${wt_branch%%-*}
+  case $n in *[!0-9]*) return ;; esac
+  real=$(cd "$wt_path" 2>/dev/null && pwd -P) || return
+  [ "$real" = "$here" ] && return
+  st=$(git -C "$wt_path" status --porcelain 2>/dev/null) || return
+  [ -z "$st" ] || return
+
+  branch_prs "$wt_branch"
+  [ "$open_pr" = false ] || return
+  if [ "$merged" != null ]; then
+    fact="PR #$(printf '%s' "$merged" | jq -r '.number' 2>/dev/null) merged"
+  elif printf '%s' "$open_numbers" | jq -e --argjson n "$n" 'index($n) == null' >/dev/null 2>&1; then
+    # Not among the open issues: read the issue, which may be closed or may not exist.
+    out=$(gh api "repos/{owner}/{repo}/issues/$n" 2>&1) || {
+      case $out in *"HTTP 404"*|*"HTTP 410"*) return ;; esac
+      fail "gh api repos/{owner}/{repo}/issues/$n: $out"
+    }
+    closed=$(printf '%s' "$out" | jq -r 'if has("pull_request") then "no" elif .state == "closed" then "yes" else "no" end' 2>/dev/null) \
+      || fail "gh api repos/{owner}/{repo}/issues/$n did not return an issue: $out"
+    [ "$closed" = yes ] || return
+    fact="issue #$n closed"
+  fi
+  [ -n "$fact" ] || return
+
+  ahead=$(git rev-list --count "$wt_head" --not --remotes 2>/dev/null) || return
+  if [ "$ahead" != 0 ]; then
+    [ "$merged" != null ] || return
+    git merge-base --is-ancestor "$wt_head" "$(printf '%s' "$merged" | jq -r '.sha' 2>/dev/null)" >/dev/null 2>&1 || return
+  fi
+
+  finished=$(jq -n --argjson all "$finished" --arg p "$wt_path" --arg b "$wt_branch" --arg f "$fact" \
+    '$all + [{path: $p, branch: $b, fact: $f}]' 2>/dev/null) || fail "cannot list the worktree $wt_path."
+}
+
+# `git worktree list --porcelain -z` ends each field with a NUL and each worktree with an
+# empty field; the first worktree is the main one.
+wt_main=1 wt_path='' wt_head='' wt_branch='' wt_bare=0 wt_locked=0 wt_prunable=0
+while IFS= read -r -d '' field; do
+  case $field in
+    'worktree '*) wt_path=${field#worktree } ;;
+    'HEAD '*) wt_head=${field#HEAD } ;;
+    'branch refs/heads/'*) wt_branch=${field#branch refs/heads/} ;;
+    bare) wt_bare=1 ;;
+    locked|'locked '*) wt_locked=1 ;;
+    prunable|'prunable '*) wt_prunable=1 ;;
+    '')
+      [ -n "$wt_path" ] && check_worktree
+      wt_main=0 wt_path='' wt_head='' wt_branch='' wt_bare=0 wt_locked=0 wt_prunable=0
+      ;;
+  esac
+done < <(git worktree list --porcelain -z 2>/dev/null)
+[ -n "$wt_path" ] && check_worktree
+
 out=$(jq -n -r \
   --arg repo "$repo" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
   --argjson branches "$branches" \
   --argjson blockers "$blockers" \
-  --argjson subs "$subs" '
+  --argjson subs "$subs" \
+  --argjson finished "$finished" \
+  --argjson merged_branches "$merged_branches" '
   def rank: {"status:ready": 1, "status:in-progress": 2, "status:needs-review": 3}[.] // 0;
   def ref_of($url): ($url | sub("^.*/repos/"; "") | capture("^(?<r>.*)/issues/(?<n>[0-9]+)$")
                      | if .r == $repo then "#\(.n)" else "\(.r)#\(.n)" end);
@@ -258,7 +372,23 @@ out=$(jq -n -r \
       "",
       "## Repairs",
       "",
-      ( if ($repairs | length) == 0 then "- none" else ($repairs[] | repair_lines) end )
+      ( if ($repairs | length) == 0 then "- none" else ($repairs[] | repair_lines) end ),
+      "",
+      "## Cleanup",
+      "",
+      "### Finished worktrees",
+      ( if ($finished | length) == 0 then "- none"
+        else ($finished | sort_by((.branch | capture("^(?<n>[0-9]+)").n | tonumber), .path)[]
+              | "- \(.path) · \(.branch) · \(.fact)",
+                "  " + @sh "git worktree remove \(.path)",
+                "  " + @sh "git branch -D \(.branch)")
+        end ),
+      "",
+      "### Merged remote branches",
+      ( if ($merged_branches | length) == 0 then "- none"
+        else ($merged_branches | sort_by((.branch | capture("^(?<n>[0-9]+)").n | tonumber), .branch)[]
+              | "- \(.branch) · PR #\(.pr) merged")
+        end )
 ' 2>/dev/null) || fail "cannot build the report."
 
 printf '%s\n' "$out"
