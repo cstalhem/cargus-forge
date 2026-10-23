@@ -3,14 +3,22 @@
 # Reads open issues, open PRs, blockers and sub-issues through `gh api` REST, and remote
 # branches through git, for the repo in the current directory. It changes nothing.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
+# An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
+# call sends its stderr to /dev/null, and the output is printed only once it is complete.
 #
 # Output:
 #   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
+#   ## Repairs  `- none`, or one entry per issue whose labels the facts contradict (#69 D5):
+#               a line `- #<n> · <change> · <fact>`, then one indented `gh api` call per
+#               line, then `  labels after: <JSON array>`, the labels the calls leave,
+#               sorted, in the form of `--jq '[.[].name] | sort | tojson'`.
 
 set -u
 
 fail() {
-  printf 'status.sh error: %s\n' "$*"
+  local msg
+  msg=$(printf '%s' "$*" | tr '\r\n' '  ')
+  printf 'status.sh error: %s\n' "$msg"
   exit 0
 }
 
@@ -26,8 +34,9 @@ read_list() {
   case $path in *\?*) sep='&' ;; esac
   while :; do
     out=$(gh api "$path${sep}per_page=100&page=$page" 2>&1) || fail "gh api $path: $out"
-    count=$(printf '%s' "$out" | jq 'length' 2>/dev/null) || fail "gh api $path did not return a list: $out"
-    all=$(jq -n --argjson a "$all" --argjson b "$out" '$a + $b') || fail "could not join the pages of $path."
+    count=$(printf '%s' "$out" | jq 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
+      || fail "gh api $path did not return a list: $out"
+    all=$(jq -n --argjson a "$all" --argjson b "$out" '$a + $b' 2>/dev/null) || fail "could not join the pages of $path."
     [ "$count" -lt 100 ] && break
     page=$((page + 1))
   done
@@ -45,7 +54,7 @@ issues=$(printf '%s' "$items" | jq '
     parent: (.parent_issue_url // null),
     blocked_total: (.issue_dependencies_summary.total_blocked_by // 0),
     sub_total: (.sub_issues_summary.total // 0)
-  })') || fail "cannot read the open issues."
+  })' 2>/dev/null) || fail "cannot read the open issues."
 
 # Open PRs, with the issue that the first line of the body names:
 # "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR).
@@ -57,10 +66,10 @@ pulls=$(printf '%s' "$items" | jq '
     issue: ((.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
             | (capture("^(Sub-issue #(?<n>[0-9]+) of|Closes #(?<c>[0-9]+)([^0-9]|$))") // null)
             | if . == null then null else ((.n // .c) | tonumber) end)
-  })') || fail "cannot read the open PRs."
+  })' 2>/dev/null) || fail "cannot read the open PRs."
 
 remote=$(git ls-remote --heads origin 2>&1) || fail "git ls-remote --heads origin: $remote"
-branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/||p' | jq -R . | jq -s .) \
+branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/||p' | jq -R . 2>/dev/null | jq -s . 2>/dev/null) \
   || fail "cannot read the remote branches."
 
 plugin_status='["status:ready","status:in-progress","status:needs-review"]'
@@ -72,28 +81,30 @@ for n in $(printf '%s' "$issues" | jq -r --argjson s "$plugin_status" '
     .[] | select(.blocked_total > 0)
         | select((.labels | index("umbrella")) | not)
         | select([.labels[] | select(. as $l | $s | index($l))] | length > 0)
-        | .number'); do
+        | .number' 2>/dev/null); do
   read_list "repos/{owner}/{repo}/issues/$n/dependencies/blocked_by"
   list=$(printf '%s' "$items" | jq --arg repo "$repo" '
     map(select(.state == "open") | {
       number,
       repo: (.repository_url | sub("^.*/repos/"; ""))
-    } | .ref = (if .repo == $repo then "#\(.number)" else "\(.repo)#\(.number)" end))') \
+    } | .ref = (if .repo == $repo then "#\(.number)" else "\(.repo)#\(.number)" end))' 2>/dev/null) \
     || fail "cannot read the blockers of #$n."
-  blockers=$(jq -n --argjson all "$blockers" --argjson l "$list" --arg n "$n" '$all + {($n): $l}')
+  blockers=$(jq -n --argjson all "$blockers" --argjson l "$list" --arg n "$n" '$all + {($n): $l}' 2>/dev/null) \
+    || fail "cannot read the blockers of #$n."
 done
 
 # Closed and total sub-issues of each umbrella that has any.
 subs='{}'
-for n in $(printf '%s' "$issues" | jq -r '.[] | select(.labels | index("umbrella")) | select(.sub_total > 0) | .number'); do
+for n in $(printf '%s' "$issues" | jq -r '.[] | select(.labels | index("umbrella")) | select(.sub_total > 0) | .number' 2>/dev/null); do
   read_list "repos/{owner}/{repo}/issues/$n/sub_issues"
   count=$(printf '%s' "$items" | jq '
-    {total: length, closed: (map(select(.state == "closed")) | length)}') \
+    {total: length, closed: (map(select(.state == "closed")) | length)}' 2>/dev/null) \
     || fail "cannot read the sub-issues of #$n."
-  subs=$(jq -n --argjson all "$subs" --argjson c "$count" --arg n "$n" '$all + {($n): $c}')
+  subs=$(jq -n --argjson all "$subs" --argjson c "$count" --arg n "$n" '$all + {($n): $c}' 2>/dev/null) \
+    || fail "cannot read the sub-issues of #$n."
 done
 
-jq -n -r \
+out=$(jq -n -r \
   --arg repo "$repo" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
@@ -105,24 +116,44 @@ jq -n -r \
                      | if .r == $repo then "#\(.n)" else "\(.r)#\(.n)" end);
   def issue_branches($n): [$branches[] | select(startswith("\($n)-"))];
 
-  # The status from the facts (#69 D5), before any repair.
+  # The status from the facts (#69 D5), before any repair, and the repair of the labels.
   ($issues | map(
     . as $i
     | ($i.labels | map(select(rank > 0))) as $status_labels
+    | ($i.labels | index("umbrella") != null) as $is_umbrella
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
+    | issue_branches($i.number) as $own_branches
     | ($blockers["\($i.number)"] // []) as $open_blockers
+    # The status label that a fact gives. Only an issue with a status label gets one, and
+    # never `status:ready` or `umbrella`. With no fact, the labels stay as they are.
+    | (if $is_umbrella or ($status_labels | length) == 0 then null
+       elif $ready_pr then {label: "status:needs-review", fact: "ready PR #\($ready_pr.number)"}
+       elif $draft_pr then {label: "status:in-progress", fact: "draft PR #\($draft_pr.number)"}
+       elif ($own_branches | length) > 0 then
+         {label: "status:in-progress", fact: "branch \($own_branches | join(", "))"}
+       else null end) as $target
+    | (if $is_umbrella then {add: null, remove: $status_labels, fact: "umbrella"}
+       elif $target then
+         { add: (if ($i.labels | index($target.label)) != null then null else $target.label end),
+           remove: ($status_labels - [$target.label]),
+           fact: $target.fact }
+       else null end) as $fix
     | $i + {
         status: (
-          if ($i.labels | index("umbrella")) then "umbrella"
+          if $is_umbrella then "umbrella"
           elif ($status_labels | length) == 0 then "request"
-          elif $ready_pr then "needs-review"
-          elif $draft_pr or (issue_branches($i.number) | length > 0) then "in-progress"
+          elif $target then ($target.label | ltrimstr("status:"))
           else ($status_labels | max_by(rank) | ltrimstr("status:"))
           end),
+        no_facts: (($is_umbrella | not) and ($status_labels | length) > 0 and $target == null),
         pr: ($ready_pr // $draft_pr // null | if . then .number else null end),
         blockers: $open_blockers,
-        umbrella_of: (if $i.parent then ref_of($i.parent) else null end)
+        umbrella_of: (if $i.parent then ref_of($i.parent) else null end),
+        repair: (
+          if $fix != null and ($fix.add != null or ($fix.remove | length) > 0) then
+            $fix + {after: (($i.labels - $fix.remove) + (if $fix.add then [$fix.add] else [] end))}
+          else null end)
       }
     | if .status == "ready" and (.blockers | length > 0) then .status = "blocked" else . end
   ) | sort_by(.number)) as $all
@@ -155,7 +186,7 @@ jq -n -r \
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"
                 else "\($fb | length) feature branches: \($fb | join(", "))" end) ]
          elif .status == "needs-review" or .status == "in-progress" then
-           (if .pr then ["PR #\(.pr)"] else [] end)
+           (if .pr then ["PR #\(.pr)"] elif .no_facts then ["no branch or PR"] else [] end)
          else [] end)
       + [ suggestion ]
       | join(" · ");
@@ -167,6 +198,20 @@ jq -n -r \
           | "  - blocked by #\($b.number) · \($x.status | label_of) · \($x | suggestion)"
         else "  - blocked by #\($b.number)"
         end;
+    # One entry per repair: the change and its fact, the calls in order (add, then each
+    # remove, as the label rule in rules.md says), then the labels they leave as a sorted JSON
+    # array, which no label name can make ambiguous.
+    def repair_lines:
+      . as $x
+      | $x.repair as $r
+      | "- #\($x.number) · "
+        + ([ (if $r.add then "adds \($r.add)" else empty end),
+             (if ($r.remove | length) > 0 then "removes \($r.remove | join(", "))" else empty end),
+             $r.fact ] | join(" · ")),
+        (if $r.add then "  gh api -X POST repos/{owner}/{repo}/issues/\($x.number)/labels -f '\''labels[]=\($r.add)'\''"
+         else empty end),
+        ($r.remove[] | "  gh api -X DELETE repos/{owner}/{repo}/issues/\($x.number)/labels/\(.)"),
+        "  labels after: \($r.after | sort | tojson)";
 
     [ {name: "Needs review", status: "needs-review"},
       {name: "In progress", status: "in-progress"},
@@ -189,6 +234,7 @@ jq -n -r \
           | select(($subs["\(.number)"] // {total: 0}) | .total > 0 and .closed == .total) ][0] ) as $to_ship
     | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
     | ( [ $all[] | select(.status == "request") ][0] ) as $request
+    | [ $all[] | select(.repair) ] as $repairs
 
     | "## Report",
       "",
@@ -208,5 +254,11 @@ jq -n -r \
         elif $ready then "/engineering:execute #\($ready.number)"
         elif $request then "/engineering:discuss #\($request.number)"
         else "nothing: no open issue waits for a step"
-        end)
-' || fail "cannot build the report."
+        end),
+      "",
+      "## Repairs",
+      "",
+      ( if ($repairs | length) == 0 then "- none" else ($repairs[] | repair_lines) end )
+' 2>/dev/null) || fail "cannot build the report."
+
+printf '%s\n' "$out"
