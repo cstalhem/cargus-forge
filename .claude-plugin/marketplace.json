@@ -28,7 +28,7 @@
     {
       "name": "engineering",
       "source": "./plugins/engineering",
-      "description": "Turn a request into GitHub issues and build each one into a verified pull request: discuss, slice, execute, verify, ship."
+      "description": "Turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: discuss, slice, execute, verify, ship, next."
     },
     {
       "name": "research",
