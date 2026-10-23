@@ -12,7 +12,7 @@ status: active
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
 - A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. The `Blocked by #<a>, #<b>` text in its first line mirrors them for readers ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
-- **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, an issue branch, a draft PR.
+- **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, an issue branch with no merged PR, a draft PR.
 - **Labels show only what GitHub does not show.** Each skill sets one label:
   - `umbrella`: discuss sets it when the size test fails;
   - `status:ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
@@ -25,11 +25,12 @@ status: active
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label. slice sets every blocker as a link, so the Blocked icon shows for each one ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **A script (`status.sh`) recomputes every status and lists each label that the facts contradict, and `next` repairs it.** A repair touches only an issue that carries a plugin label, and acts only on a fact that exists:
   - an open ready PR whose first line names the issue gives `status:needs-review`;
-  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch, gives `status:in-progress`;
+  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch with no merged PR, gives `status:in-progress`;
+  - a remote branch whose PR has merged is finished work, so it gives nothing;
   - the new status label replaces the issue's other status labels, and an umbrella loses its status labels and keeps `umbrella`;
   - with no such PR and no such branch, the labels stay as they are, because a cloud session's issue is in progress before its draft PR exists;
   - a repair never adds `status:ready`, because only the size test can, and never adds `umbrella`;
-  - `next` applies each repair without asking, reads the labels back, and lists the change.
+  - `next` applies each repair without asking, reads the labels back, and lists the change. Its `allowed-tools` pre-approve the label calls and the read-back, and a hook makes Claude Code ask for any call that is not exactly one of them.
 - Each repo describes its tracker in `docs/agents/issue-tracker.md`. Skills read that file, so the tracker can change without a change to the skills.
 
 ## Rejected alternatives
