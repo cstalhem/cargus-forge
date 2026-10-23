@@ -4,7 +4,7 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
-**Role since v0.** The v0 skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the v0 process, and they win where this file differs. This file stays as the design record for the stages after v0 (research, plan, reflect, next, labels and `status.sh`), and as the design notes that the ADRs link to. It goes once those stages are built.
+**Role since v0.** The v0 skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the v0 process, and they win where this file differs. This file stays as the design record for the stages after v0 (research, plan, reflect, next and `status.sh`), and as the design notes that the ADRs link to. It goes once those stages are built.
 
 ## Words
 
@@ -56,7 +56,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ### discuss (Shape)
 - **Gets:** a request, the code, `docs/adr/`.
-- **Gives:** a single issue if the size test passes, or an umbrella issue if it fails. Both use the formats below.
+- **Gives:** a single issue with `status:ready` if the size test passes, or an umbrella issue with `umbrella` and no status label if it fails. Both use the formats below.
 - **Stores in:** GitHub.
 - **Exit gate:** no open question remains, you confirm the scenarios, and the size test has a result.
 - **Depth fits the request.** A small request needs one or two rounds. discuss stops when the size test can be answered and passes. A request that fails the test gets full rounds.
@@ -77,7 +77,7 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ### slice (Shape; plan calls it, and execute calls it under rule 5)
 - **Gets:** the umbrella issue with its design and decisions. From execute under rule 5: a sub-issue that fails the size test, with execute's findings.
-- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, with parent links and "blocked by" links that slice sets through REST. The `Blocked by` text in a sub-issue's first line mirrors the links for readers ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
+- **Gives:** the feature branch `<n>-<slug>` from `main`, plus sub-issues in the format below, each with `status:ready`, with parent links and "blocked by" links that slice sets through REST. The `Blocked by` text in a sub-issue's first line mirrors the links for readers ([ADR-006](../adr/ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **Feature branch:** slice creates it with `gh issue develop`, or with `git push` and no link where GraphQL is refused. When a single issue with work so far becomes an umbrella, the branch starts from the current branch's head, not `main`, and the plan lists those commits so you can drop them (ADR-006).
 - **Re-split:** slice reads the work so far from the current branch (ADR-006). The sub-issue keeps the part that is built or closest to built, and slice rewrites its body for that part. Each other part becomes a new sub-issue of the same umbrella, blocked by the narrowed sub-issue and by its blockers. Each issue that the old sub-issue blocked becomes blocked by every part. You then run execute again on the narrowed sub-issue.
 - **Exit gate:** every umbrella scenario belongs to at least one sub-issue, and every sub-issue passes the size test.
@@ -105,15 +105,15 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
   5. The issue fails the size test: stop, and push the work. For a sub-issue, open a draft PR whose first line names it, then call slice. A later run on the narrowed sub-issue resumes from that work and rewrites the PR's title and body (ADR-006). For a single issue, open no PR, because its branch becomes the feature branch, and send it back to discuss.
-- **Later:** inject the issue and the commands through scripts (ADR-004), and add `status: in progress`.
+- **Status label:** once it is on the issue branch, execute sets `status:in-progress`, which replaces the issue's other status label.
+- **Later:** inject the issue and the commands through scripts (ADR-004).
 
 ### verify, issue scope (Build; execute calls it)
 - **Gets:** the PR and the scenarios of its issue.
 - **Gives:** one PR comment. For each scenario it records exists, substantive and wired, with evidence, then gives a verdict.
-- **On pass:** it marks the PR ready with `gh pr ready`. If that gets a GraphQL 403, it uses `POST pulls/<n>/ccr/ready_for_review` (ADR-006).
+- **On pass:** it marks the PR ready with `gh pr ready`. If that gets a GraphQL 403, it uses `POST pulls/<n>/ccr/ready_for_review` (ADR-006). Then it sets `status:needs-review` on the issue, which replaces its other status label.
 - **On fail:** it returns to execute with the report.
 - **Rule:** a fresh-context agent that did not write the code. A summary is a claim, not evidence.
-- **Later:** `status: needs review` on pass.
 
 ### merge (you)
 You review the PR and merge it. A sub-issue PR merges into the feature branch, and the close-sub-issue workflow closes its issue (ADR-002). A single-issue PR merges into `main`, and `Closes #n` closes the issue.
@@ -147,20 +147,20 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 
 ## Status
 
-Each status is derived from facts that GitHub and git record. Only automation writes labels (ADR-001). v0 uses no labels.
+Each status is derived from facts that GitHub and git record. Only automation writes labels (ADR-001): discuss, slice, execute and verify each set the label of their step, as the plugin's `references/rules.md` says.
 
 | Facts on an open issue | Status | Label | Set by |
 |---|---|---|---|
 | no status label and no `umbrella` label | request: needs discuss | none (the default) | — |
 | discuss found that it fails the size test | umbrella | `umbrella` | discuss |
-| it passed the size test | ready | `status: ready` | discuss (single issue), slice (sub-issues) |
-| a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status: ready` label stays | — |
-| an issue branch or a draft PR | in progress | `status: in progress` | execute |
-| a ready PR (not a draft) | needs review | `status: needs review` | verify, on pass |
+| it passed the size test | ready | `status:ready` | discuss (single issue), slice (sub-issues) |
+| a "blocked by" link to an open issue | blocked | GitHub's Blocked icon; the `status:ready` label stays | — |
+| an issue branch or a draft PR | in progress | `status:in-progress` | execute, when it gets onto the issue branch |
+| a ready PR (not a draft) | needs review | `status:needs-review` | verify, on pass |
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
-- **Each new status label replaces the one before it.**
-- **`status.sh` repairs labels from facts:** branches, PRs and merges. It never sets `status: ready`, because only the size test can do that.
+- **Each new status label replaces the one before it,** and `umbrella` replaces every status label. A skill adds a label with `POST issues/<n>/labels`, removes each one it replaces with `DELETE issues/<n>/labels/<name>`, reads the labels back, and leaves every other label as it was. It never uses the `labels` field of a `PATCH`, which replaces every label.
+- **`status.sh` repairs labels from facts:** branches, PRs and merges. It never sets `status:ready`, because only the size test can do that.
 - **`next` lists unlabelled open issues as requests,** and suggests `discuss` for each one.
 - A closed issue is done. Its labels do no harm.
 - **A merged sub-issue is closed,** by the close-sub-issue workflow when its PR merges into the feature branch (ADR-002). So it needs no status of its own, and the Blocked icon clears as soon as its blocker merges.
