@@ -28,3 +28,6 @@ _Avoid_: test case, user story
 _Avoid_: state
 
 **Request**: An open GitHub issue with none of the plugin's labels, so discuss has not shaped it yet.
+
+**Finished worktree**: A local worktree on an issue branch whose PR has merged or whose issue is closed, with no uncommitted or unpushed work; `next` removes it after you confirm.
+_Avoid_: stale worktree
