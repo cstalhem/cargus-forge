@@ -285,7 +285,7 @@ out=$(jq -n -r \
   # One suggestion for each status.
   | def suggestion:
       if .status == "needs-review" then
-        (if .pr then "review and merge PR #\(.pr)" else "review and merge its PR" end)
+        (if .pr then "review and merge PR #\(.pr)" else "check #\(.number): labelled needs review, no PR" end)
       elif .status == "in-progress" or .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
       elif .status == "umbrella" then
@@ -350,7 +350,8 @@ out=$(jq -n -r \
         | .left -= $k)
       | .out) as $cut
 
-    | ( [ $all[] | select(.status == "needs-review") ][0] ) as $review
+    # Only an open ready PR gives the review suggestion: a needs-review label with no PR does not.
+    | ( [ $all[] | select(.status == "needs-review" and .pr != null) ][0] ) as $review
     | ( [ $all[] | select(.status == "in-progress") ][0] ) as $doing
     | ( [ $all[] | select(.status == "umbrella")
           | select(($subs["\(.number)"] // {total: 0}) | .total > 0 and .closed == .total) ][0] ) as $to_ship
@@ -369,8 +370,7 @@ out=$(jq -n -r \
           "" ),
       "Next: " + (
         if $review then
-          (if $review.pr then "review and merge PR #\($review.pr), for #\($review.number)"
-           else "review and merge the PR of #\($review.number)" end)
+          "review and merge PR #\($review.pr), for #\($review.number)"
         elif $doing then "/engineering:execute #\($doing.number)"
         elif $to_ship then "/engineering:ship #\($to_ship.number)"
         elif $ready then "/engineering:execute #\($ready.number)"
