@@ -135,11 +135,17 @@ branch_prs() {
   merged=$(printf '%s' "$prs" | jq -c '.merged' 2>/dev/null) || fail "cannot read the PRs of branch $1."
 }
 
-# Merged remote branches: each remote issue branch with a merged PR and no open one.
+# Merged remote branches: each remote issue branch with a merged PR and no open one. A remote
+# issue branch with any merged PR is finished work, so it gives no in-progress fact (#69 D5):
+# `finished_branches` lists each one, open PR or not.
 merged_branches='[]'
+finished_branches='[]'
 for b in $(printf '%s' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))' 2>/dev/null); do
   branch_prs "$b"
-  [ "$open_pr" = false ] && [ "$merged" != null ] || continue
+  [ "$merged" != null ] || continue
+  finished_branches=$(jq -n --argjson all "$finished_branches" --arg b "$b" '$all + [$b]' 2>/dev/null) \
+    || fail "cannot read the PRs of branch $b."
+  [ "$open_pr" = false ] || continue
   merged_branches=$(jq -n --argjson all "$merged_branches" --argjson m "$merged" --arg b "$b" \
     '$all + [{branch: $b, pr: $m.number}]' 2>/dev/null) || fail "cannot read the PRs of branch $b."
 done
@@ -224,7 +230,8 @@ out=$(jq -n -r \
   --argjson blockers "$blockers" \
   --argjson subs "$subs" \
   --argjson finished "$finished" \
-  --argjson merged_branches "$merged_branches" '
+  --argjson merged_branches "$merged_branches" \
+  --argjson finished_branches "$finished_branches" '
   def rank: {"status:ready": 1, "status:in-progress": 2, "status:needs-review": 3}[.] // 0;
   def ref_of($url): ($url | sub("^.*/repos/"; "") | capture("^(?<r>.*)/issues/(?<n>[0-9]+)$")
                      | if .r == $repo then "#\(.n)" else "\(.r)#\(.n)" end);
@@ -237,7 +244,8 @@ out=$(jq -n -r \
     | ($i.labels | index("umbrella") != null) as $is_umbrella
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
-    | issue_branches($i.number) as $own_branches
+    # Its remote `<n>-*` branches with no merged PR. A branch whose PR merged gives nothing.
+    | [issue_branches($i.number)[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
     | ($blockers["\($i.number)"] // []) as $open_blockers
     # The status label that a fact gives. Only an issue with a status label gets one, and
     # never `status:ready` or `umbrella`. With no fact, the labels stay as they are.
