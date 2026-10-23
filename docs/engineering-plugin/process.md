@@ -4,7 +4,7 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
-**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills and next, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan, reflect, and the label repair and worktree cleanup of next), and as the design notes that the ADRs link to. It goes once those stages are built.
+**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills and next, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan, reflect, and the worktree cleanup of next), and as the design notes that the ADRs link to. It goes once those stages are built.
 
 ## Words
 
@@ -141,15 +141,16 @@ Runs once for each piece of work that lands on `main`: in ship for an umbrella, 
 - **No evidence means no proposal.** "No setup change" is a normal result, not a failure.
 
 ### next (you type it)
-- **Gets:** GitHub and git, through `status.sh`, which the skill injects, so it runs before the model reads the skill (ADR-004). It reads the open issues and the open PRs through `gh api` REST, page by page, the remote branches with `git ls-remote --heads origin`, the "blocked by" links of each issue with a status label, and the sub-issues of each umbrella. It changes nothing, exits 0 and prints errors as text.
+- **Gets:** GitHub and git, through `status.sh`, which the skill injects, so it runs before the model reads the skill (ADR-004). It reads the open issues and the open PRs through `gh api` REST, page by page, the remote branches with `git ls-remote --heads origin`, the "blocked by" links of each issue with a status label, and the sub-issues of each umbrella. It changes nothing, exits 0 and prints an error as one `status.sh error: …` line with nothing before it.
 - **Gives:** the open issues, and no PRs, in the groups Needs review, In progress, Ready to build, Blocked, Umbrellas and To shape. Each issue is in one group, by the status that the facts give (see [Status](#status)), so the report is right before any label is repaired. Within a group, the lowest number comes first.
   - Each line shows one suggested command, and a sub-issue's line names its umbrella.
   - An umbrella's line shows closed of total sub-issues, or "not sliced" when it has none, and its feature branch, found by name as execute finds it: the name for one match, "no feature branch" for none, "N feature branches: …" for several.
   - A blocked issue lists each open blocker, one level deep, with its status and suggestion. A blocker counts while its issue is open. A blocker in another repo shows as `owner/repo#n` with no status.
   - At most 20 issues show, in group order. Each group that the limit cuts gets one "and N more" line.
   - The last line is one suggestion, the first that applies: review and merge a PR that needs review, execute an issue in progress, ship an umbrella whose sub-issues are all closed, execute the lowest ready issue, discuss the lowest request.
-- **Output of `status.sh`:** `## Report`, with one `### <group>` per group and a last line `Next: <suggestion>`. Label repairs and worktree cleanup come in later parts under their own headings.
-- **Later:** repair each label that differs from the status that the facts give.
+  - An in-progress or needs-review line whose issue has no PR and no branch notes "no branch or PR". An issue with several status labels and neither is grouped by its highest label.
+- **Repairs:** next repairs each label that the facts contradict, by the rules in [Status](#status), without asking. It reads the labels back after each repair, and lists each change after the report.
+- **Output of `status.sh`:** `## Report`, with one `### <group>` per group and a last line `Next: <suggestion>`. Then `## Repairs`: `- none`, or for each repair a line `- #<n> · <change> · <fact>`, its `gh api` calls one per line, and the labels that the calls leave. Worktree cleanup comes in a later part under its own heading.
 
 ## Status
 
@@ -166,7 +167,12 @@ Each status is derived from facts that GitHub and git record. Only automation wr
 
 - **The safe state is the default.** An issue that someone makes by hand has no label, so it reads as a request until discuss shapes it. An issue template can add a label, but only to issues made through the template, so nothing depends on a template.
 - **Each new status label replaces the one before it,** and `umbrella` replaces every status label. A skill adds a label with `POST issues/<n>/labels`, removes each one it replaces with `DELETE issues/<n>/labels/<name>`, reads the labels back, and leaves every other label as it was. It never uses the `labels` field of a `PATCH`, which replaces every label.
-- **`status.sh` repairs labels from facts:** branches, PRs and merges. It never sets `status:ready`, because only the size test can do that.
+- **`next` repairs each label that the facts contradict,** from the list that `status.sh` prints. A repair touches only an issue that carries a plugin label, and acts only on a fact that exists:
+  - an open ready PR whose first line names the issue gives `status:needs-review`;
+  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch, gives `status:in-progress`;
+  - the new status label replaces the issue's other status labels, and an umbrella loses its status labels and keeps `umbrella`;
+  - with no such PR and no such branch, the labels stay as they are, because a cloud session's issue is in progress before its draft PR exists;
+  - a repair never adds `status:ready`, because only the size test can, and never adds `umbrella`. It touches no other label.
 - **`next` lists unlabelled open issues as requests,** and suggests `discuss` for each one.
 - A closed issue is done. Its labels do no harm.
 - **A merged sub-issue is closed,** by the close-sub-issue workflow when its PR merges into the feature branch (ADR-002). So it needs no status of its own, and the Blocked icon clears as soon as its blocker merges.
