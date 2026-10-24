@@ -34,6 +34,7 @@ status: active
 
 ## Consequences
 - A feature branch can drift from `main` while a feature is in progress.
+- Sub-issue PRs need CI on the feature branch, or problems first show on the final PR, after every sub-issue has merged. This repo runs its plugin checks on every PR, and `version-bump` compares against `main`, so a feature branch bumps each plugin once, sized to the whole umbrella. Branch protection still requires the checks only on `main`.
 - GitHub's Blocked icon, the umbrella's progress bar and the issue list show merged sub-issues as done. The umbrella stays open until the final PR, so it records whether the feature is on `main`.
 - A closed sub-issue on an abandoned feature branch reads as done. The umbrella, closed as not planned, records that.
 - In a repo without the workflow, the final PR's `Closes` lines close the sub-issues. execute and ship look for a sub-issue's merged PR, not only its state, so they work either way.
