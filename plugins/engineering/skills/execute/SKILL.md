@@ -56,7 +56,9 @@ Issue: $ARGUMENTS
    - `## What it delivers`: the changes, file by file;
    - `## Verify`: each command and its result, and what the commands do not prove;
    - `## Deviations`: only if a deviation rule was used, one line for each.
-6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number. If verify fails, fix what its report names and go back to step 4. If it fails a second time, stop and ask.
+6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number.
+   - **FAIL:** fix what its report names, failed checks included, and go back to step 4. If it fails a second time, stop and ask.
+   - **PENDING:** stop. Name each pending check, and tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again. A PENDING verdict does not count as one of the two failures.
 
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
