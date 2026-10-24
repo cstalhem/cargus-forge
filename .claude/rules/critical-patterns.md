@@ -39,6 +39,7 @@ WRONG:
 CORRECT:
 ```
 # bump plugins/<name>/.claude-plugin/plugin.json "version" (SemVer) in the same commit
+# on a feature branch: version = main's version + the largest bump any of its changes needs
 ```
 
 Why: With an explicit `version` set, Claude Code caches by version string — users never receive the change and `/plugin update` reports "already at the latest version". A silent no-op that is hard to debug.
