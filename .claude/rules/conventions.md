@@ -7,6 +7,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 ## Plugins & manifests
 
 - Bump the plugin's `plugin.json` `version` (SemVer) in the same commit as any change to that plugin (see skill: plugin-release).
+- On a feature branch, a plugin's version is `main`'s plus the largest bump that any of the branch's changes needs: a sub-issue bumps only when its change needs a larger level than the branch has (see skill: plugin-release).
 - SemVer: bump MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
 - Register every new plugin in both `.claude-plugin/marketplace.json` and the README plugin index.
 - Keep each plugin's description identical across its `plugin.json`, `marketplace.json`, and the README.
