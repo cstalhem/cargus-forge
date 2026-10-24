@@ -12,16 +12,25 @@ status: active
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
 - A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. The `Blocked by #<a>, #<b>` text in its first line mirrors them for readers ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
-- **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, an issue branch, a draft PR.
+- **Facts decide the status:** closed, blocked by an open issue, a merged PR, a ready PR, an issue branch with no merged PR, a draft PR.
 - **Labels show only what GitHub does not show.** Each skill sets one label:
   - `umbrella`: discuss sets it when the size test fails;
-  - `status: ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
-  - `status: in progress`: execute sets it;
-  - `status: needs review`: verify sets it on pass.
+  - `status:ready`: discuss (single issue) or slice (sub-issues) sets it when the size test passes;
+  - `status:in-progress`: execute sets it when it gets onto the issue branch;
+  - `status:needs-review`: verify sets it when it passes a PR.
+- **Each status label replaces the one before it,** and `umbrella` replaces every status label. A skill adds a label with `POST issues/<n>/labels`, removes each one it replaces with `DELETE issues/<n>/labels/<name>`, reads the labels back, and leaves every other label as it was. It never uses the `labels` field of a `PATCH`, which replaces every label.
+- **The label names are fixed** in the plugin's `references/rules.md`. A name holds no space, so no path needs encoding. Adding a label that the repo lacks creates it, so no skill has a create step.
 - **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no label.
 - **No label means a request that needs discuss.** An issue made by hand is therefore never mistaken for shaped work.
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues, so neither gets a label. slice sets every blocker as a link, so the Blocked icon shows for each one ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
-- A script (`status.sh`) recomputes every status and repairs labels that differ. It never sets `status: ready`, because only the size test can.
+- **A script (`status.sh`) recomputes every status and lists each label that the facts contradict, and `next` repairs it.** A repair touches only an issue that carries a plugin label, and acts only on a fact that exists:
+  - an open ready PR whose first line names the issue gives `status:needs-review`;
+  - with no such PR, an open draft PR that names the issue, or a remote `<n>-*` branch with no merged PR, gives `status:in-progress`;
+  - a remote branch whose PR has merged is finished work, so it gives nothing;
+  - the new status label replaces the issue's other status labels, and an umbrella loses its status labels and keeps `umbrella`;
+  - with no such PR and no such branch, the labels stay as they are, because a cloud session's issue is in progress before its draft PR exists;
+  - a repair never adds `status:ready`, because only the size test can, and never adds `umbrella`;
+  - `next` applies each repair without asking, reads the labels back, and lists the change. Its `allowed-tools` pre-approve the label calls and the read-back, and a hook makes Claude Code ask for any call that is not exactly one of them.
 - Each repo describes its tracker in `docs/agents/issue-tracker.md`. Skills read that file, so the tracker can change without a change to the skills.
 
 ## Rejected alternatives
@@ -31,7 +40,7 @@ status: active
 - **Labels for blocked and done:** GitHub shows both already.
 - **No label means ready:** an issue made by hand then looks ready before discuss has shaped it.
 - **A "new" label from an issue template:** a template labels only the issues made through it. It misses issues made with `gh`, the API or a blank form, so those would look ready again.
-- **A GitHub Action that sets labels from events:** it is extra setup in each repo, and the repair script covers the drift. The one workflow the plugin ships closes sub-issues and sets no label.
+- **A GitHub Action that sets labels from events:** it is extra setup in each repo, and the label repair of `next` covers the drift. The one workflow the plugin ships closes sub-issues and sets no label.
 
 ## Consequences
 - Each repo must be on GitHub. Skills read and write issues, PRs, parent, sub-issue and dependency data through `gh api` REST, so they need no minimum `gh` version and work in cloud sessions ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
