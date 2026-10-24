@@ -282,11 +282,20 @@ out=$(jq -n -r \
 
   | ($all | map({key: "\(.number)", value: .}) | from_entries) as $by_number
 
-  # One suggestion for each status.
-  | def suggestion:
+  # An in-progress or needs-review issue whose status comes from its labels alone: no PR and
+  # no branch with no merged PR (#69 D5). Its labels stay, and next cannot tell whether its PR
+  # merged or a session is building it before its draft PR exists.
+  | def no_branch_or_pr: (.status == "needs-review" or .status == "in-progress") and .no_facts;
+
+  # One suggestion for each status. An issue with no branch or PR gets both steps it may need.
+  def suggestion:
       if .status == "needs-review" then
-        (if .pr then "review and merge PR #\(.pr)" else "check #\(.number): labelled needs review, no PR" end)
-      elif .status == "in-progress" or .status == "ready" then "/engineering:execute #\(.number)"
+        (if .pr then "review and merge PR #\(.pr)"
+         else "close #\(.number) if its PR merged, else /engineering:execute #\(.number)" end)
+      elif .status == "in-progress" then
+        (if no_branch_or_pr then "/engineering:execute #\(.number) if no session is building it"
+         else "/engineering:execute #\(.number)" end)
+      elif .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
       elif .status == "umbrella" then
         ($subs["\(.number)"] // {total: 0, closed: 0}) as $s
@@ -308,7 +317,7 @@ out=$(jq -n -r \
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"
                 else "\($fb | length) feature branches: \($fb | join(", "))" end) ]
          elif .status == "needs-review" or .status == "in-progress" then
-           (if .pr then ["PR #\(.pr)"] elif .no_facts then ["no branch or PR"] else [] end)
+           (if .pr then ["PR #\(.pr)"] elif no_branch_or_pr then ["no branch or PR"] else [] end)
          else [] end)
       + [ suggestion ]
       | join(" · ");
@@ -350,13 +359,17 @@ out=$(jq -n -r \
         | .left -= $k)
       | .out) as $cut
 
-    # Only an open ready PR gives the review suggestion: a needs-review label with no PR does not.
+    # The `Next:` line, the first step that applies (#69). Only an open ready PR gives the
+    # review step, and only a branch or PR gives the execute step of an issue in progress: an
+    # issue whose status label has no branch or PR may be built by another session.
     | ( [ $all[] | select(.status == "needs-review" and .pr != null) ][0] ) as $review
-    | ( [ $all[] | select(.status == "in-progress") ][0] ) as $doing
+    | ( [ $all[] | select(.status == "in-progress" and (no_branch_or_pr | not)) ][0] ) as $doing
     | ( [ $all[] | select(.status == "umbrella")
           | select(($subs["\(.number)"] // {total: 0}) | .total > 0 and .closed == .total) ][0] ) as $to_ship
     | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
     | ( [ $all[] | select(.status == "request") ][0] ) as $request
+    # When no step applies: each issue whose status label has no branch or PR, lowest first.
+    | [ $all[] | select(no_branch_or_pr) | "#\(.number)" ] as $unknown
     | [ $all[] | select(.repair) ] as $repairs
 
     | "## Report",
@@ -375,6 +388,8 @@ out=$(jq -n -r \
         elif $to_ship then "/engineering:ship #\($to_ship.number)"
         elif $ready then "/engineering:execute #\($ready.number)"
         elif $request then "/engineering:discuss #\($request.number)"
+        elif ($unknown | length) > 0 then
+          "check \($unknown | join(", ")), whose status label has no branch or PR"
         else "nothing: no open issue waits for a step"
         end),
       "",
