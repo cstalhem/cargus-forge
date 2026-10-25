@@ -109,10 +109,12 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Later:** inject the issue and the commands through scripts (ADR-004).
 
 ### verify, issue scope (Build; execute calls it)
-- **Gets:** the PR and the scenarios of its issue.
-- **Gives:** one PR comment. For each scenario it records exists, substantive and wired, with evidence, then gives a verdict.
+- **Gets:** the PR, the scenarios of its issue, and the check runs on the PR's head.
+- **Gives:** one PR comment. For each scenario it records exists, substantive and wired, with evidence. It then lists each check run as passed, failed or pending, and gives a verdict: FAIL if a scenario or a check failed, else PENDING if a check is pending, else PASS.
+- **Checks:** it reads the check runs once, after its grading agent returns, and does not wait for them (ADR-006). A repo whose CI does not run on PRs into a feature branch has no checks on a sub-issue PR, and verify grades by the scenarios alone. The verdict is the only gate on a sub-issue PR, because feature branches have no branch protection; GitHub does not merge a draft, and verify marks a PR ready only on PASS.
 - **On pass:** it marks the PR ready with `gh pr ready`. If that gets a GraphQL 403, it uses `POST pulls/<n>/ccr/ready_for_review` (ADR-006). Then it sets `status:needs-review` on the issue, which replaces its other status label.
-- **On fail:** it returns to execute with the report.
+- **On fail:** it returns to execute with the report, and execute fixes what it names.
+- **On pending:** it leaves the PR a draft and changes no label. execute stops and asks you to run it again once CI has finished.
 - **Rule:** a fresh-context agent that did not write the code. A summary is a claim, not evidence.
 
 ### merge (you)

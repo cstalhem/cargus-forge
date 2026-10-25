@@ -31,3 +31,6 @@ _Avoid_: state
 
 **Finished worktree**: A local worktree on an issue branch whose PR has merged or whose issue is closed, with no uncommitted or unpushed work; `next` removes it after you confirm.
 _Avoid_: stale worktree
+
+**Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
+_Avoid_: conclusion
