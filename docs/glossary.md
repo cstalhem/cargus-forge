@@ -34,3 +34,9 @@ _Avoid_: stale worktree
 
 **Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
 _Avoid_: conclusion
+
+**Guideline strength**: The tag on each guideline in a home-design reference file: `standard` (a standard, regulation or ergonomic measure, always cited), `convention` (a designer rule of thumb, cited where possible) or `taste` (a style choice, given as options).
+_Avoid_: rule
+
+**Room brief**: The facts about one room or outdoor area that `room-plan` gathers before it advises: size, orientation, windows, existing pieces, budget, style and optional photos.
+_Avoid_: room profile
