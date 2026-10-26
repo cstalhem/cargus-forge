@@ -4,6 +4,8 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `furniture-layout`: where to place furniture and what size to choose, with clearances, layouts by room type and sizes for beds, tables, rugs and art, in centimetres.
+
 ## Guideline strength
 
 Every guideline in a reference file carries one of three tags, so you can tell a requirement from a habit and a habit from a matter of taste:
