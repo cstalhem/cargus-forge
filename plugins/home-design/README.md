@@ -4,6 +4,7 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `color`: colour schemes, proportions and light direction for a room, and paint: LRV, sheen, scrub class and wet rooms.
 - `decor`: style and decoration advice (styles, styling objects, curtains, textiles, art and indoor plants), with style choices given as options.
 - `furniture-layout`: where to place furniture and what size to choose, with clearances, layouts by room type and sizes for beds, tables, rugs and art, in centimetres.
 - `lighting`: light levels in lux, light sources by lumen, Kelvin and Ra, layers of general, task and mood light, and wet-room IP zones and electrical safety.
