@@ -141,6 +141,43 @@ cp "$root/no-newline" "$repo/$tracker"
 run --issue-tracker --repo new/name --default-branch main
 expect "re-render of a file that ends at ## Notes with no newline" same "$tracker" new/name main ''
 
+# An issue-tracker.md that setup did not write: with --adopt, its whole text moves under
+# ## Notes, byte for byte, and the facts are rendered above it (#151 D2).
+adopt_cases=(
+  $'# Issue tracker\n\n- Branches are named `feature/<slug>`.\n- Rebase-merge every PR.\n'
+  $'# Tracker\n\n## Notes\n- a Notes heading of its own\n'
+  $'- a last line with no newline'
+  $'# Tracker\r\n\r\n- CRLF lines\r\n'
+  $'<!-- Written by hand. -->\n- a comment that is not the marker\n'
+  ''
+)
+adopt_names=(
+  "a hand-written file"
+  "a file with its own ## Notes line"
+  "a file with no final newline"
+  "a file with CRLF lines"
+  "a file whose first line is another comment"
+  "an empty file"
+)
+for i in "${!adopt_cases[@]}"; do
+  fixture
+  mkdir -p "$repo/docs/agents"
+  printf '%s' "${adopt_cases[$i]}" > "$repo/$tracker"
+  run --issue-tracker --adopt --repo owner/name --default-branch main
+  expect "adopt, ${adopt_names[$i]}: the facts, then the whole old text under ## Notes" \
+    same "$tracker" owner/name main "${adopt_cases[$i]}"
+  expect "adopt, ${adopt_names[$i]}: prints the issue tracker's path" printed "$tracker"
+done
+
+fixture
+mkdir -p "$repo/docs/agents"
+printf '# Issue tracker\n\nWritten by hand.\n' > "$repo/$tracker"
+run --issue-tracker --adopt --repo owner/name --default-branch main
+cp "$repo/$tracker" "$root/adopted"
+run --issue-tracker --repo owner/name --default-branch main
+expect "an adopted file is then one that setup wrote: a re-render without --adopt changes no byte" \
+  cmp -s "$root/adopted" "$repo/$tracker"
+
 # No issue-tracker.md yet.
 fixture
 run --issue-tracker --repo owner/name --default-branch main
@@ -212,6 +249,15 @@ fails "an issue-tracker.md with no marker line" unmarked \
   --issue-tracker --repo owner/name --default-branch main --behaviour close-sub-issue
 fails "an issue-tracker.md with no ## Notes line" no_notes \
   --issue-tracker --repo owner/name --default-branch main
+marked() {
+  mkdir -p "$repo/docs/agents"
+  tracker_of owner/name main $'- mine\n' > "$repo/$tracker"
+}
+fails "--adopt on an issue-tracker.md that setup wrote" marked \
+  --issue-tracker --adopt --repo owner/name --default-branch main --behaviour close-sub-issue
+fails "--adopt with no issue-tracker.md" nothing \
+  --issue-tracker --adopt --repo owner/name --default-branch main --behaviour close-sub-issue
+fails "--adopt with no --issue-tracker" unmarked --adopt --behaviour close-sub-issue
 
 # No run above called git or gh.
 code=0 out="$calls" err=/dev/null

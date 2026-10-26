@@ -6,12 +6,17 @@
 # no `git` or `gh` command (#149 D1).
 #
 # Usage:
-#   apply.sh [--issue-tracker --repo <owner/name> --default-branch <branch>]
+#   apply.sh [--issue-tracker [--adopt] --repo <owner/name> --default-branch <branch>]
 #            [--behaviour <name>]...
 #
 #   --issue-tracker     render `docs/agents/issue-tracker.md` from `templates/issue-tracker.md`
 #                       with the repo and the default branch, and keep the existing file's
 #                       `## Notes` byte-identical (#85 D4, D8).
+#   --adopt             with --issue-tracker, for an existing file that setup did not write:
+#                       its first line does not start with the marker. Its whole text moves
+#                       under `## Notes`, byte for byte (#151 D2). Without --adopt such a file
+#                       is an error, and with --adopt any other file is, so a file is never
+#                       adopted without the user's yes.
 #   --behaviour <name>  copy an optional behaviour's file from the template with `cp`, so the
 #                       copy is byte-identical (#85 D8). Known: close-sub-issue.
 #
@@ -48,7 +53,7 @@ behaviour_template() {
   esac
 }
 
-repo='' default_branch='' issue_tracker=0 behaviours=()
+repo='' default_branch='' issue_tracker=0 adopt=0 behaviours=()
 
 # value <option> <arg count> <value>: fail unless the option has a value.
 value() {
@@ -61,6 +66,7 @@ while [ $# -gt 0 ]; do
     --repo) value "$1" $# "${2-}"; repo=$2; shift 2 ;;
     --default-branch) value "$1" $# "${2-}"; default_branch=$2; shift 2 ;;
     --issue-tracker) issue_tracker=1; shift ;;
+    --adopt) adopt=1; shift ;;
     --behaviour)
       value "$1" $# "${2-}"
       behaviour_target "$2" >/dev/null || fail "unknown behaviour: $2. Known: close-sub-issue."
@@ -73,6 +79,7 @@ done
 
 [ "$issue_tracker" = 1 ] || [ "${#behaviours[@]}" -gt 0 ] \
   || fail "nothing to write: pass --issue-tracker, --behaviour <name>, or both."
+[ "$adopt" = 0 ] || [ "$issue_tracker" = 1 ] || fail "--adopt needs --issue-tracker."
 
 work=$(mktemp -d 2>/dev/null) || fail "cannot create a temporary directory."
 trap 'rm -rf "$work"' EXIT
@@ -86,15 +93,22 @@ sed_escape() {
   printf '%s' "$1" | sed -e 's/[\\&#]/\\&/g'
 }
 
-# notes <file> <out>: writes the text after the existing file's `## Notes` line to <out>,
-# byte for byte, trailing newlines or their absence included. Fails if the file has no
-# marker line or no `## Notes` line, because then setup would drop text it does not own.
+# notes <file> <out>: writes the notes of the existing file to <out>, byte for byte, trailing
+# newlines or their absence included. For a file that setup wrote, they are the text after its
+# `## Notes` line; it fails if that line is missing, because then setup would drop text it does
+# not own. For a file that setup did not write, they are its whole text, and only with --adopt.
 notes() {
   local file=$1 out=$2 first='' line bytes
   IFS= read -r first < "$file" || [ -n "$first" ] || first=''
   case $first in
-    "$marker_prefix"*) ;;
-    *) fail "$file was not written by setup: its first line is not the marker line. It is left as it is." ;;
+    "$marker_prefix"*)
+      [ "$adopt" = 0 ] || fail "--adopt is only for a file that setup did not write, but $file starts with the marker line. It is left as it is."
+      ;;
+    *)
+      [ "$adopt" = 1 ] || fail "$file was not written by setup: its first line is not the marker line. It is left as it is. --adopt moves its text under ## Notes."
+      cat "$file" > "$out" || fail "cannot read $file."
+      return
+      ;;
   esac
   line=$(grep -a -n -m 1 -x '## Notes' "$file" | cut -d: -f1)
   [ -n "$line" ] || fail "$file has no '## Notes' line. It is left as it is."
@@ -115,6 +129,7 @@ if [ "$issue_tracker" = 1 ]; then
     [ -f "$tracker" ] || fail "$tracker is not a file."
     notes "$tracker" "$work/notes"
   else
+    [ "$adopt" = 0 ] || fail "--adopt needs an existing $tracker, but there is none."
     : > "$work/notes"
   fi
   sed -e "s#{{repo}}#$(sed_escape "$repo")#g" \
