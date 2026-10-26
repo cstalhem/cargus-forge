@@ -8,7 +8,7 @@
 - [convention] A white with a very high LRV can look stark in a bright room; an off-white, about LRV 73 to 81, softens it [2]
 - [convention] A paint's LRV does not change, but how light it looks depends on the light the wall gets: a high-LRV paint on a dim stairwell can look darker than a lower-LRV paint in a bright room. No paint makes up for too little daylight or lamplight [2]
 - [convention] Read a paint's LRV from the maker's colour chart, fan deck or the back of the sample card, rather than estimating it [2]
-- [standard] The bigger the LRV difference between two surfaces next to each other, the easier it is for a person with low vision to tell them apart. Swedish guidance gives this contrast on the NCS lightness scale instead; see `color-theory.md` [1]
+- [standard] The British standard BS 8300:2018 counts two surfaces next to each other as contrasting enough when their LRVs differ by at least 30 points: the bigger the difference, the easier it is for a person with low vision to tell them apart. Swedish guidance gives this contrast on the NCS lightness scale instead; see `color-theory.md` [1][8]
 
 ## Sheen
 - [standard] EN 13300 sorts interior wall and ceiling paints into four gloss grades, G1 glossy, G2 medium gloss, G3 matt and G4 dull matt, measured at 60° and 85° [4]
@@ -38,3 +38,4 @@
 5. Tak och väggar inomhus: målningsguide för inomhusytor, Teknos, https://www.teknos.com/globalassets/teknos.se/ac/inomhusguide_tak-och-vaggar.pdf
 6. Teknos Våtrumssystem: utförandeanvisning enligt Måleribranschens regler för våtrum 2013, Teknos, https://www.teknos.com/globalassets/inriver/resources/teknos-utforandeanvisning-vatrum.pdf
 7. MVK: Måleribranschens Våtrumskontroll, MVK (SVEFF and Måleriföretagen i Sverige), https://vatrumsmalning.se/
+8. Light reflectance value, Wikipedia, https://en.wikipedia.org/wiki/Light_reflectance_value

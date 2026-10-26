@@ -1,7 +1,7 @@
 # Colour theory
 
 ## Naming a colour
-- [standard] Name a colour by its NCS code, the reference system for colour designation in Sweden, adopted as the Swedish standard through SIS in 1979. In NCS S 1040-R20B, 10 is the blackness, 40 the chromaticness, and R20B the hue: a red with 20 % blue [1][2]
+- [standard] Name a colour by its NCS code, the reference norm for colour designation in Sweden since 1979, when it became the Swedish national colour standard through SIS. In NCS S 1040-R20B, 10 is the blackness, 40 the chromaticness, and R20B the hue: a red with 20 % blue [1][2]
 - [standard] NCS describes every colour by how much it resembles six elementary colours: white, black, yellow, red, blue and green. Whites and greys have no hue, and their code ends in -N [1]
 - [convention] Two traditional Swedish whites: målarvit, a broken white that leans towards grey and has long been the most used colour on interior walls, and listvit, a warm white (NCS S 0502-Y) used on factory-painted mouldings and interior doors [7]
 
