@@ -5,7 +5,7 @@ Light level means illuminance: the light that falls on a surface, measured in lu
 ## Home office and desk work
 - [standard] For normal desk work, such as reading, writing and screen work, light the work area to 500 lx and the room to 300 lx, measured 85 cm above the floor. These are Arbetsmiljöverket's values for normal office work, from SS-EN 12464-1:2021. [1]
 - [standard] For work with higher demands on sight, light the work area to 750 lx; for fine drawing work, to 1,500 lx with 500 lx in the room (Arbetsmiljöverket, from SS-EN 12464-1:2021). [1]
-- [standard] Place the desk so that no window is behind the screen or mirrored in it, and so that light from lamps and windows does not glare or reflect in the screen (Arbetsmiljöverket). [1]
+- [convention] Place the desk so that no window is behind the screen or mirrored in it, and so that light from lamps and windows does not glare or reflect in the screen. [1]
 - [convention] Put the extra light on the work area with a task lamp, rather than raising the light in the whole room, and make both adjustable. [1]
 - [convention] Keep light-coloured walls lit to at least about 150 lx, so the room does not feel dark around a bright desk. [1]
 
