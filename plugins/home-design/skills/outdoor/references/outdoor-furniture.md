@@ -13,7 +13,7 @@
 
 ## Balconies
 - [standard] Where young children can be, 0.8 m of a balcony railing's height must be designed to resist climbing, and fixed climbable items next to the railing, such as planter boxes, are counted (BFS 2024:9) [5].
-- [convention] Where young children use the balcony, keep movable furniture, planters and stacked pots that a child could climb away from the railing, for the same reason.
+- [convention] A balcony railing should not be climbable (Konsumentverket's child-safety advice) [7]. Where young children use the balcony, keep movable furniture, planters and stacked pots that a child could climb on away from the railing.
 - [convention] Ask the landlord or housing association before placing heavy items on a balcony, such as large filled planters or a hot tub. How much load a balcony takes is a structural question for a professional, not something to estimate.
 
 ## Grilling
@@ -23,7 +23,8 @@
 - [convention] Never take a charcoal grill indoors, because coals that are not fully out give off carbon monoxide; put used charcoal in a non-combustible container, since it can glow for up to three days [6].
 
 ## Space
-- [convention] Plan clearances around an outdoor dining table or seating group as for indoor furniture; the `furniture-layout` skill has the measures.
+- [convention] From the edge of an outdoor dining table to a wall, railing or other obstruction, allow 81 cm when nobody passes behind the seated diners, 91 cm for someone to edge past, and 112 cm for someone to walk past (NKBA Kitchen Planning Guidelines). These are the figures the `furniture-layout` skill uses indoors [8].
+- [convention] Give each diner about 60 cm of table edge: NKBA asks for a 61 cm wide knee space per seated diner [8].
 
 ## Sources
 1. SS-EN 581-2:2026 Möbler för utomhusmiljö – Mekaniska säkerhetskrav och provningsmetoder – Del 2: Sittmöbler för camping, hemmiljö och offentlig miljö, SIS, https://www.sis.se/produkter/hem-och-hushall-underhallning-sport/mobler/SS-EN-581-22026/
@@ -32,3 +33,5 @@
 4. Produktinformationsblad – Träskyddsbehandlat virke, NTR AB, Derome Timber AB, https://media.derome.se/medias/docus/208/Produktinformationsblad_NTR-AB.pdf
 5. Räcken och ledstänger (Skydd mot fall i form av räcken och ledstänger), PBL kunskapsbanken, Boverket, https://www.boverket.se/sv/PBL-kunskapsbanken/regler-om-byggande/sakerhet-anvandning/racken-ledstanger/
 6. Goda råd om grillning, Brandskyddsföreningen, hosted by Markaryds kommun, https://www.markaryd.se/download/18.620884d01797fb131edebe2c/1622097210755/Grilla%20s%C3%A4kert.pdf
+7. Barnsäkerhet – så här kan du barnsäkra, Konsumentverket, https://www.konsumentverket.se/sakerhet-varor-tjanster/barnsakerhet-sa-har-kan-du-barnsakra/
+8. Kitchen Planning Guidelines with Access Standards, National Kitchen & Bath Association (NKBA), https://kb.nkba.org/uploads/2022/05/Kitchen-Planning-Guidelines.pdf
