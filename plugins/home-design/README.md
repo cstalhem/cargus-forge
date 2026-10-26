@@ -4,6 +4,8 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `outdoor`: balconies, patios and gardens. Suggests plants suited to your growing zone (odlingszon), and covers outdoor lighting and outdoor furniture and materials.
+
 ## Guideline strength
 
 Every guideline in a reference file carries one of three tags, so you can tell a requirement from a habit and a habit from a matter of taste:
