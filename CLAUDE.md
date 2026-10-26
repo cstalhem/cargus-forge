@@ -1,6 +1,6 @@
 # Cargus Forge
 
-A marketplace monorepo of Claude Code plugins for knowledge management, note-taking workflows, and Claude Code productivity.
+A marketplace monorepo of Claude Code plugins for knowledge management, note-taking workflows, Claude Code productivity, and home design.
 
 ## Repository layout
 
@@ -12,7 +12,7 @@ A marketplace monorepo of Claude Code plugins for knowledge management, note-tak
 - `docs/adr/` — architecture decision records (ADR-NNN, living documents, indexed in `docs/adr/README.md`)
 - `docs/engineering-plugin/` — design workspace for the engineering plugin: research, synthesis, the process contract
 
-Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`, `engineering`.
+Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`, `engineering`, `home-design`.
 
 ## Local development loop
 
