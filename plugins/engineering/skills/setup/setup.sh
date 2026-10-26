@@ -73,7 +73,7 @@ facts_repo() {
   line
 
   if [ "$default_branch" != main ]; then
-    warnings+=("The default branch is \`$default_branch\`, not \`main\`. ship and the final PR still assume \`main\` (#85 D6).")
+    warnings+=("The default branch is \`$default_branch\`, not \`main\`. ship and the final PR still assume \`main\`.")
   fi
   case $squash in
     false) warnings+=("\`allow_squash_merge\` is off, but the plugin squash-merges every PR. Setup changes no repo setting.") ;;

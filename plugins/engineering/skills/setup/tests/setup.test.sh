@@ -178,8 +178,8 @@ issue_tracker develop
 run
 has '- default branch: `develop`' \
   '- `docs/agents/issue-tracker.md` · current' \
-  'The default branch is `develop`, not `main`. ship and the final PR still assume `main`'
-lacks "## Warnings$nl- none"
+  'The default branch is `develop`, not `main`. ship and the final PR still assume `main`.'
+lacks "## Warnings$nl- none" '#85'
 done_check
 
 setup
