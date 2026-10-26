@@ -20,7 +20,7 @@ Read only the files the question needs.
 2. **Read the reference files** that the question needs.
 3. **Work it out.** Add up the furniture and the clearances along each wall and across the room, and show that sum, for example: 350 cm wall = 60 cm + 160 cm bed + 70 cm + 60 cm free.
 4. **Answer.** Give the placement or the size in centimetres, and tag each point with its guideline strength:
-   - `standard`: a rule or an ergonomic measure. Name the standard or authority it comes from.
+   - `standard`: a standard, a regulation or an ergonomic measure. Name the standard or authority it comes from.
    - `convention`: a designer's rule of thumb. Say that it is a rule of thumb, and that the user can depart from it.
    - `taste`: a style choice. Give two or three options to choose from, never a single right answer.
    If the room cannot fit a standard clearance, say which one, by how much, and what the user could change.
