@@ -34,3 +34,6 @@ _Avoid_: stale worktree
 
 **Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
 _Avoid_: conclusion
+
+**Repo profile**: The files in a repo's `docs/agents/` that hold its own facts for the plugin's skills: its commands and its issue tracker; setup writes them, and the plugin's contract stays in the plugin.
+_Avoid_: repo config, agent docs

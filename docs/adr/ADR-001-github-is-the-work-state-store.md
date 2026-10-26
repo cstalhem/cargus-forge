@@ -31,7 +31,7 @@ status: active
   - with no such PR and no such branch, the labels stay as they are, because a cloud session's issue is in progress before its draft PR exists;
   - a repair never adds `status:ready`, because only the size test can, and never adds `umbrella`;
   - `next` applies each repair without asking, reads the labels back, and lists the change. Its `allowed-tools` pre-approve the label calls and the read-back, and a hook makes Claude Code ask for any call that is not exactly one of them.
-- Each repo describes its tracker in `docs/agents/issue-tracker.md`. Skills read that file, so the tracker can change without a change to the skills.
+- The plugin's contract for branches, merging and PRs is in its `references/issue-tracker.md`. Each repo's own facts, its repo and default branch, are in its `docs/agents/issue-tracker.md`, with its notes under `## Notes`. Skills read both, so a plugin update reaches every repo, and a repo's facts can change without a change to the skills.
 
 ## Rejected alternatives
 - **State files in the repo** (GSD's `.planning/` and `STATE.md`): GSD writes about 15 files for each phase, and the files drift from what is true.
