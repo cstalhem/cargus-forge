@@ -1,7 +1,7 @@
 # Colour theory
 
 ## Naming a colour
-- [standard] Name a colour by its NCS code, the reference system for colour designation in Sweden. In NCS S 1040-R20B, 10 is the blackness, 40 the chromaticness, and R20B the hue: a red with 20 % blue [1][2]
+- [standard] Name a colour by its NCS code, the reference system for colour designation in Sweden, adopted as the Swedish standard through SIS in 1979. In NCS S 1040-R20B, 10 is the blackness, 40 the chromaticness, and R20B the hue: a red with 20 % blue [1][2]
 - [standard] NCS describes every colour by how much it resembles six elementary colours: white, black, yellow, red, blue and green. Whites and greys have no hue, and their code ends in -N [1]
 - [convention] Two traditional Swedish whites: målarvit, a broken white that leans towards grey and has long been the most used colour on interior walls, and listvit, a warm white (NCS S 0502-Y) used on factory-painted mouldings and interior doors [7]
 
@@ -36,7 +36,7 @@
 - [convention] Paint two coats on a large card, about A2, with an unpainted border, and move it between walls and rooms and look at it at different times of day [8]
 
 ## Contrast for low vision
-- [standard] Where someone in the home has low vision, give a door (its leaf or frame) and the edges of the bottom step and top landing of a stair a lightness contrast of at least 0.40 on the NCS lightness scale against the surface around them. This is the value in Boverket's general advice in the former building rules BBR (BFS 2011:6, sections 3:1423 and 8:232) and in Handisam's accessibility guidance on doors [9][10]
+- [convention] Where someone in the home has low vision, give a door (its leaf or frame) and the edges of the bottom step and top landing of a stair a lightness contrast of at least 0.40 on the NCS lightness scale against the surface around them. This is the value in Boverket's general advice in the former building rules BBR (BFS 2011:6, sections 3:1423 and 8:232) and in Handisam's accessibility guidance on doors [9][10]
 - [standard] Inside a private home the 0.40 contrast is advice, not a requirement. BBR's advice on contrast-marked stairs left out small houses and stairs inside a flat, and Boverket's current accessibility regulations (BFS 2024:12), which replaced BBR's, require that people with reduced orientation ability can find their way but give no contrast value [9][12][13]
 - [convention] Make a door handle contrast with the door leaf, so it is easy to find, and check each contrast marking from both directions and in different light [10]
 

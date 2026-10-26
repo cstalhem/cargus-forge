@@ -26,9 +26,9 @@
 - [convention] Litres of paint for one coat = wall area in m² ÷ the spreading rate in m²/l on the tin. Measure the whole wall without taking off doors and windows, so the paint does not run out halfway [5]
 
 ## Wet rooms
-- [standard] In a bathroom, the painting trade's wet-room requirements (MVK) put the walls from floor to ceiling at the bath or shower, and at least 1 m beyond them, in wet zone 1. Paint there must be an approved waterproof system, class VT [6][7]
-- [standard] The other bathroom walls, laundry-room walls and the ceiling of every wet room are wet zone 2, which needs at least a water-repellent system, class VA [6][7]
-- [standard] A painted wet-room system is waterproofing work: refer it to an MVK-authorised painting company, which uses an approved system, and give no DIY steps [6][7]
+- [standard] In a bathroom, the painting trade's wet-room standard (MVK's branschregler) puts the walls from floor to ceiling at the bath or shower, and at least 1 m beyond them, in wet zone 1. Paint there must be an approved waterproof system, class VT [6][7]
+- [standard] The other bathroom walls, laundry-room walls and the ceiling of every wet room are wet zone 2, which under the same standard needs at least a water-repellent system, class VA [6][7]
+- [convention] A painted wet-room system is waterproofing work: refer it to an MVK-authorised painting company, which uses an approved system, and give no DIY steps [6][7]
 
 ## Sources
 1. BS 8493:2008+A1:2010, Light reflectance value (LRV) of a surface. Method of test, BSI, https://knowledge.bsigroup.com/products/light-reflectance-value-lrv-of-a-surface-method-of-test
