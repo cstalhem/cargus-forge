@@ -9,6 +9,7 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 - `furniture-layout`: where to place furniture and what size to choose, with clearances, layouts by room type and sizes for beds, tables, rugs and art, in centimetres.
 - `lighting`: light levels in lux, light sources by lumen, Kelvin and Ra, layers of general, task and mood light, and wet-room IP zones and electrical safety.
 - `outdoor`: balconies, patios and gardens, with plants suited to your growing zone (odlingszon), outdoor lighting, and outdoor furniture and materials.
+- `room-plan`: a plan for one whole room or outdoor area. It builds a room brief from your description, measurements and photos, asks only for the facts it lacks, loads the skills above that the space needs and joins their advice into one plan. It saves the plan as markdown only when you ask, at the path you give.
 
 ## Guideline strength
 
@@ -38,7 +39,7 @@ Each `standard` guideline cites a numbered source, and the file ends with a `## 
 
 ## Scope
 
-- **Sweden.** Advice assumes a Swedish home: metric units, Swedish growing zones (odlingszoner 1 to 8), Swedish electrical and building rules (Elsäkerhetsverket, BBR) and Nordic daylight. It is not adapted to other regions.
+- **Sweden.** Advice assumes a Swedish home: metric units, Swedish growing zones (odlingszoner I to VIII), Swedish electrical and building rules (Elsäkerhetsverket, BBR) and Nordic daylight. It is not adapted to other regions.
 - **Language.** The plugin's files are in English. The skills answer in the language you write in.
 - **Professional work.** For fixed electrical, structural or plumbing work, the skills tell you to hire a professional, such as an authorised electrician for fixed electrical installations, and give no DIY steps.
 - **Output.** Advice goes in the chat. A room plan is written to a markdown file only when you ask, at the path you give. No images, renders, product search or prices.
