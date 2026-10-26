@@ -4,6 +4,8 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `decor`: Style and decoration advice (styles, styling objects, curtains, textiles, art and indoor plants), with style choices given as options.
+
 ## Guideline strength
 
 Every guideline in a reference file carries one of three tags, so you can tell a requirement from a habit and a habit from a matter of taste:
