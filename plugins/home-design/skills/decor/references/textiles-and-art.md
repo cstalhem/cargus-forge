@@ -11,7 +11,7 @@
 
 ## Blinds and cords
 
-- [standard] Fasten the cords and chains of blinds, roller blinds and awnings so that a small child cannot reach them or become entangled, as Konsumentverket advises; hanging cords carry a strangulation risk [2].
+- [convention] Fasten the cords of blinds, roller blinds and awnings so that a small child cannot reach them or become entangled, as Konsumentverket advises; hanging cords carry a strangulation risk [2].
 - [standard] Cord safety devices for internal blinds are specified in SS-EN 16434:2014, which also covers devices that you can fit to existing blinds; Konsumentverket says older installations should be checked and fixed too [3].
 
 ## Upholstery, cushions and throws
@@ -25,18 +25,18 @@
 
 ## Chemicals in textiles
 
-- [standard] Wash new textiles before you use them, to keep excess chemicals from manufacturing off the skin, or buy second-hand textiles instead, as Kemikalieinspektionen advises [6].
-- [standard] Kemikalieinspektionen points to the ecolabels Svanen, EU Ecolabel, Bra Miljöval and GOTS for textiles, because they set requirements on the whole production chain [6].
-- [standard] Older wool blankets and rugs may have been treated against moths with DDT or other pesticides that are banned today; Kemikalieinspektionen says to take them to the municipal recycling centre as combustible waste, not to textile collection [6].
+- [convention] Wash new textiles before you use them, to keep excess chemicals from manufacturing off the skin, or buy second-hand textiles instead, as Kemikalieinspektionen advises [6].
+- [convention] Kemikalieinspektionen points to the ecolabels Svanen, EU Ecolabel, Bra Miljöval and GOTS for textiles, because they set requirements on the whole production chain [6].
+- [convention] Older wool blankets and rugs may have been treated against moths and other pests with DDT; Kemikalieinspektionen says to take them to the municipal recycling centre as combustible waste, not to textile collection [6].
 
 ## Rugs and fall safety
 
-- [standard] Remove loose rugs, or lay anti-slip underlay under them, and keep cords off the floor, as Socialstyrelsen advises to prevent falls; most fall accidents happen at home [7].
+- [convention] Remove loose rugs, or lay anti-slip underlay under them, and keep cords off the floor, as Socialstyrelsen advises to prevent falls; most fall accidents happen at home [7].
 - [convention] For rug sizes in relation to furniture, use the `furniture-layout` skill.
 
 ## Candles near textiles
 
-- [standard] Keep lit candles away from curtains and other textiles, use holders of a material that cannot burn (wrought iron, ceramic, stone), never set many tealights close together on one tray, and never leave lit candles unattended, as Brandskyddsföreningen advises [8].
+- [convention] Keep lit candles away from curtains and other textiles, use holders of a material that cannot burn (wrought iron, ceramic, stone), never set many tealights close together on one tray, and never leave lit candles unattended, as Brandskyddsföreningen advises [8].
 
 ## Art
 

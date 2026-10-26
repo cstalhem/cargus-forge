@@ -21,13 +21,13 @@
 
 ## Children and pets
 
-- [standard] Giftinformationscentralen says that most children who taste a plant come to little or no harm, but that the sap of prickblad (Dieffenbachia), garderobsblomma or zamiakalla (Zamioculcas), High Chaparral and gummiplanta (Ficus elastica) can strongly irritate the mouth, throat, eyes and skin [5].
-- [standard] Giftinformationscentralen classes nerium (oleander) and klänglilja (Gloriosa) as very poisonous, and ökenros (Adenium) as poisonous and able to affect the heart; choose other plants where small children live [6].
-- [standard] Giftinformationscentralen lists as irritating, among others: monstera, filodendron, gullranka (pothos), fredskalla (peace lily), silverkalla (Aglaonema), julstjärna (poinsettia), azalea, cyklamen and hortensia [6].
-- [standard] Giftinformationscentralen lists as harmless, among others: svärmors tunga (Sansevieria), dracena, fönsterfikus, parasollpilea, peperomia, pelargon, orkidé, julkaktus, novemberkaktus, spjutbräken (fern), flitiga Lisa and hibiskus [6].
-- [standard] If a child may have eaten a poisonous plant, call Giftinformationscentralen on 010-456 6700; for life-threatening symptoms, call 112 [5].
-- [standard] Lilies (Lilium) are toxic to cats and cause kidney failure [7]. Every part is dangerous, including the pollen a cat grooms off its fur and the water in the vase, so keep no lilies, potted or cut, in a home with a cat, and call a vet at once after contact [8].
-- [standard] Spider plant (Chlorophytum comosum) is non-toxic to cats and dogs [9]. Check any other plant by its botanical name in the ASPCA plant list before it goes into a home with pets; eating any plant can make a cat or dog vomit [10].
+- [convention] Giftinformationscentralen says that most children who taste a plant come to little or no harm, but that the sap of some common houseplants can strongly irritate the mouth, throat, eyes and skin [5]. Its strongly irritating plants include prickblad (Dieffenbachia seguine), garderobsblomma or zamiakalla (Zamioculcas zamiifolia), filodendron, High Chaparral and mjölkbuske or gummiplanta (Synadenium grantii) [5][6].
+- [convention] Giftinformationscentralen classes nerium (Nerium oleander) and klänglilja as very poisonous, and ökenros (Adenium obesum) as poisonous and able to affect the heart; choose other plants where small children live [6].
+- [convention] Giftinformationscentralen lists as irritating, among others: monstera, gullranka (Epipremnum pinnatum), fredskalla (Spathiphyllum), silverkalla (Aglaonema), julstjärna, azalea, cyklamen and hortensia [6].
+- [convention] Giftinformationscentralen lists as harmless, among others: svärmors tunga (Sansevieria trifasciata), dracena, fönsterfikus, parasollpilea, peperomia, pelargon, orkidé, julkaktus, novemberkaktus, spjutbräken (Nephrolepis exaltata), flitiga Lisa and hibiskus [6].
+- [convention] If a child may have eaten a poisonous plant, call Giftinformationscentralen on 010-456 6700; for life-threatening symptoms, call 112 [5].
+- [convention] Lilies (Lilium) are toxic to cats and cause kidney failure [7]. Every part is dangerous, including the pollen a cat grooms off its fur and the water in the vase, so keep no lilies, potted or cut, in a home with a cat, and call a vet at once after contact [8].
+- [convention] Spider plant (Chlorophytum comosum) is non-toxic to cats and dogs [9]. Check any other plant by its botanical name in the ASPCA plant list before it goes into a home with pets; eating any plant can make a cat or dog vomit [10].
 
 ## Plants and indoor air
 
