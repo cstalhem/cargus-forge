@@ -16,7 +16,7 @@ Read only the files the question needs.
 - `references/sizing.md`: sizes of beds, sofas, coffee tables, dining tables, storage, desks, rugs and art. Read it for "what size should I buy" and "how high do I hang it" questions.
 
 ## Steps
-1. **Get the room's facts.** You need the room's length and width in centimetres, where the doors and windows are and which way the doors swing, and the pieces the user wants to keep with their sizes. Ask only for the facts that the question needs and that the user has not given. If the user attached a photo, read what you can from it, and ask to confirm any measure you estimate.
+1. **Get the room's facts.** If `room-plan` passed a room brief, use it. Otherwise you need the room's length and width in centimetres, where the doors and windows are and which way the doors swing, and the pieces the user wants to keep with their sizes. Ask only for the facts that the question needs and that the user has not given. If the user attached a photo, read what you can from it, and ask to confirm any measure you estimate.
 2. **Read the reference files** that the question needs.
 3. **Work it out.** Add up the furniture and the clearances along each wall and across the room, and show that sum, for example: 350 cm wall = 60 cm + 160 cm bed + 70 cm + 60 cm free.
 4. **Answer.** Give the placement or the size in centimetres, and tag each point with its guideline strength:
