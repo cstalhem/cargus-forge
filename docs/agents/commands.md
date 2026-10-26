@@ -4,7 +4,7 @@ This repo has no build, tests or lint. A plugin is checked by validating it and 
 
 | Task | Command |
 |---|---|
-| Validate a plugin (the pre-PR check) | `claude plugin validate ./plugins/<name> --strict` |
+| Validate a plugin (pre-PR check) | `claude plugin validate ./plugins/<name> --strict` |
 | Load a plugin for a test, without installing it | `claude --plugin-dir ./plugins/<name>` |
 | Reload an installed plugin after an edit | `/reload-plugins` |
 
