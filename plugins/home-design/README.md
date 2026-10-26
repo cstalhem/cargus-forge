@@ -4,6 +4,8 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `color`: colour schemes, proportions and light direction for a room, and paint: LRV, sheen, scrub class and wet rooms.
+
 ## Guideline strength
 
 Every guideline in a reference file carries one of three tags, so you can tell a requirement from a habit and a habit from a matter of taste:
