@@ -34,6 +34,11 @@
       "name": "research",
       "source": "./plugins/research",
       "description": "Research a question with parallel researcher agents that write sourced, cross-checked notes, then compile them into one HTML report."
+    },
+    {
+      "name": "home-design",
+      "source": "./plugins/home-design",
+      "description": "Plan colors, lighting, furniture layout, decor and outdoor spaces for your home, with sourced reference material on standards, rules of thumb and style."
     }
   ]
 }

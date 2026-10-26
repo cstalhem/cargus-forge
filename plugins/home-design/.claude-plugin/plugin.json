@@ -1,0 +1,9 @@
+{
+  "name": "home-design",
+  "description": "Plan colors, lighting, furniture layout, decor and outdoor spaces for your home, with sourced reference material on standards, rules of thumb and style.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Carl Stålhem",
+    "url": "https://github.com/cstalhem"
+  }
+}
