@@ -4,6 +4,8 @@ Plan colors, lighting, furniture layout, decor and outdoor spaces for your home,
 
 ## Skills
 
+- `lighting`: light levels in lux, light sources by lumen, Kelvin and Ra, layers of general, task and mood light, and wet-room IP zones and electrical safety.
+
 ## Guideline strength
 
 Every guideline in a reference file carries one of three tags, so you can tell a requirement from a habit and a habit from a matter of taste:
