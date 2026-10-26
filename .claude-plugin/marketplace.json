@@ -3,7 +3,7 @@
   "owner": {
     "name": "Carl Stålhem"
   },
-  "description": "Plugins for knowledge management, note-taking workflows, and Claude Code productivity.",
+  "description": "Plugins for knowledge management, note-taking workflows, Claude Code productivity, and home design.",
   "plugins": [
     {
       "name": "obsidian",

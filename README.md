@@ -1,7 +1,7 @@
 # Cargus Forge
 
 ## About
-Plugins for knowledge management, note-taking workflows, and Claude Code productivity.
+Plugins for knowledge management, note-taking workflows, Claude Code productivity, and home design.
 
 ## Plugin Index
 - **Obsidian** (`plugins/obsidian`): Daily notes, meeting processing, task management, and note creation for Obsidian vaults.
