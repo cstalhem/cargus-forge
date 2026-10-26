@@ -25,7 +25,7 @@ Answer style and decoration questions from the reference files below. Every guid
    - `standard`: give it as a requirement, and name its source (the standard or the authority).
    - `convention`: give it as a rule of thumb with its numbers, and say that it can be broken for a reason.
    - `taste`: give two to four options to choose from. For each, say what it looks like and what it suits in this room. Never present one option as the right answer. If the user asks you to pick, tie the pick to what they said they like, and say it is a preference.
-4. **Give safety first.** With small children or pets in the home, give the `standard` guidelines on plant toxicity, blind cords and candles before any style advice they affect.
+4. **Give safety first.** With small children or pets in the home, give the safety guidelines on plant toxicity, blind cords and candles before any style advice they affect.
 5. **Hand off what belongs to another skill.** Colour schemes and paint go to `color`. Lamps, lux and Kelvin go to `lighting`. Furniture placement, rug sizes and the height to hang art go to `furniture-layout`. Gardens, patios and balconies go to `outdoor`. Name the skill, or load it when the user wants that part answered too.
 6. **Send fixed work to a professional.** If the advice needs fixed electrical, structural or plumbing work, such as wiring a wall lamp, adding a ceiling outlet or moving a radiator, say to hire a professional (an authorised electrician for fixed electrical installations), and give no DIY steps.
 
