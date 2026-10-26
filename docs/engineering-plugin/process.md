@@ -4,7 +4,7 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
-**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills and next, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan and reflect), and as the design notes that the ADRs link to. It goes once those stages are built.
+**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills, next and setup, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan and reflect), and as the design notes that the ADRs link to. It goes once those stages are built.
 
 ## Words
 
@@ -53,6 +53,20 @@ The test needs scenarios and settled questions, so **discuss always comes first*
 An issue that already has scenarios and passes the test skips discuss. Sub-issues from slice are like this.
 
 ## Phases
+
+### setup (you type it, once per repo)
+- **Gets:** the repo's settings and files, through `setup.sh`, which the skill injects, so it runs before the model reads the skill (ADR-004). It reads the repo, its default branch and `allow_squash_merge` through `gh api` REST, the state of each file of the repo profile and of each optional behaviour, and the commands in `package.json`, a Makefile, `pyproject.toml` and the run lines of `.github/workflows/*`. It changes nothing, exits 0 and prints an error as one `setup.sh error: …` line.
+- **Gives:** the repo profile and the accepted optional behaviours, written to the working tree, and a list of the files to commit.
+  - `docs/agents/issue-tracker.md`: the repo and its default branch, rendered from the plugin's `templates/issue-tracker.md` by `apply.sh`. Setup owns these facts. It keeps the file's `## Notes` byte-identical, and a re-run re-renders only the facts.
+  - `docs/agents/commands.md`: the commands table, or the "no build, tests or lint" form, from `templates/commands.md`. The model proposes the rows and writes the file. The repo owns it after that, so a re-run keeps it and offers each detected command that its table lacks as its own question.
+  - Each optional behaviour, such as `.github/workflows/close-sub-issue.yml`, is a byte-identical copy of its template, which `apply.sh` makes with `cp`. A behaviour is on when its file is in the repo, with no separate flag.
+- **Stores in:** the working tree. You commit the files and open a PR.
+- **One screen:** a line for each file (create, up to date, or differs with the diff), the proposed commands, the optional behaviours with a recommendation each, and the warnings. Then numbered questions, only for what needs a decision, answered "yes" or "yes, except N".
+- **Warns about:** a default branch other than `main`, which ship and the final PR still assume, and `allow_squash_merge` turned off, since the plugin squash-merges every PR.
+- **Never:** commits, pushes, opens an issue or a PR, adds a label or changes a repo setting. It asks about neither the branch pattern nor the merge style, which the plugin fixes. Pushing a file under `.github/workflows/` needs a token with the `workflow` scope, which a cloud session often lacks, so setup leaves the push to you.
+- **Exit gate:** a second run of `setup.sh` reads each file that `apply.sh` wrote as current, and `commands.md` holds each accepted row.
+- **Stops for:** a `setup.sh error:` line, a session that is not at the top of the repo, and an `apply.sh error:` line. `apply.sh` checks everything before its first write, so an error leaves no file written.
+- **Only the user starts it** (`disable-model-invocation: true`). execute tells you to run it when the repo has no `docs/agents/`, and goes on with its defaults.
 
 ### discuss (Shape)
 - **Gets:** a request, the code, `docs/adr/`.
