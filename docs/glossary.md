@@ -37,3 +37,6 @@ _Avoid_: conclusion
 
 **Repo profile**: The files in a repo's `docs/agents/` that hold its own facts for the plugin's skills: its commands and its issue tracker; setup writes them, and the plugin's contract stays in the plugin.
 _Avoid_: repo config, agent docs
+
+**Optional behaviour**: A per-repo behaviour of the plugin that is on when its file is in the repo, such as `.github/workflows/close-sub-issue.yml`; setup offers each one.
+_Avoid_: feature flag, option
