@@ -42,3 +42,5 @@ _Avoid_: repo config, agent docs
 _Avoid_: feature flag, option
 
 **Conversion issue**: The one request that setup creates after a yes, which lists each conversion item it reported with a suggested action. A conversion item is something in an existing repo that differs from the plugin's process: an open issue's colliding branches, another branch convention, ADRs or a glossary that the plugin cannot see, or a line that conflicts with the contract.
+
+**Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it.
