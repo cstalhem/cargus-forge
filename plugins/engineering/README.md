@@ -2,7 +2,7 @@
 
 Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next.
 
-The plugin keeps its record of the work in GitHub: issues, labels, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
+The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
 
 ## Requirements
 
@@ -71,13 +71,6 @@ flowchart TD
 
 Run `/engineering:next` at any point to see where things stand and what to run next. The process terms are defined in the [glossary](../../docs/glossary.md).
 
-## Status labels
+## Status
 
-| Label | Set by | Means |
-|---|---|---|
-| `status:ready` | discuss, slice | Shaped and ready for execute. |
-| `status:in-progress` | execute | execute is building it. |
-| `status:needs-review` | verify | Its PR passed verify and waits for your review and merge. |
-| `umbrella` | discuss | An umbrella issue, which slice splits into sub-issues. |
-
-`/engineering:next` reads no label: an open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.
+`/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.

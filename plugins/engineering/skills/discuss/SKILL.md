@@ -27,7 +27,6 @@ Request: $ARGUMENTS
 4. **Write.** After "yes", write the body to a file as the rules say, then run one of these two commands.
    - A new request: `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`.
    - An existing issue `#<n>`: add its original body at the end, under `## Request`. Then run `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`.
-   - Then set the issue's label as the rules say, on the `number` that the POST returns or on `<n>`: `status:ready` for a single issue, which replaces any other status label; `umbrella` for an umbrella issue, which removes every status label, so an issue that discuss turns into an umbrella keeps none.
 5. **Hand off.**
    - Pass: show the issue URL. The next step is execute on this issue.
    - Fail: show the issue URL, then call the Skill tool with `engineering:slice` and the issue number.

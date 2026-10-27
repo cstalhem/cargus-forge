@@ -56,7 +56,7 @@ Target: $ARGUMENTS
    - Add to the end of the agent's report, in PR scope, a `### Checks` section with one line for each run, `- <name>: passed`, `failed (<html_url>)` or `pending`, or `- none` when there are none. Then add, in both scopes, `### Verdict: **PASS**`, `**FAIL**` or `**PENDING**`. Change nothing else in the report.
 5. **Post.** Write the report from step 4 to a file, as the rules say. In both scopes, run `gh api -X POST repos/{owner}/{repo}/issues/<n>/comments -F body=@<path>`: a PR takes comments on the issues path. Read the comment back with `gh api repos/{owner}/{repo}/issues/comments/<id>`, where `<id>` is the `id` that the post returns.
 6. **Result.** Start this step only after the comment from step 5 is posted. If posting failed, stop and say so.
-   - **PR scope, PASS:** mark PR `<n>` ready as the rules say. Then set the label of its issue from step 1 to `status:needs-review` as the rules say. It replaces the issue's other status label, such as `status:in-progress`.
+   - **PR scope, PASS:** mark PR `<n>` ready as the rules say.
    - **PR scope, FAIL:** leave the PR as a draft, and return each failing scenario and each failing `Term` row with its evidence, and each failed check with its `html_url`, to the caller.
-   - **PR scope, PENDING:** leave the PR as a draft, change no label, and return the PENDING verdict and each pending check to the caller.
+   - **PR scope, PENDING:** leave the PR as a draft, and return the PENDING verdict and each pending check to the caller.
    - **Umbrella scope:** return the verdict and each gap to the caller.
