@@ -376,13 +376,17 @@ facts_branches() {
   read_list 'repos/{owner}/{repo}/issues?state=open'
   issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not) | .number] | sort' 2>/dev/null) \
     || fail "cannot read the open issues."
-  out=$(jq -nr --argjson branches "$branches" --argjson issues "$issues" --arg default "$default_branch" '
+  # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to
+  # 128 KiB (#179 D1).
+  out=$(printf '%s\n%s\n' "$branches" "$issues" | jq -nr --arg default "$default_branch" '
     def prefix:
       if test("/") then capture("^(?<p>[^/]*/)").p
       elif test("[-_]") then capture("^(?<p>[^-_]*[-_])").p
       else . end;
     def names: map("`\(.)`") | join(", ");
-    [$branches[] | select(. != $default and (startswith("dependabot/") | not) and (startswith("renovate/") | not))] as $b
+    input as $branches
+    | input as $issues
+    | [$branches[] | select(. != $default and (startswith("dependabot/") | not) and (startswith("renovate/") | not))] as $b
     | [$b[] | select(test("^[0-9]+-") | not)] as $other
     | ($b | length) as $total
     | if $total == 0 then

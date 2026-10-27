@@ -450,6 +450,23 @@ lacks 'setup.sh error:'
 done_check
 
 setup
+check "remote branch names over 128 KiB, the limit of one argument, give the facts and their branches (#179)"
+# 700 branches with 200-byte names, created in one update-ref and packed, so that the snapshot
+# stays quick.
+pad=$(printf '%0195d' 0)
+for i in $(seq 1000 1699); do printf 'create refs/heads/%s-%s %s\n' "$i" "$pad" "$(git rev-parse HEAD)"; done \
+  | git --git-dir="$remote" update-ref --stdin || miss "cannot create the fixture's branches"
+git --git-dir="$remote" pack-refs --all
+[ "$(git ls-remote --heads origin | sed 's|.*refs/heads/||' | wc -c)" -gt 131072 ] \
+  || miss "the fixture's branch names are not over 128 KiB"
+issues 1000
+run
+[ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
+has '### Branches' '- branches: 700 of 700 match `<n>-*`' "- #1000 · \`1000-$pad\`"
+lacks 'setup.sh error:'
+done_check
+
+setup
 check "docs: ADR folders and glossaries the plugin cannot see give warnings, rule docs are listed, and none is changed"
 mkdir -p docs/adr doc/decisions architecture/records wiki .github/PULL_REQUEST_TEMPLATE src/decisions notes vendor
 printf '# x\n' | tee docs/adr/0001-a.md doc/decisions/0001-a.md doc/decisions/0002-b.md \
