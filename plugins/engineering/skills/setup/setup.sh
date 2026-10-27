@@ -55,18 +55,20 @@ done
 # Reads a list page by page, 100 items a page, without following GitHub's next-page link.
 # $1 is the path. Sets `items` to one JSON array with every item. Call it in the main shell,
 # not in a pipe or `$(…)`, so that its `fail` ends the script and its error text is printed.
+# The pages reach `jq` on stdin, not as arguments, because Linux limits one argument to 128 KiB
+# (#179 D1).
 read_list() {
-  local path=$1 sep='?' page=1 out count all='[]'
+  local path=$1 sep='?' page=1 out count pages=''
   case $path in *\?*) sep='&' ;; esac
   while :; do
     out=$(gh api "$path${sep}per_page=100&page=$page" 2>&1) || fail "gh api $path: $out"
     count=$(printf '%s' "$out" | jq 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
       || fail "gh api $path did not return a list: $out"
-    all=$(jq -n --argjson a "$all" --argjson b "$out" '$a + $b' 2>/dev/null) || fail "could not join the pages of $path."
+    pages+=$out$'\n'
     [ "$count" -lt 100 ] && break
     page=$((page + 1))
   done
-  items=$all
+  items=$(printf '%s' "$pages" | jq -s 'add' 2>/dev/null) || fail "could not join the pages of $path."
 }
 
 plugin_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd -P) \
@@ -374,13 +376,17 @@ facts_branches() {
   read_list 'repos/{owner}/{repo}/issues?state=open'
   issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not) | .number] | sort' 2>/dev/null) \
     || fail "cannot read the open issues."
-  out=$(jq -nr --argjson branches "$branches" --argjson issues "$issues" --arg default "$default_branch" '
+  # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to
+  # 128 KiB (#179 D1).
+  out=$(printf '%s\n%s\n' "$branches" "$issues" | jq -nr --arg default "$default_branch" '
     def prefix:
       if test("/") then capture("^(?<p>[^/]*/)").p
       elif test("[-_]") then capture("^(?<p>[^-_]*[-_])").p
       else . end;
     def names: map("`\(.)`") | join(", ");
-    [$branches[] | select(. != $default and (startswith("dependabot/") | not) and (startswith("renovate/") | not))] as $b
+    input as $branches
+    | input as $issues
+    | [$branches[] | select(. != $default and (startswith("dependabot/") | not) and (startswith("renovate/") | not))] as $b
     | [$b[] | select(test("^[0-9]+-") | not)] as $other
     | ($b | length) as $total
     | if $total == 0 then
