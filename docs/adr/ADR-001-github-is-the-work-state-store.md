@@ -7,7 +7,6 @@ status: active
 # ADR-001: GitHub is the only store of work state
 
 - **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs. No skill writes or reads a status label.
-- **Design notes:** [process.md, Status](../engineering-plugin/process.md#status)
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.

@@ -8,7 +8,6 @@ status: active
 
 - **Decision:** Each umbrella issue gets a feature branch. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. One final PR merges the feature into `main` and closes the umbrella issue.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md)
-- **Design notes:** [process.md, ship](../engineering-plugin/process.md#ship-build-for-an-umbrella-issue)
 
 ## Details
 - **Branch names:** the feature branch is `38-export-to-s3`, taken from `main`. When a single issue with work so far becomes an umbrella, the feature branch starts from that work instead ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)). A sub-issue branch is `39-export-job`, taken from the feature branch, with one worktree for each active sub-issue. In a cloud session, the sub-issue branch is the session's designated branch instead ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).

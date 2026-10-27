@@ -16,7 +16,7 @@ status: active
   3. Simplify and optimise what is left. Never simplify a part that should not exist.
   4. Speed up the cycle time, only after the first three.
   5. Automate last, once the first four leave nothing to cut.
-- **The challenge round** is discuss's first round. It lists the request and each of its requirements with a source and a verdict of keep, simplify or delete, and asks each simplify or delete verdict as a question with the reason for its recommendation. A request to speed up or automate a step first gets the question whether the step could be deleted or simplified.
+- **The challenge round** is discuss's first round. It lists the request and each of its requirements with a source and a verdict of keep, simplify or delete, and asks each simplify or delete verdict as a question with the reason for its recommendation. A request to speed up or automate a step first gets the question whether that step, or the part that makes it needed, could be deleted or simplified.
 - **A source, not a person:** a source is the user's words in the request, an issue, an ADR or the code. A requirement with no source gets the verdict delete.
 - **Deletions are decisions:** removing a part that exists in the repo is a `D<n> · Delete: <part>` decision with its own scenario, so verify checks that the part is gone. A requirement cut from a request gets no decision; the original wording stays under the issue's `## Request`.
 - **Only discuss challenges.** slice, execute and verify take the shaped issue as it is.
