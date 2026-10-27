@@ -33,7 +33,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:setup` | Writes the repo profile and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
 | `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then opens a draft PR. |
-| `/engineering:next` | Shows where each open issue stands, suggests one next command, and repairs status labels that the facts contradict. |
+| `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 
 Three more skills run only when another skill calls them:
@@ -80,4 +80,4 @@ Run `/engineering:next` at any point to see where things stand and what to run n
 | `status:needs-review` | verify | Its PR passed verify and waits for your review and merge. |
 | `umbrella` | discuss | An umbrella issue, which slice splits into sub-issues. |
 
-An open issue with none of these labels is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`, which also repairs a status label that the facts contradict.
+`/engineering:next` reads no label: an open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.
