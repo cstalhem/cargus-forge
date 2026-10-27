@@ -20,7 +20,7 @@ Install the plugin from this repo's marketplace:
 
 Then run `/engineering:setup` once per repo, from its top folder. Plugin updates reach the repo without a re-run, because the plugin's own rules stay in the plugin.
 
-- It shows what it found on one screen, then asks numbered questions that you answer with "yes" or "yes, except <numbers>".
+- It shows what it found on one screen, then asks numbered questions, each with a recommended answer. Answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
 - After your yes, it writes the repo profile in `docs/agents/`: `issue-tracker.md` with the repo and its default branch, and `commands.md` with the build, test and lint commands it detected.
 - It offers each optional behaviour. Today that is the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch.
 - On an existing repo, it reports what differs from the plugin's process, such as other branch names or conflicting docs, and offers one issue that lists them.
