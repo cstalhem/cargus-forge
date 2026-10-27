@@ -22,8 +22,10 @@ export GIT_CEILING_DIRECTORIES=$tmp
 
 # The stub gh: logs each call, then fails with $GH_FAIL if it is set. For the repo it prints
 # $GH_JSON. For page <p> of the open issues it fails with $GH_FAIL_ISSUES if it is set, or
-# prints $GH_ISSUES_<p>, or `[]`. Any other call fails.
-mkdir "$tmp/bin"
+# prints the file $GH_PAGES/<p>, or `[]`. Any other call fails. The pages are files, not
+# variables, because Linux limits one variable in the environment to 128 KiB, as it does one
+# argument.
+mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
   'printf "%s\n" "$*" >> "$GH_LOG"' \
@@ -32,12 +34,12 @@ printf '%s\n' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
   '  "repos/{owner}/{repo}/issues?state=open&per_page=100&page="*)' \
   '    if [ -n "${GH_FAIL_ISSUES:-}" ]; then printf "%s\n" "$GH_FAIL_ISSUES" >&2; exit 1; fi' \
-  '    var=GH_ISSUES_${2##*page=}' \
-  '    printf "%s\n" "${!var:-[]}" ;;' \
+  '    page=$GH_PAGES/${2##*page=}' \
+  '    if [ -f "$page" ]; then cat "$page"; else printf "[]\n"; fi ;;' \
   '  *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;;' \
   'esac' > "$tmp/bin/gh"
 chmod +x "$tmp/bin/gh"
-export PATH="$tmp/bin:$PATH" GH_LOG=$tmp/gh.log
+export PATH="$tmp/bin:$PATH" GH_LOG=$tmp/gh.log GH_PAGES=$tmp/pages
 
 # gh_repo [default branch] [allow_squash_merge]: the JSON that the stub returns for the repo,
 # and no open issues. An allow_squash_merge of "none" leaves the field out, as GitHub does for
@@ -47,13 +49,17 @@ gh_repo() {
     {full_name: "acme/widget", default_branch: $b}
     + (if $s == "none" then {} else {allow_squash_merge: ($s == "true")} end)')
   export GH_JSON
-  unset GH_FAIL GH_FAIL_ISSUES GH_ISSUES_1 GH_ISSUES_2 GH_ISSUES_3
+  unset GH_FAIL GH_FAIL_ISSUES
+  rm -f "$GH_PAGES"/*
 }
+
+# page <p> <json>: page <p> of the open issues.
+page() { printf '%s\n' "$2" > "$GH_PAGES/$1"; }
 
 # issues <n>...: page 1 of the open issues. `pr:<n>` is a PR, which the endpoint lists too.
 issues() {
-  GH_ISSUES_1=$(printf '%s\n' "$@" | jq -R 'if startswith("pr:") then {number: (.[3:] | tonumber), pull_request: {}} else {number: tonumber} end' | jq -sc .)
-  export GH_ISSUES_1
+  printf '%s\n' "$@" | jq -R 'if startswith("pr:") then {number: (.[3:] | tonumber), pull_request: {}} else {number: tonumber} end' \
+    | jq -sc . > "$GH_PAGES/1"
 }
 
 # setup: a new fixture repo with one commit, on main, with a local bare repo as `origin` that
@@ -421,15 +427,26 @@ done_check
 
 setup
 check "the open issues are read page by page, and a PR on a page is not an issue"
-GH_ISSUES_1=$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, pull_request: {}}]')
-GH_ISSUES_2='[{"number": 6}]'
-export GH_ISSUES_1 GH_ISSUES_2
+page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, pull_request: {}}]')"
+page 2 '[{"number": 6}]'
 branches 5-pr 6-second-page
 run
 has '- #6 · `6-second-page`'
 lacks '- #5 ·'
 grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=2' "$GH_LOG" || miss "page 2 was not read"
 grep -q 'page=3' "$GH_LOG" && miss "page 3 was read after a short page 2"
+done_check
+
+setup
+check "open issues over 128 KiB of JSON, the limit of one argument, give the facts and their branches (#179)"
+page 1 "$(jq -nc '[range(1000; 1099) | {number: ., body: ("x" * 2000)}] + [{number: 7, body: ("y" * 2000)}]')"
+page 2 '[{"number": 6}]'
+[ "$(wc -c < "$GH_PAGES/1")" -gt 131072 ] || miss "the fixture's page 1 is not over 128 KiB"
+branches 7-login 6-second-page
+run
+[ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
+has '### Branches' '- #6 · `6-second-page`' '- #7 · `7-login`'
+lacks 'setup.sh error:'
 done_check
 
 setup
@@ -467,7 +484,7 @@ done_check
 
 setup
 check "open issues that are not a list print one setup.sh error line and exits 0"
-export GH_ISSUES_1='{"message": "Not Found"}'
+page 1 '{"message": "Not Found"}'
 run
 error 'did not return a list'
 done_check
