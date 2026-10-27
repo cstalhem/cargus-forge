@@ -11,6 +11,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 - SemVer: bump MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
 - Register every new plugin in both `.claude-plugin/marketplace.json` and the README plugin index.
 - Keep each plugin's description identical across its `plugin.json`, `marketplace.json`, and the README.
+- Update a plugin's README when its commands, setup or requirements change.
 - A marketplace entry's `source` must point to the plugin's real directory under `plugins/`.
 - Edit `plugin.json` and `marketplace.json` by hand — they are not package-manager files.
 - `author`/`owner` use `{ "name": "Carl Stålhem" }`; a plugin's `author` also includes `"url"`.
