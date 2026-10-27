@@ -1,7 +1,7 @@
 {
   "name": "engineering",
-  "description": "Turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: discuss, slice, execute, verify, ship, next.",
-  "version": "0.16.0",
+  "description": "Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next.",
+  "version": "0.17.0",
   "author": {
     "name": "Carl Stålhem",
     "url": "https://github.com/cstalhem"

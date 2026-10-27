@@ -4,7 +4,7 @@ This is the contract between the phases of the engineering plugin. Each phase ge
 
 The decisions behind it are in [docs/adr/](../adr/README.md). Lines marked **v0** describe the walking skeleton. Everything not marked v0 comes in a later stage.
 
-**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills and next, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan and reflect), and as the design notes that the ADRs link to. It goes once those stages are built.
+**Role since v0.** The skills in `plugins/engineering/skills/` and the files in `plugins/engineering/references/` now hold the process that is built, the v0 skills, next and setup, and they win where this file differs. This file stays as the design record for the stages after v0 that are not built yet (research, plan and reflect), and as the design notes that the ADRs link to. It goes once those stages are built.
 
 ## Words
 
@@ -54,6 +54,21 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 
 ## Phases
 
+### setup (you type it, once per repo)
+- **Gets:** the repo's settings and files, through `setup.sh`, which the skill injects, so it runs before the model reads the skill (ADR-004). It reads the repo, its default branch and `allow_squash_merge` through `gh api` REST, the state of each file of the repo profile and of each optional behaviour, and the commands in `package.json`, a Makefile, `pyproject.toml` and the run lines of `.github/workflows/*`. On an existing repo it also reads the remote branches and the open issues, and lists the docs that the plugin cannot see or whose rules can conflict with it: ADR folders other than `docs/adr/`, glossary-like files other than `docs/glossary.md`, and CLAUDE.md, AGENTS.md, CONTRIBUTING.md and the PR templates. It changes nothing, exits 0 and prints an error as one `setup.sh error: …` line.
+- **Gives:** the repo profile and the accepted optional behaviours, written to the working tree, a list of the files to commit, and, after a yes, one conversion issue.
+  - `docs/agents/issue-tracker.md`: the repo and its default branch, rendered from the plugin's `templates/issue-tracker.md` by `apply.sh`. Setup owns these facts. It keeps the file's `## Notes` byte-identical, and a re-run re-renders only the facts. A file that setup did not write is adopted after a yes: its whole text moves under `## Notes`, and setup flags each line of it that conflicts with the plugin's contract, for you to edit or remove.
+  - `docs/agents/commands.md`: the commands table, or the "no build, tests or lint" form, from `templates/commands.md`. The model proposes the rows and writes the file. The repo owns it after that, so a re-run keeps it and offers each detected command that its table lacks as its own question.
+  - Each optional behaviour, such as `.github/workflows/close-sub-issue.yml`, is a byte-identical copy of its template, which `apply.sh` makes with `cp`. A behaviour is on when its file is in the repo, with no separate flag.
+  - The conversion issue, `engineering: convert this repo to the plugin's process`: one issue with no label that lists each conversion item with its suggested action. With no label it is a request, which discuss shapes later. Setup offers it only when it reported a conversion item.
+- **Stores in:** the working tree. You commit the files and open a PR. The conversion issue is in GitHub.
+- **One screen:** a line for each file (create, up to date, differs with the diff, or not written by setup), the proposed commands, the optional behaviours with a recommendation each, the warnings, and the lines that conflict with the plugin's contract. Then numbered questions, only for what needs a decision, answered "yes" or "yes, except N". The conversion issue is the last question.
+- **Warns about:** a default branch other than `main`, which ship and the final PR still assume, and `allow_squash_merge` turned off, since the plugin squash-merges every PR. On an existing repo it also reports the conversion items, each with a suggested action: an open issue with one or more `<n>-*` branches, most branches on another naming convention, ADRs or a glossary that the plugin cannot see, and lines in `docs/agents/issue-tracker.md` or the rule docs that conflict with the contract.
+- **Never:** commits, pushes, opens a PR, adds a label, creates or renames a branch, changes a repo setting or edits a doc other than the repo profile. Its one GitHub write is the conversion issue, after a yes. It asks about neither the branch pattern nor the merge style, which the plugin fixes. Pushing a file under `.github/workflows/` needs a token with the `workflow` scope, which a cloud session often lacks, so setup leaves the push to you.
+- **Exit gate:** a second run of `setup.sh` reads each file that `apply.sh` wrote as current, `commands.md` holds each accepted row, and a read-back of the conversion issue shows its title, its body and no label.
+- **Stops for:** a `setup.sh error:` line, a session that is not at the top of the repo, and an `apply.sh error:` line. `apply.sh` checks everything before its first write, so an error leaves no file written. A conversion issue that fails is named in the report and not created again.
+- **Only the user starts it** (`disable-model-invocation: true`). execute tells you to run it when the repo has no `docs/agents/`, and goes on with its defaults.
+
 ### discuss (Shape)
 - **Gets:** a request, the code, `docs/adr/`.
 - **Gives:** a single issue with `status:ready` if the size test passes, or an umbrella issue with `umbrella` and no status label if it fails. Both use the formats below.
@@ -84,12 +99,12 @@ An issue that already has scenarios and passes the test skips discuss. Sub-issue
 - **Stops for:** a scenario that no sub-issue can own, or two parts of the umbrella that conflict, such as a Design that breaks a decision. Both go back to plan (discuss in v0), and slice does not settle them in a sub-issue.
 
 ### execute (Build)
-- **Gets:** one ready issue and `docs/agents/commands.md`.
+- **Gets:** one ready issue, the repo profile in `docs/agents/`, and the plugin's `references/issue-tracker.md`.
 - **Gives:** an issue branch, commits, and a draft PR. The base is the feature branch for a sub-issue, and `main` for a single issue. execute finds the feature branch by its name in git, as the one remote branch that matches the pattern for the umbrella's number (ADR-006).
 - **Blockers:** execute reads them from the issue's "blocked by" links only (ADR-006).
 - **Issue branch:** outside a cloud session, execute makes the branch with `gh issue develop`, which links it to the issue. If that gets a GraphQL 403, execute makes it with `git push`, without a link. In a cloud session, the issue branch is the session's designated branch (ADR-006).
 - **Cloud session:** execute uses the designated branch, enters no worktree and creates no `<n>-<slug>` branch. On resume, it finds the open PR whose head is the current branch and whose first line names the issue. It then fetches the base and the branch, fast-forwards the local branch with `git merge --ff-only` if it is behind, and stops and asks you if they have diverged or the fetch or fast-forward fails.
-- **Branch name:** `docs/agents/issue-tracker.md` sets the pattern for each repo, for example `feature/<n>-<slug>`. The default is `<n>-<slug>`, which is the form `gh issue develop` makes.
+- **Branch name:** `<n>-<slug>`, which is the form `gh issue develop` makes. The pattern is fixed in the plugin's `references/issue-tracker.md`, and a repo cannot set its own.
 - **Worktree:** outside a cloud session, execute uses the session's worktree and does not make a second one.
   1. The session is in a worktree on its own new branch, with no changes and no commits that are not on a remote. Remote Control names these `.claude/worktrees/bridge-cse_<id>` on the branch `worktree-bridge-cse_<id>`. execute switches that worktree to the issue branch, fast-forwards a local copy that is behind with `git merge --ff-only` (stopping to ask if it has diverged or the fetch or fast-forward fails), and deletes the unused branch.
   2. The session is already on `<n>-<slug>` for this issue. execute resumes the work. It first fetches the base and the branch, fast-forwards the local branch with `git merge --ff-only` if it is behind, and stops and asks you if they have diverged or the fetch or fast-forward fails.

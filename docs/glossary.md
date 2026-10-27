@@ -34,3 +34,11 @@ _Avoid_: stale worktree
 
 **Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
 _Avoid_: conclusion
+
+**Repo profile**: The files in a repo's `docs/agents/` that hold its own facts for the plugin's skills: its commands and its issue tracker; setup writes them, and the plugin's contract stays in the plugin.
+_Avoid_: repo config, agent docs
+
+**Optional behaviour**: A per-repo behaviour of the plugin that is on when its file is in the repo, such as `.github/workflows/close-sub-issue.yml`; setup offers each one.
+_Avoid_: feature flag, option
+
+**Conversion issue**: The one request that setup creates after a yes, which lists each conversion item it reported with a suggested action. A conversion item is something in an existing repo that differs from the plugin's process: an open issue's colliding branches, another branch convention, ADRs or a glossary that the plugin cannot see, or a line that conflicts with the contract.
