@@ -50,7 +50,7 @@ One session of work.
 - When a sub-issue depends on an umbrella decision, point to it as `#<umbrella> D<n>`. Do not copy its text. A bare `D<n>` always means a decision of the issue itself.
 
 ## Term decision
-A decision that settles one domain term, in the `## Decisions` section of an umbrella issue or an issue. It holds the whole glossary entry for `docs/glossary.md`, in the format of `engineering:domain-model`:
+A decision that settles one domain term, in the `## Decisions` section of an umbrella issue or an issue. It holds the whole glossary entry for `docs/glossary.md`, in the format of `references/domain-model.md`:
 
 ```markdown
 - D<n> · Term: **<Term>**: <definition> _Avoid_: <words>
