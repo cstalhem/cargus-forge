@@ -2,12 +2,12 @@
 
 Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next.
 
-The plugin keeps all work state in GitHub: issues, labels, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
+The plugin keeps its record of the work in GitHub: issues, labels, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
 
 ## Requirements
 
 - A git repo with a GitHub remote, and `main` as its default branch.
-- `gh` installed and authenticated with access to that repo. The skills read and write GitHub only through `gh api` REST calls.
+- `gh` installed and authenticated with access to that repo. The skills read and write GitHub mostly through `gh api` REST calls, so they also work in a cloud session, where GraphQL is blocked.
 - Squash merge allowed on the repo. Every PR is squash-merged.
 
 ## Setup
