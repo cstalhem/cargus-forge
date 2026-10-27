@@ -10,7 +10,6 @@ A marketplace monorepo of Claude Code plugins for knowledge management, note-tak
 - `.claude-plugin/marketplace.json` — root marketplace listing every plugin (`name`, `source`, `description`)
 - `README.md` — human-facing plugin index
 - `docs/adr/` — architecture decision records (ADR-NNN, living documents, indexed in `docs/adr/README.md`)
-- `docs/engineering-plugin/` — design workspace for the engineering plugin: research, synthesis, the process contract
 
 Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`, `engineering`.
 

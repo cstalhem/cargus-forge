@@ -9,7 +9,6 @@ status: active
 - **Decision:** Every engineering skill runs end to end in a Claude Code cloud session, where the agent proxy refuses GraphQL and `git/refs` writes. Skills read and write GitHub through `gh api` REST on every surface, use a fallback for the two operations that exist only in GraphQL, and find branches by their names in git.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-002](ADR-002-feature-branch-per-umbrella.md)
 - **Records:** #78 D1, D4, D5, D7 and D9 to D16. D2, D3 and D6 are replaced (see Rejected alternatives). Also #144 D1.
-- **Design notes:** [process.md, execute](../engineering-plugin/process.md#execute-build)
 
 ## Details
 - **What the cloud refuses:** GraphQL, with HTTP 403 and a message that points to REST and to the CCR routes `POST pulls/<n>/ccr/ready_for_review`, `POST pulls/<n>/ccr/convert_to_draft`, `PUT` and `DELETE pulls/<n>/ccr/auto_merge`, and `GET pulls/<n>/ccr/review_threads`. Also `POST` and `DELETE git/refs` (HTTP 403), and deleting a branch with `git push`. That breaks `gh issue develop`, `gh pr ready`, and every `gh issue` and `gh pr` command that reads or writes through GraphQL.
