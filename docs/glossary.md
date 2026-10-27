@@ -35,7 +35,7 @@ _Avoid_: stale worktree
 **Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
 _Avoid_: conclusion
 
-**Repo profile**: The files in a repo's `docs/agents/` that hold its own facts for the plugin's skills: its commands and its issue tracker; setup writes them, and the plugin's contract stays in the plugin.
+**Repo profile**: The file `docs/agents/commands.md`, which holds a repo's commands for the plugin's skills; setup writes it, and the plugin's contract stays in the plugin.
 _Avoid_: repo config, agent docs
 
 **Optional behaviour**: A per-repo behaviour of the plugin that is on when its file is in the repo, such as `.github/workflows/close-sub-issue.yml`; setup offers each one.

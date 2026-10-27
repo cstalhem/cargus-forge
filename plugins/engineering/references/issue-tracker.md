@@ -1,6 +1,6 @@
 # Issue tracker
 
-The plugin's contract for branches, merging and PRs. It is the same in every repo. A repo's own facts, its repo and its default branch, are in its repo profile, `docs/agents/issue-tracker.md`, with its notes under `## Notes`. A note can add to this contract but not change it. The contract assumes that the default branch is `main`.
+The plugin's contract for branches, merging and PRs. It is the same in every repo, and it takes `main` as the default branch.
 
 ## Branches
 - **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own. Create every branch the same way on every surface: run `git fetch origin <base>`, then `git push origin <sha>:refs/heads/<n>-<slug>` with `origin/<base>` as `<sha>`, or `HEAD` when the branch starts from the current branch's head and the current branch is `<base>`. The branch has no link to its issue.

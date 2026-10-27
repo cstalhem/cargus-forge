@@ -20,7 +20,7 @@ status: active
 - **No status label.** A label would copy a fact that the body, a link, a branch or a PR already holds. An old status label on an issue changes nothing, and `next` changes no label.
 - **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no other record.
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues. slice sets every blocker as a link, so the Blocked icon shows for each one ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
-- The plugin's contract for branches, merging and PRs is in its `references/issue-tracker.md`. Each repo's own facts, its repo and default branch, are in its `docs/agents/issue-tracker.md`, with its notes under `## Notes`. Skills read both, so a plugin update reaches every repo, and a repo's facts can change without a change to the skills.
+- The plugin's contract for branches, merging and PRs is in its `references/issue-tracker.md`, and it takes `main` as the default branch. A repo's only profile file is `docs/agents/commands.md`, with its commands. The contract stays in the plugin, so a plugin update reaches every repo.
 
 ## Rejected alternatives
 - **State files in the repo** (GSD's `.planning/` and `STATE.md`): GSD writes about 15 files for each phase, and the files drift from what is true.

@@ -14,15 +14,12 @@
 # Output:
 #   ## Facts
 #   ### Repo                 `- repo:`, `- default branch:` and `- allow_squash_merge:` lines.
-#   ### Files                a line `- <path> · <state>` for each file of the repo profile:
-#                            `docs/agents/issue-tracker.md` is missing, current or differs
-#                            (#148 D2), or `not written by setup` when its first line does not
-#                            start with the marker, with its whole text in a fenced block under
-#                            the line (#151 D2). `docs/agents/commands.md` is present or missing.
+#   ### Files                a line `- <path> · <state>` for the repo profile,
+#                            `docs/agents/commands.md`: present or missing (#181 D2).
 #   ### Optional behaviours  a line `- <name> · <path> · <state>` for each optional behaviour:
-#                            missing, current or differs. A file that differs, here and under
-#                            `### Files`, gets a fenced `diff -u` block under its line, from the
-#                            repo's file (`-`) to what setup would write (`+`).
+#                            missing, current or differs. A file that differs gets a fenced
+#                            `diff -u` block under its line, from the repo's file (`-`) to what
+#                            setup would write (`+`).
 #   ### Commands             a line `- <command> · <source>` for each command found in
 #                            `package.json`, a Makefile, `pyproject.toml` and the run lines of
 #                            `.github/workflows/*`, or `- none` (#85 D7).
@@ -75,9 +72,6 @@ plugin_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd -P) \
   || fail "cannot find the plugin's directory from $0."
 templates=$plugin_root/templates
 
-# The first line of each file that setup writes starts with this, as apply.sh checks.
-marker_prefix='<!-- Written by /engineering:setup.'
-
 # Each optional behaviour (#85 D5): its name, the file that turns it on, and the template that
 # file is a byte-identical copy of.
 behaviours=(
@@ -109,29 +103,12 @@ facts_repo() {
   line
 
   if [ "$default_branch" != main ]; then
-    warnings+=("The default branch is \`$default_branch\`, not \`main\`. ship and the final PR still assume \`main\`.")
+    warnings+=("The default branch is \`$default_branch\`, not \`main\`. The plugin's skills take \`main\` as the default branch.")
   fi
   case $squash in
     false) warnings+=("\`allow_squash_merge\` is off, but the plugin squash-merges every PR. Setup changes no repo setting.") ;;
     unknown) warnings+=("\`allow_squash_merge\` is unknown, because the token cannot read the repo's merge settings. The plugin squash-merges every PR.") ;;
   esac
-}
-
-# Prints file $1 up to and including its first `## Notes` line, or all of it if it has none.
-head_to_notes() { awk '{ print } /^## Notes$/ { exit }' "$1"; }
-
-# Prints $1 escaped for the replacement of a `s#…#…#` sed command: `\`, `&` and `#`.
-sed_escape() { printf '%s' "$1" | sed -e 's/[\\&#]/\\&/g'; }
-
-# Sets `rendered` to templates/issue-tracker.md with the repo's facts, byte for byte. It
-# renders as apply.sh does, so a file that apply.sh just wrote reads as current.
-render_issue_tracker() {
-  local r b
-  [ -f "$templates/issue-tracker.md" ] || fail "cannot find the template $templates/issue-tracker.md."
-  r=$(sed_escape "$repo") && b=$(sed_escape "$default_branch") || fail "cannot escape the repo's facts."
-  rendered=$(sed -e "s#{{repo}}#$r#g" -e "s#{{default_branch}}#$b#g" "$templates/issue-tracker.md" 2>/dev/null \
-    && printf x) || fail "cannot render the template $templates/issue-tracker.md."
-  rendered=${rendered%x}
 }
 
 # Adds a fenced `diff -u` block from what is in the repo to what setup would write.
@@ -146,47 +123,9 @@ add_diff() {
   line '```'
 }
 
-# Adds the whole text of file $1 as a fenced block. The fence is one backtick longer than the
-# longest run of backticks that starts a line of the file, so no line of it closes the block.
-add_text() {
-  local fence text
-  fence=$(awk '
-    { match($0, /^`+/); if (RLENGTH > n) n = RLENGTH }
-    END { if (n < 3) n = 2; for (i = 0; i <= n; i++) printf "`" }' "$1" 2>/dev/null) \
-    || fail "cannot read $1."
-  text=$(cat "$1" 2>/dev/null) || fail "cannot read $1."
-  line "${fence}markdown"
-  line "$text"
-  line "$fence"
-}
-
 facts_files() {
-  local path=docs/agents/issue-tracker.md head first=''
+  local path=docs/agents/commands.md
   line '### Files'
-  if [ -f "$path" ]; then
-    IFS= read -r first < "$path" 2>/dev/null || [ -n "$first" ] || first=''
-  fi
-  if [ ! -f "$path" ]; then
-    line "- \`$path\` · missing"
-  elif [[ "$first" != "$marker_prefix"* ]]; then
-    # A file that setup did not write (#151 D2), with the same prefix rule as apply.sh. Its
-    # whole text is printed, so the model can flag each line that contradicts the contract.
-    line "- \`$path\` · not written by setup"
-    add_text "$path"
-  else
-    render_issue_tracker
-    head=$(head_to_notes "$path" 2>/dev/null && printf x) || fail "cannot read $path."
-    head=${head%x}
-    if [ "$head" = "$rendered" ]; then
-      line "- \`$path\` · current"
-    else
-      line "- \`$path\` · differs"
-      add_diff "$path, up to ## Notes" "templates/issue-tracker.md, rendered" \
-        <(printf '%s' "$head") <(printf '%s' "$rendered")
-    fi
-  fi
-
-  path=docs/agents/commands.md
   if [ -f "$path" ]; then
     line "- \`$path\` · present"
   else
