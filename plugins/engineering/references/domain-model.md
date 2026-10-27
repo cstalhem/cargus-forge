@@ -1,4 +1,4 @@
-# domain-model
+# Domain model
 
 The glossary is the one list of domain terms that developers and agents share. The skill that reads this file loads `docs/glossary.md` into its own body. Check terms against that text, except where that skill's section says to read the file again. The format and the gate apply in every skill that reads this file. Then follow the section for that skill.
 
