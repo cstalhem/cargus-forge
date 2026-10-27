@@ -2,16 +2,13 @@
 # status.sh: the facts for /engineering:next.
 # Reads open issues, open PRs, blockers and sub-issues through `gh api` REST, and remote
 # branches through git, for the repo in the current directory. It changes nothing.
+# Each status comes from facts only: the issue's body, its links, its branches and its PRs.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
 # call sends its stderr to /dev/null, and the output is printed only once it is complete.
 #
 # Output:
 #   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
-#   ## Repairs  `- none`, or one entry per issue whose labels the facts contradict (#69 D5):
-#               a line `- #<n> · <change> · <fact>`, then one indented `gh api` call per
-#               line, then `  labels after: <JSON array>`, the labels the calls leave,
-#               sorted, in the form of `--jq '[.[].name] | sort | tojson'`.
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
 #               `### Finished worktrees`: a line `- <path> · <branch> · <fact>` per finished
 #               worktree, then its two indented calls, `git worktree remove '<path>'` and
@@ -42,7 +39,9 @@ read_list() {
     out=$(gh api "$path${sep}per_page=100&page=$page" 2>&1) || fail "gh api $path: $out"
     count=$(printf '%s' "$out" | jq 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
       || fail "gh api $path did not return a list: $out"
-    all=$(jq -n --argjson a "$all" --argjson b "$out" '$a + $b' 2>/dev/null) || fail "could not join the pages of $path."
+    # Through stdin, not `--argjson`: a page of issue bodies can pass the 128 KB limit of one
+    # command-line argument.
+    all=$(printf '%s\n%s\n' "$all" "$out" | jq -s '.[0] + .[1]' 2>/dev/null) || fail "could not join the pages of $path."
     [ "$count" -lt 100 ] && break
     page=$((page + 1))
   done
@@ -51,12 +50,15 @@ read_list() {
 
 repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot read the current repo with gh api: $repo"
 
-# Open issues, without PRs: the issues endpoint lists PRs too.
+# Open issues, without PRs: the issues endpoint lists PRs too. `goal` and `scenarios` say
+# whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
 read_list 'repos/{owner}/{repo}/issues?state=open'
 issues=$(printf '%s' "$items" | jq '
+  def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");
   map(select(has("pull_request") | not) | {
     number, title,
-    labels: [.labels[].name],
+    goal: has_section("Goal"),
+    scenarios: has_section("Scenarios"),
     parent: (.parent_issue_url // null),
     blocked_total: (.issue_dependencies_summary.total_blocked_by // 0),
     sub_total: (.sub_issues_summary.total // 0)
@@ -78,16 +80,11 @@ remote=$(git ls-remote --heads origin 2>&1) || fail "git ls-remote --heads origi
 branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/||p' | jq -R . 2>/dev/null | jq -s . 2>/dev/null) \
   || fail "cannot read the remote branches."
 
-plugin_status='["status:ready","status:in-progress","status:needs-review"]'
-
-# Open blockers of each issue that carries a status label and has a "blocked by" link.
-# A blocker counts while its issue is open.
+# Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
+# "blocked by" link. A blocker counts while its issue is open.
 blockers='{}'
-for n in $(printf '%s' "$issues" | jq -r --argjson s "$plugin_status" '
-    .[] | select(.blocked_total > 0)
-        | select((.labels | index("umbrella")) | not)
-        | select([.labels[] | select(. as $l | $s | index($l))] | length > 0)
-        | .number' 2>/dev/null); do
+for n in $(printf '%s' "$issues" | jq -r '
+    .[] | select(.blocked_total > 0 and .scenarios and (.goal | not)) | .number' 2>/dev/null); do
   read_list "repos/{owner}/{repo}/issues/$n/dependencies/blocked_by"
   list=$(printf '%s' "$items" | jq --arg repo "$repo" '
     map(select(.state == "open") | {
@@ -101,7 +98,7 @@ done
 
 # Closed and total sub-issues of each umbrella that has any.
 subs='{}'
-for n in $(printf '%s' "$issues" | jq -r '.[] | select(.labels | index("umbrella")) | select(.sub_total > 0) | .number' 2>/dev/null); do
+for n in $(printf '%s' "$issues" | jq -r '.[] | select(.goal and .sub_total > 0) | .number' 2>/dev/null); do
   read_list "repos/{owner}/{repo}/issues/$n/sub_issues"
   count=$(printf '%s' "$items" | jq '
     {total: length, closed: (map(select(.state == "closed")) | length)}' 2>/dev/null) \
@@ -232,69 +229,44 @@ out=$(jq -n -r \
   --argjson finished "$finished" \
   --argjson merged_branches "$merged_branches" \
   --argjson finished_branches "$finished_branches" '
-  def rank: {"status:ready": 1, "status:in-progress": 2, "status:needs-review": 3}[.] // 0;
   def ref_of($url): ($url | sub("^.*/repos/"; "") | capture("^(?<r>.*)/issues/(?<n>[0-9]+)$")
                      | if .r == $repo then "#\(.n)" else "\(.r)#\(.n)" end);
   def issue_branches($n): [$branches[] | select(startswith("\($n)-"))];
 
-  # The status from the facts (#69 D5), before any repair, and the repair of the labels.
+  # The status from the facts (#181 D1), the first that applies:
+  # - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so
+  #   this comes before the branch fact;
+  # - needs review: an open ready PR whose first line names the issue;
+  # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
+  #   PR. A branch whose PR merged is finished work, so it gives nothing;
+  # - ready, or blocked with an open "blocked by" link: the body has a `## Scenarios` section;
+  # - request: anything else.
   ($issues | map(
     . as $i
-    | ($i.labels | map(select(rank > 0))) as $status_labels
-    | ($i.labels | index("umbrella") != null) as $is_umbrella
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
-    # Its remote `<n>-*` branches with no merged PR. A branch whose PR merged gives nothing.
     | [issue_branches($i.number)[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
     | ($blockers["\($i.number)"] // []) as $open_blockers
-    # The status label that a fact gives. Only an issue with a status label gets one, and
-    # never `status:ready` or `umbrella`. With no fact, the labels stay as they are.
-    | (if $is_umbrella or ($status_labels | length) == 0 then null
-       elif $ready_pr then {label: "status:needs-review", fact: "ready PR #\($ready_pr.number)"}
-       elif $draft_pr then {label: "status:in-progress", fact: "draft PR #\($draft_pr.number)"}
-       elif ($own_branches | length) > 0 then
-         {label: "status:in-progress", fact: "branch \($own_branches | join(", "))"}
-       else null end) as $target
-    | (if $is_umbrella then {add: null, remove: $status_labels, fact: "umbrella"}
-       elif $target then
-         { add: (if ($i.labels | index($target.label)) != null then null else $target.label end),
-           remove: ($status_labels - [$target.label]),
-           fact: $target.fact }
-       else null end) as $fix
     | $i + {
         status: (
-          if $is_umbrella then "umbrella"
-          elif ($status_labels | length) == 0 then "request"
-          elif $target then ($target.label | ltrimstr("status:"))
-          else ($status_labels | max_by(rank) | ltrimstr("status:"))
+          if $i.goal then "umbrella"
+          elif $ready_pr then "needs-review"
+          elif $draft_pr or ($own_branches | length) > 0 then "in-progress"
+          elif $i.scenarios then (if ($open_blockers | length) > 0 then "blocked" else "ready" end)
+          else "request"
           end),
-        no_facts: (($is_umbrella | not) and ($status_labels | length) > 0 and $target == null),
         pr: ($ready_pr // $draft_pr // null | if . then .number else null end),
         blockers: $open_blockers,
-        umbrella_of: (if $i.parent then ref_of($i.parent) else null end),
-        repair: (
-          if $fix != null and ($fix.add != null or ($fix.remove | length) > 0) then
-            $fix + {after: (($i.labels - $fix.remove) + (if $fix.add then [$fix.add] else [] end))}
-          else null end)
+        umbrella_of: (if $i.parent then ref_of($i.parent) else null end)
       }
-    | if .status == "ready" and (.blockers | length > 0) then .status = "blocked" else . end
   ) | sort_by(.number)) as $all
 
   | ($all | map({key: "\(.number)", value: .}) | from_entries) as $by_number
 
-  # An in-progress or needs-review issue whose status comes from its labels alone: no PR and
-  # no branch with no merged PR (#69 D5). Its labels stay, and next cannot tell whether its PR
-  # merged or a session is building it before its draft PR exists.
-  | def no_branch_or_pr: (.status == "needs-review" or .status == "in-progress") and .no_facts;
-
-  # One suggestion for each status. An issue with no branch or PR gets both steps it may need.
-  def suggestion:
-      if .status == "needs-review" then
-        (if .pr then "review and merge PR #\(.pr)"
-         else "close #\(.number) if its PR merged, else /engineering:execute #\(.number)" end)
-      elif .status == "in-progress" then
-        (if no_branch_or_pr then "/engineering:execute #\(.number) if no session is building it"
-         else "/engineering:execute #\(.number)" end)
+  # One suggestion for each status.
+  | def suggestion:
+      if .status == "needs-review" then "review and merge PR #\(.pr)"
+      elif .status == "in-progress" then "/engineering:execute #\(.number)"
       elif .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
       elif .status == "umbrella" then
@@ -317,7 +289,7 @@ out=$(jq -n -r \
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"
                 else "\($fb | length) feature branches: \($fb | join(", "))" end) ]
          elif .status == "needs-review" or .status == "in-progress" then
-           (if .pr then ["PR #\(.pr)"] elif no_branch_or_pr then ["no branch or PR"] else [] end)
+           (if .pr then ["PR #\(.pr)"] else [] end)
          else [] end)
       + [ suggestion ]
       | join(" · ");
@@ -329,20 +301,6 @@ out=$(jq -n -r \
           | "  - blocked by #\($b.number) · \($x.status | label_of) · \($x | suggestion)"
         else "  - blocked by #\($b.number)"
         end;
-    # One entry per repair: the change and its fact, the calls in order (add, then each
-    # remove, as the label rule in rules.md says), then the labels they leave as a sorted JSON
-    # array, which no label name can make ambiguous.
-    def repair_lines:
-      . as $x
-      | $x.repair as $r
-      | "- #\($x.number) · "
-        + ([ (if $r.add then "adds \($r.add)" else empty end),
-             (if ($r.remove | length) > 0 then "removes \($r.remove | join(", "))" else empty end),
-             $r.fact ] | join(" · ")),
-        (if $r.add then "  gh api -X POST repos/{owner}/{repo}/issues/\($x.number)/labels -f '\''labels[]=\($r.add)'\''"
-         else empty end),
-        ($r.remove[] | "  gh api -X DELETE repos/{owner}/{repo}/issues/\($x.number)/labels/\(.)"),
-        "  labels after: \($r.after | sort | tojson)";
 
     [ {name: "Needs review", status: "needs-review"},
       {name: "In progress", status: "in-progress"},
@@ -359,18 +317,13 @@ out=$(jq -n -r \
         | .left -= $k)
       | .out) as $cut
 
-    # The `Next:` line, the first step that applies (#69). Only an open ready PR gives the
-    # review step, and only a branch or PR gives the execute step of an issue in progress: an
-    # issue whose status label has no branch or PR may be built by another session.
-    | ( [ $all[] | select(.status == "needs-review" and .pr != null) ][0] ) as $review
-    | ( [ $all[] | select(.status == "in-progress" and (no_branch_or_pr | not)) ][0] ) as $doing
+    # The `Next:` line, the first step that applies (#69).
+    | ( [ $all[] | select(.status == "needs-review") ][0] ) as $review
+    | ( [ $all[] | select(.status == "in-progress") ][0] ) as $doing
     | ( [ $all[] | select(.status == "umbrella")
           | select(($subs["\(.number)"] // {total: 0}) | .total > 0 and .closed == .total) ][0] ) as $to_ship
     | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
     | ( [ $all[] | select(.status == "request") ][0] ) as $request
-    # When no step applies: each issue whose status label has no branch or PR, lowest first.
-    | [ $all[] | select(no_branch_or_pr) | "#\(.number)" ] as $unknown
-    | [ $all[] | select(.repair) ] as $repairs
 
     | "## Report",
       "",
@@ -388,14 +341,8 @@ out=$(jq -n -r \
         elif $to_ship then "/engineering:ship #\($to_ship.number)"
         elif $ready then "/engineering:execute #\($ready.number)"
         elif $request then "/engineering:discuss #\($request.number)"
-        elif ($unknown | length) > 0 then
-          "check \($unknown | join(", ")), whose status label has no branch or PR"
         else "nothing: no open issue waits for a step"
         end),
-      "",
-      "## Repairs",
-      "",
-      ( if ($repairs | length) == 0 then "- none" else ($repairs[] | repair_lines) end ),
       "",
       "## Cleanup",
       "",
