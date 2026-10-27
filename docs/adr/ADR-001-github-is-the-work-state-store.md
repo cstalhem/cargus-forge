@@ -10,7 +10,7 @@ status: active
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
-- A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. The `Blocked by #<a>, #<b>` text in its first line mirrors them for readers ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
+- A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. Its body lists neither its parent nor its blockers, so no text copies a link ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **Facts decide the status.** A script (`status.sh`) works out the status of each open issue for `next`, the first of these that applies:
   - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so this comes before the branch fact;
   - needs review: an open ready PR whose first line names the issue;
