@@ -81,7 +81,8 @@ branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/
   || fail "cannot read the remote branches."
 
 # Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
-# "blocked by" link. A blocker counts while its issue is open.
+# "blocked by" link. A blocker counts while its issue is open and, in this repo, not merged:
+# the report leaves out each one in `merged_issues` below (#214 D1).
 blockers='{}'
 for n in $(printf '%s' "$issues" | jq -r '
     .[] | select(.blocked_total > 0 and .scenarios and (.goal | not)) | .number' 2>/dev/null); do
@@ -262,15 +263,21 @@ out=$(jq -n -r \
   # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
   #   PR. A branch whose PR merged is finished work, so it gives nothing;
   # - merged: a merged PR into the feature branch of its umbrella names it (#212 D1). No
-  #   group lists it and no `Next:` step picks it, because the final PR of ship closes it;
-  # - ready, or blocked with an open "blocked by" link: the body has a `## Scenarios` section;
+  #   group lists it, no blocker line names it and no `Next:` step picks it, because the
+  #   final PR of ship closes it;
+  # - ready, or blocked with an open "blocked by" link whose blocker is not merged: the body
+  #   has a `## Scenarios` section;
   # - request: anything else.
   ($issues | map(
     . as $i
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
     | [issue_branches($i.number)[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
-    | ($blockers["\($i.number)"] // []) as $open_blockers
+    # A merged blocker does not block (#214 D1): leave out each blocker in this repo whose
+    # number is in $merged_issues. A blocker in another repo stays.
+    | ($blockers["\($i.number)"] // []
+       | map(select(. as $b | ($b.ref | startswith("#") | not) or ($merged_issues | index($b.number) | not))))
+      as $open_blockers
     | $i + {
         status: (
           if $i.goal then "umbrella"
@@ -301,7 +308,6 @@ out=$(jq -n -r \
       elif .status == "in-progress" then "/engineering:execute #\(.number)"
       elif .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
-      elif .status == "merged" then "merged, the final PR of its umbrella closes it"
       elif .status == "umbrella" then
         subs_of(.number) as $s
         | if $s.total == 0 then "/engineering:discuss #\(.number)"
@@ -310,8 +316,7 @@ out=$(jq -n -r \
       else "/engineering:discuss #\(.number)"
       end;
     def label_of: {"needs-review": "needs review", "in-progress": "in progress", "ready": "ready",
-                   "blocked": "blocked", "umbrella": "umbrella", "request": "request",
-                   "merged": "merged"}[.];
+                   "blocked": "blocked", "umbrella": "umbrella", "request": "request"}[.];
     def line:
       [ "- #\(.number) \(.title)" ]
       + (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
