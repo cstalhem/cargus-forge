@@ -1,15 +1,6 @@
----
-name: domain-model
-description: Keep a repo's domain terms in one glossary, `docs/glossary.md`. Holds the entry format and the gate a term must pass. In discuss, it challenges and settles each domain term as a numbered question, so an accepted term becomes a `Term` decision in the draft issue. In execute, it writes each `Term` decision and each new or renamed domain name into the glossary in the issue's PR. discuss and execute call it in their Load step.
-argument-hint: "<discuss | execute>"
-user-invocable: false
----
+# Domain model
 
-# domain-model
-
-Caller: $ARGUMENTS
-
-The glossary is the one list of domain terms that developers and agents share. The calling skill loads `docs/glossary.md` into its own body. Check terms against that text, except where your caller's section says to read the file again. The format and the gate apply in every caller. Then follow the section for your caller.
+The glossary is the one list of domain terms that developers and agents share. The skill that reads this file loads `docs/glossary.md` into its own body. Check terms against that text, except where that skill's section says to read the file again. The format and the gate apply in every skill that reads this file. Then follow the section for that skill.
 
 ## Format
 - The file starts with a `# Glossary` heading. Then comes one entry per term: `**<Term>**: <definition>`, with an optional `_Avoid_: <words>` line under it. A blank line separates entries.

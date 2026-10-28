@@ -36,11 +36,12 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 
-Three more skills run only when another skill calls them:
+Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
 - `verify` grades a PR against its issue's scenarios with a fresh-context agent and marks a passing PR ready. execute and ship call it.
-- `domain-model` keeps the repo's domain terms in `docs/glossary.md`. discuss and execute call it.
+
+discuss and execute read `references/domain-model.md` in their Load step. It holds the rules that keep the repo's domain terms in `docs/glossary.md`.
 
 ## Process overview
 
