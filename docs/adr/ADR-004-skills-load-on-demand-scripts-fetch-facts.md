@@ -9,8 +9,8 @@ status: active
 - **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total.
 
 ## Details
-- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `research`, `plan`, `execute`, `ship`, `next`.
-- **Called skills:** `slice`, `verify`, `reflect`, `grill`, `tdd`, `ste-writing`.
+- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`. `research` is not built (#200), and neither is the plan page (#201).
+- **Called skills:** `slice`, `verify`. `reflect` is not built (#202). `grill`, `tdd` and `ste-writing` are not built and have no request.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill.
 - **Scripted facts:**
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
