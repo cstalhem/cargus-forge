@@ -96,15 +96,36 @@ for n in $(printf '%s' "$issues" | jq -r '
     || fail "cannot read the blockers of #$n."
 done
 
-# Closed and total sub-issues of each umbrella that has any.
+# Closed and total sub-issues of each umbrella that has any, and the numbers of its open ones.
 subs='{}'
 for n in $(printf '%s' "$issues" | jq -r '.[] | select(.goal and .sub_total > 0) | .number' 2>/dev/null); do
   read_list "repos/{owner}/{repo}/issues/$n/sub_issues"
   count=$(printf '%s' "$items" | jq '
-    {total: length, closed: (map(select(.state == "closed")) | length)}' 2>/dev/null) \
+    {total: length, closed: (map(select(.state == "closed")) | length),
+     open: [.[] | select(.state != "closed") | .number]}' 2>/dev/null) \
     || fail "cannot read the sub-issues of #$n."
   subs=$(jq -n --argjson all "$subs" --argjson c "$count" --arg n "$n" '$all + {($n): $c}' 2>/dev/null) \
     || fail "cannot read the sub-issues of #$n."
+done
+
+# Merged sub-issues (#212 D1): for each umbrella with open sub-issues, the closed PRs into
+# each of its `<u>-*` remote branches, its feature branch. A merged PR whose first line is
+# "Sub-issue #<n> of" marks open issue #<n> as merged. The repo may leave a merged sub-issue
+# open until ship's final PR closes it, and GitHub may delete its branch, so this fact rests
+# on the PR alone.
+merged_issues='[]'
+for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | length > 0) | .key' 2>/dev/null); do
+  for b in $(printf '%s' "$branches" | jq -r --arg p "$u-" '.[] | select(startswith($p))' 2>/dev/null); do
+    enc=$(jq -rn --arg b "$b" '$b | @uri' 2>/dev/null) || fail "cannot read the PRs into branch $b."
+    read_list "repos/{owner}/{repo}/pulls?base=$enc&state=closed"
+    list=$(printf '%s' "$items" | jq '
+      [.[] | select(.merged_at)
+       | (.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
+       | capture("^Sub-issue #(?<n>[0-9]+) of") | .n | tonumber]' 2>/dev/null) \
+      || fail "cannot read the PRs into branch $b."
+    merged_issues=$(jq -n --argjson all "$merged_issues" --argjson l "$list" '$all + $l | unique' 2>/dev/null) \
+      || fail "cannot read the PRs into branch $b."
+  done
 done
 
 # Cleanup (#69 D8, D12). An issue branch is a branch whose name starts with `<n>-`, as above,
@@ -226,6 +247,7 @@ out=$(jq -n -r \
   --argjson branches "$branches" \
   --argjson blockers "$blockers" \
   --argjson subs "$subs" \
+  --argjson merged_issues "$merged_issues" \
   --argjson finished "$finished" \
   --argjson merged_branches "$merged_branches" \
   --argjson finished_branches "$finished_branches" '
@@ -239,6 +261,8 @@ out=$(jq -n -r \
   # - needs review: an open ready PR whose first line names the issue;
   # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
   #   PR. A branch whose PR merged is finished work, so it gives nothing;
+  # - merged: a merged PR into the feature branch of its umbrella names it (#212 D1). No
+  #   group lists it and no `Next:` step picks it, because the final PR of ship closes it;
   # - ready, or blocked with an open "blocked by" link: the body has a `## Scenarios` section;
   # - request: anything else.
   ($issues | map(
@@ -252,6 +276,7 @@ out=$(jq -n -r \
           if $i.goal then "umbrella"
           elif $ready_pr then "needs-review"
           elif $draft_pr or ($own_branches | length) > 0 then "in-progress"
+          elif $merged_issues | index($i.number) then "merged"
           elif $i.scenarios then (if ($open_blockers | length) > 0 then "blocked" else "ready" end)
           else "request"
           end),
@@ -263,28 +288,37 @@ out=$(jq -n -r \
 
   | ($all | map({key: "\(.number)", value: .}) | from_entries) as $by_number
 
-  # One suggestion for each status.
-  | def suggestion:
+  # The sub-issues of umbrella $u: the total, and the done ones: the closed ones plus the
+  # open ones whose status is merged (#212 D1).
+  | def subs_of($u):
+      ($subs["\($u)"] // {total: 0, closed: 0, open: []}) as $s
+      | {total: $s.total,
+         done: ($s.closed + ([$s.open[] | select($by_number["\(.)"].status == "merged")] | length))};
+
+    # One suggestion for each status.
+    def suggestion:
       if .status == "needs-review" then "review and merge PR #\(.pr)"
       elif .status == "in-progress" then "/engineering:execute #\(.number)"
       elif .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
+      elif .status == "merged" then "merged, the final PR of its umbrella closes it"
       elif .status == "umbrella" then
-        ($subs["\(.number)"] // {total: 0, closed: 0}) as $s
+        subs_of(.number) as $s
         | if $s.total == 0 then "/engineering:discuss #\(.number)"
-          elif $s.closed == $s.total then "/engineering:ship #\(.number)"
+          elif $s.done == $s.total then "/engineering:ship #\(.number)"
           else "build its sub-issues" end
       else "/engineering:discuss #\(.number)"
       end;
     def label_of: {"needs-review": "needs review", "in-progress": "in progress", "ready": "ready",
-                   "blocked": "blocked", "umbrella": "umbrella", "request": "request"}[.];
+                   "blocked": "blocked", "umbrella": "umbrella", "request": "request",
+                   "merged": "merged"}[.];
     def line:
       [ "- #\(.number) \(.title)" ]
       + (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
       + (if .status == "umbrella" then
-           ($subs["\(.number)"] // {total: 0, closed: 0}) as $s
+           subs_of(.number) as $s
            | issue_branches(.number) as $fb
-           | [ (if $s.total == 0 then "not sliced" else "\($s.closed) of \($s.total) sub-issues closed" end),
+           | [ (if $s.total == 0 then "not sliced" else "\($s.done) of \($s.total) sub-issues done" end),
                (if ($fb | length) == 0 then "no feature branch"
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"
                 else "\($fb | length) feature branches: \($fb | join(", "))" end) ]
@@ -321,7 +355,7 @@ out=$(jq -n -r \
     | ( [ $all[] | select(.status == "needs-review") ][0] ) as $review
     | ( [ $all[] | select(.status == "in-progress") ][0] ) as $doing
     | ( [ $all[] | select(.status == "umbrella")
-          | select(($subs["\(.number)"] // {total: 0}) | .total > 0 and .closed == .total) ][0] ) as $to_ship
+          | select(subs_of(.number) | .total > 0 and .done == .total) ][0] ) as $to_ship
     | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
     | ( [ $all[] | select(.status == "request") ][0] ) as $request
 
