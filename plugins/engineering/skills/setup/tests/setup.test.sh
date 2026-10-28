@@ -139,17 +139,14 @@ setup
 check "a new repo: prints the facts, every file missing, no commands, branches or docs, and no warnings"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has '### Repo' \
-  '- repo: `acme/widget`' \
-  '- default branch: `main`' \
-  '- allow_squash_merge: `true`' \
+has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Files$nl- \`docs/agents/commands.md\` · missing$nl$nl" \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · missing' \
   "### Commands$nl- none" \
   "### Branches$nl- branches: none other than the default branch, \`dependabot/*\` and \`renovate/*\`$nl" \
   "### Docs$nl- none$nl" \
   "## Warnings$nl- none"
-lacks 'issue-tracker'
+lacks 'issue-tracker' '- default branch:'
 grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=1' "$GH_LOG" \
   || miss "the open issues were not read with gh api REST"
 done_check
@@ -184,9 +181,8 @@ setup
 check "a default branch other than main gives a warning"
 gh_repo develop
 run
-has '- default branch: `develop`' \
-  'The default branch is `develop`, not `main`. The plugin'"'"'s skills take `main` as the default branch.'
-lacks "## Warnings$nl- none" '#85'
+has 'The default branch is `develop`, not `main`. The plugin'"'"'s skills take `main` as the default branch.'
+lacks "## Warnings$nl- none" '#85' '- default branch:'
 done_check
 
 setup

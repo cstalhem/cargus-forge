@@ -13,7 +13,7 @@
 #
 # Output:
 #   ## Facts
-#   ### Repo                 `- repo:`, `- default branch:` and `- allow_squash_merge:` lines.
+#   ### Repo                 `- repo:` and `- allow_squash_merge:` lines.
 #   ### Files                a line `- <path> · <state>` for the repo profile,
 #                            `docs/agents/commands.md`: present or missing (#181 D2).
 #   ### Optional behaviours  a line `- <name> · <path> · <state>` for each optional behaviour:
@@ -98,7 +98,6 @@ facts_repo() {
 
   line '### Repo'
   line "- repo: \`$repo\`"
-  line "- default branch: \`$default_branch\`"
   line "- allow_squash_merge: \`$squash\`"
   line
 
