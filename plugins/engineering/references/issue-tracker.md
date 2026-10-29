@@ -1,10 +1,10 @@
 # Issue tracker
 
-The plugin's contract for branches, merging and PRs. It is the same in every repo. A repo's own facts, its repo and its default branch, are in its repo profile, `docs/agents/issue-tracker.md`, with its notes under `## Notes`. A note can add to this contract but not change it. The contract assumes that the default branch is `main`.
+The plugin's contract for branches, merging and PRs. It is the same in every repo, and it takes `main` as the default branch.
 
 ## Branches
-- **Branch pattern:** `<n>-<slug>`, the form `gh issue develop` makes. It is fixed, and a repo cannot set its own. Create every branch with `gh issue develop <n> --name <n>-<slug> --base <base>`, so it is linked to its issue. Where that gets a GraphQL 403, as in a Claude Code cloud session, run `git fetch origin <base>`, then `git push origin <sha>:refs/heads/<n>-<slug>` with `origin/<base>` as `<sha>`, or `HEAD` when the branch starts from the current branch's head and the current branch is `<base>`. That branch has no link.
-  - Skills find a branch by its name, not by its link, because the link cannot be read or made on every surface. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
+- **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own. Create a branch the same way on every surface: run `git push origin <sha>:refs/heads/<n>-<slug>`, with `origin/<base>` as `<sha>`, or `HEAD` when the branch starts from the current branch's head and the current branch is `<base>`. Before the push, run `git fetch origin <base>` only when `<sha>` is `origin/<base>`, so that the push of `HEAD` works when the current branch was never pushed. The branch has no link to its issue.
+  - Skills find a branch by its name, because no branch is linked to its issue. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
   - Feature branch of an umbrella issue: base `main`. When a single issue with work so far becomes an umbrella and the user keeps those commits, slice reuses the issue's own branch as the feature branch. Only when no such branch exists, as in a cloud session, does slice create the feature branch from the current branch's head, with the current branch as base.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.

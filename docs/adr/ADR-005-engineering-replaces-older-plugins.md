@@ -9,10 +9,10 @@ status: active
 - **Decision:** The engineering plugin takes over the roles of knowledge-system and adr-management. It takes their ideas and copies no files. The two older plugins are deprecated when engineering is stable.
 
 ## Details
-- `domain-model` takes the ADR rules from adr-management: the litmus test, living ADRs, and glossary alignment.
-- `reflect` takes the reflection step from knowledge-system, and `domain-model` takes the knowledge tiers.
-- `reflect` runs once for each piece of work that lands on `main`, from ship or from execute. It proposes a change only when it has evidence. There is no push hook, because with feature branches a push hook fires on every sub-issue push.
-- `verify` can use a second opinion in the style of codex-review. codex-review stays as it is.
+- `references/domain-model.md` holds only the glossary rules: the format, the gate, and how discuss and execute use it.
+- Engineering does not hold the ADR rules from adr-management yet, nor the knowledge tiers or the reflection step from knowledge-system. `reflect`, the skill for the reflection step, is a request in #202.
+- knowledge-system and adr-management stay until engineering holds these.
+- codex-review stays as it is.
 
 ## Rejected alternatives
 - **Keep both older plugins, and leave ADR and knowledge skills out of engineering:** the plugin is smaller, but you must install three plugins.

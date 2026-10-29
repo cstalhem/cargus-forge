@@ -2,7 +2,7 @@
 
 Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next.
 
-The plugin keeps its record of the work in GitHub: issues, labels, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
+The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes, and you merge every PR yourself. It works in a local Claude Code session and in a Claude Code cloud session.
 
 ## Requirements
 
@@ -21,7 +21,7 @@ Install the plugin from this repo's marketplace:
 Then run `/engineering:setup` once per repo, from its top folder. Plugin updates reach the repo without a re-run, because the plugin's own rules stay in the plugin.
 
 - It shows what it found on one screen, then asks numbered questions, each with a recommended answer. Answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
-- After your yes, it writes the repo profile in `docs/agents/`: `issue-tracker.md` with the repo and its default branch, and `commands.md` with the build, test and lint commands it detected.
+- After your yes, it writes the repo profile, which is only `docs/agents/commands.md`: the build, test and lint commands it detected. The plugin takes `main` as the default branch, so the profile does not record it.
 - It offers each optional behaviour. Today that is the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch.
 - On an existing repo, it reports what differs from the plugin's process, such as other branch names or conflicting docs, and offers one issue that lists them.
 - It commits, pushes and labels nothing. It lists the files it wrote, and you commit them on a branch and open a PR.
@@ -33,14 +33,15 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:setup` | Writes the repo profile and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
 | `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then opens a draft PR. |
-| `/engineering:next` | Shows where each open issue stands, suggests one next command, and repairs status labels that the facts contradict. |
+| `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 
-Three more skills run only when another skill calls them:
+Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
 - `verify` grades a PR against its issue's scenarios with a fresh-context agent and marks a passing PR ready. execute and ship call it.
-- `domain-model` keeps the repo's domain terms in `docs/glossary.md`. discuss and execute call it.
+
+discuss and execute read `references/domain-model.md` in their Load step. It holds the rules that keep the repo's domain terms in `docs/glossary.md`.
 
 ## Process overview
 
@@ -71,13 +72,6 @@ flowchart TD
 
 Run `/engineering:next` at any point to see where things stand and what to run next. The process terms are defined in the [glossary](../../docs/glossary.md).
 
-## Status labels
+## Status
 
-| Label | Set by | Means |
-|---|---|---|
-| `status:ready` | discuss, slice | Shaped and ready for execute. |
-| `status:in-progress` | execute | execute is building it. |
-| `status:needs-review` | verify | Its PR passed verify and waits for your review and merge. |
-| `umbrella` | discuss | An umbrella issue, which slice splits into sub-issues. |
-
-An open issue with none of these labels is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`, which also repairs a status label that the facts contradict.
+`/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.

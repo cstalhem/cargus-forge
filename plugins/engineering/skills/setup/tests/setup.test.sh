@@ -6,7 +6,6 @@ set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
 script=$here/../setup.sh
-apply=$here/../apply.sh
 templates=$(cd "$here/../../../templates" && pwd)
 failures=0
 
@@ -83,15 +82,6 @@ branches() {
   for b in "$@"; do git push -q origin "main:refs/heads/$b" || exit 1; done
 }
 
-# issue_tracker <default branch>: write docs/agents/issue-tracker.md as setup renders it, with
-# the same sed as the #147 check, and a note.
-issue_tracker() {
-  mkdir -p docs/agents
-  sed -e 's#{{repo}}#acme/widget#' -e "s#{{default_branch}}#$1#" "$templates/issue-tracker.md" \
-    > docs/agents/issue-tracker.md
-  printf '%s\n' '- A note that setup never reads.' >> docs/agents/issue-tracker.md
-}
-
 # A listing of every path under the repo, .git included, and under its origin, with each
 # file's checksum.
 snapshot() {
@@ -149,95 +139,29 @@ setup
 check "a new repo: prints the facts, every file missing, no commands, branches or docs, and no warnings"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has '### Repo' \
-  '- repo: `acme/widget`' \
-  '- default branch: `main`' \
-  '- allow_squash_merge: `true`' \
-  '- `docs/agents/issue-tracker.md` · missing' \
-  '- `docs/agents/commands.md` · missing' \
+has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
+  "### Files$nl- \`docs/agents/commands.md\` · missing$nl$nl" \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · missing' \
   "### Commands$nl- none" \
   "### Branches$nl- branches: none other than the default branch, \`dependabot/*\` and \`renovate/*\`$nl" \
   "### Docs$nl- none$nl" \
   "## Warnings$nl- none"
+lacks 'issue-tracker' '- default branch:'
 grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=1' "$GH_LOG" \
   || miss "the open issues were not read with gh api REST"
 done_check
 
 setup
-check "files that setup wrote are current, whatever the notes hold, and commands.md is present"
-issue_tracker main
+check "a workflow copy of the template is current, and commands.md is present"
+mkdir -p docs/agents
 printf '# Commands\n' > docs/agents/commands.md
 mkdir -p .github/workflows
 cp "$templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml
 git add -A && git commit -qm profile
 run
-has '- `docs/agents/issue-tracker.md` · current' \
-  '- `docs/agents/commands.md` · present' \
+has '- `docs/agents/commands.md` · present' \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · current'
 lacks '```diff'
-done_check
-
-setup
-check "files that are not committed are read from the working tree"
-issue_tracker main
-run
-has '- `docs/agents/issue-tracker.md` · current'
-done_check
-
-setup
-check "an issue-tracker.md with other facts differs, with a diff of the part up to ## Notes"
-issue_tracker develop
-run
-has '- `docs/agents/issue-tracker.md` · differs' \
-  '```diff' \
-  '-- **Default branch:** `develop`.' \
-  '+- **Default branch:** `main`.'
-lacks 'A note that setup never reads'
-done_check
-
-setup
-check "an issue-tracker.md with the marker line but no ## Notes line differs"
-mkdir -p docs/agents
-sed '/^## Notes$/d' "$templates/issue-tracker.md" | sed 's#{{repo}}#acme/widget#; s#{{default_branch}}#main#' \
-  > docs/agents/issue-tracker.md
-printf 'We use GitHub.\n' >> docs/agents/issue-tracker.md
-run
-has '- `docs/agents/issue-tracker.md` · differs' '-We use GitHub.'
-lacks 'not written by setup'
-done_check
-
-setup
-check "an issue-tracker.md that setup did not write is printed whole, in a fence that no line of it closes"
-mkdir -p docs/agents
-printf '%s\n' '# Issue tracker' '' '- Branches are named `feature/<slug>`.' '- Rebase-merge every PR.' \
-  '```sh' 'git rebase main' '```' '## Notes' '- a note' > docs/agents/issue-tracker.md
-run
-has "- \`docs/agents/issue-tracker.md\` · not written by setup$nl\`\`\`\`markdown$nl# Issue tracker$nl" \
-  '- Branches are named `feature/<slug>`.' \
-  "- Rebase-merge every PR.$nl\`\`\`sh${nl}git rebase main$nl\`\`\`$nl## Notes$nl- a note$nl\`\`\`\`$nl"
-lacks '```diff' '· differs'
-done_check
-
-setup
-check "a file whose first line is another comment, or that has the marker text later, is not written by setup"
-mkdir -p docs/agents
-printf '%s\n' '<!-- Written by hand. -->' '<!-- Written by /engineering:setup. Edit only under ## Notes. -->' \
-  > docs/agents/issue-tracker.md
-run
-has '- `docs/agents/issue-tracker.md` · not written by setup' "$nl\`\`\`markdown$nl<!-- Written by hand. -->$nl"
-done_check
-
-setup
-check "after apply.sh --adopt moves the text under ## Notes, the file is current"
-mkdir -p docs/agents
-printf '%s\n' '# Issue tracker' '' '- Squash-merge every PR.' > docs/agents/issue-tracker.md
-cp docs/agents/issue-tracker.md "$tmp/old-tracker"
-bash "$apply" --issue-tracker --adopt --repo acme/widget --default-branch main > /dev/null \
-  || miss "apply.sh --adopt failed"
-tail -n 3 docs/agents/issue-tracker.md | cmp -s - "$tmp/old-tracker" || miss "the old text is not at the end"
-run
-has '- `docs/agents/issue-tracker.md` · current'
 done_check
 
 setup
@@ -256,27 +180,9 @@ done_check
 setup
 check "a default branch other than main gives a warning"
 gh_repo develop
-issue_tracker develop
 run
-has '- default branch: `develop`' \
-  '- `docs/agents/issue-tracker.md` · current' \
-  'The default branch is `develop`, not `main`. ship and the final PR still assume `main`.'
-lacks "## Warnings$nl- none" '#85'
-done_check
-
-setup
-check "a default branch with & and # renders literally, so the file apply.sh writes is current"
-branch='fix&it#2'
-gh_repo "$branch"
-mkdir -p docs/agents
-text=$(cat "$templates/issue-tracker.md"; printf x)
-text=${text%x}
-text=${text//'{{repo}}'/'acme/widget'}
-text=${text//'{{default_branch}}'/"$branch"}
-printf '%s' "$text" > docs/agents/issue-tracker.md
-[[ "$text" == *'`fix&it#2`'* ]] || miss "the fixture does not hold the branch name"
-run
-has '- `docs/agents/issue-tracker.md` · current'
+has 'The default branch is `develop`, not `main`. The plugin'"'"'s skills take `main` as the default branch.'
+lacks "## Warnings$nl- none" '#85' '- default branch:'
 done_check
 
 setup
@@ -360,10 +266,10 @@ done_check
 
 setup
 check "run from a subdirectory, it reads the files at the top of the repo"
-issue_tracker main
-mkdir -p sub/dir
+mkdir -p docs/agents sub/dir
+printf '# Commands\n' > docs/agents/commands.md
 run "$repo/sub/dir"
-has '- `docs/agents/issue-tracker.md` · current'
+has '- `docs/agents/commands.md` · present'
 done_check
 
 setup

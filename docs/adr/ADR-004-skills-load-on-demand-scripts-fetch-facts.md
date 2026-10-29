@@ -9,8 +9,8 @@ status: active
 - **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total.
 
 ## Details
-- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `research`, `plan`, `execute`, `ship`, `next`.
-- **Called skills:** `slice`, `verify`, `reflect`, `grill`, `domain-model`, `tdd`, `ste-writing`.
+- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`. `research` is not built (#200), and neither is the plan page (#201).
+- **Called skills:** `slice`, `verify`. `reflect` is not built (#202). `grill`, `tdd` and `ste-writing` are not built and have no request.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill.
 - **Scripted facts:**
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
@@ -20,6 +20,7 @@ status: active
 - **Size and placement:**
   - No skill body is longer than about 150 lines.
   - Critical rules go at the top, because only the start of a skill is restored after compaction.
+  - The glossary rules live in `references/domain-model.md`, which discuss and execute read in their Load step instead of calling a skill.
   - Rules that several skills share live in `references/rules.md`. Each skill pulls it in with `` !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"` `` as the first line of its Rules section, pre-approved in `allowed-tools`, so the rules are part of the skill body. A missing file stops a typed skill with no output, makes the Skill tool return the error for a called skill, and is not caught by `claude plugin validate`.
   - The plugin has no `CLAUDE.md`, because Claude Code does not load one from a plugin.
   - Facts about a repo live in `docs/agents/`, which skills read on demand.
