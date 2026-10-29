@@ -1,7 +1,7 @@
 ---
 name: plugin-testing
-description: "Headless test runs of a plugin's skills with claude -p: keeping a run out of the current session, seeing what a skill loaded, testing a skill that another skill calls, and injecting files into a skill body with ${CLAUDE_PLUGIN_ROOT}"
-when_to_use: "When running a manual or verify test of a plugin skill with claude -p, checking what a skill's body holds after it loads, or writing a !`command` injection or allowed-tools line in a plugin skill"
+description: "Headless test runs of a plugin's skills with claude -p: keeping a run out of the current session, seeing what a skill loaded, testing a skill that another skill calls, and injecting files into a skill body with ${CLAUDE_PLUGIN_ROOT}, plus interactive runs through tmux for pop-ups and permission prompts"
+when_to_use: "When running a manual or verify test of a plugin skill with claude -p, checking what a skill's body holds after it loads, writing a !`command` injection or allowed-tools line in a plugin skill, or testing a pop-up or which calls a skill pre-approves"
 ---
 
 # Testing plugin skills headless
@@ -29,6 +29,27 @@ A `claude -p` started from inside a Claude Code session inherits `CLAUDE_CODE_SE
 
 In `claude -p` (2.1.308), a Skill call needs approval only when the called skill has an `allowed-tools` line, from the prompt and from inside a typed skill alike. Without approval the call is denied, and the run only reports that the skill did not load. Pass `--allowedTools=Skill`. Write it with `=`: the flag takes several values, so `--allowedTools Skill "<prompt>"` swallows the prompt.
 
+## Test an interactive flow
+
+`claude -p` has no AskUserQuestion tool and turns every permission prompt into a denial. To test a pop-up, or which calls prompt, drive an interactive session through tmux:
+
+```bash
+tmux new-session -d -s t -x 200 -y 50 "cd <test repo> && env -u CLAUDE_CODE_SESSION_ID -u CLAUDECODE claude --permission-mode default --plugin-dir ./plugins/<name>"
+tmux send-keys -t t "/<plugin>:<skill>"; tmux send-keys -t t Enter   # a separate Enter submits reliably
+tmux capture-pane -p -t t | grep -v '^\s*$' | tail -40               # read the screen
+```
+
+- A new folder first shows the trust dialog (`Down Enter` trusts it); a fresh machine also shows the theme and security screens.
+- The session transcript is in `~/.claude/projects/<folder>/<id>.jsonl`. It shows each tool call, and which calls went out in the same message.
+- Rejecting a permission prompt ends the turn. Put a call that is meant to prompt last.
+- To keep a GitHub write out of a test, put a `gh` script first on `PATH` that logs the call and fakes the write, and passes reads on to the real `gh`.
+- What Claude Code 2.1.312 showed:
+  - A skill's `allowed-tools` hold after an AskUserQuestion answer, through several pop-ups in one turn, but not after the user's next message.
+  - `Edit(<path>)` covers the Write tool; a `Write(<path>)` rule never matches.
+  - `{owner}/{repo}` in a `gh api` rule matches as literal text.
+  - A `gh api` GET needs approval like any other `gh api` call.
+  - A write to the session's scratchpad needs no approval, and a write to `/tmp` does.
+
 ## Inject a file into a skill body
 
 - `` !`cat "${CLAUDE_PLUGIN_ROOT}/references/<file>.md"` `` runs when the skill loads, and the model sees only the output, as part of the skill body.
@@ -49,3 +70,6 @@ In `claude -p` (2.1.308), a Skill call needs approval only when the called skill
 - **What went wrong:** A skill with a broken injection line ran in `claude -p`, returned an empty result and reported success.
   **Why:** A failed or blocked `` !`…` `` command stops a typed skill before the first turn, and `claude -p` does not mark that as an error.
   **Fix:** Check the injected file in the verify step, and check `num_turns` in the result, not only `is_error`.
+- **What went wrong:** A test session loaded a plugin with `--plugin-dir` from outside its working folder, and the skill stopped at its first `` !`cat …` `` line.
+  **Why:** Claude Code lets an injected `cat` read only from the session's working folders, and a `--plugin-dir` outside them is not one.
+  **Fix:** Copy the plugin into the test repo and load it with `--plugin-dir ./plugins/<name>`.
