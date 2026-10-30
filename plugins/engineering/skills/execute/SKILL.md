@@ -16,6 +16,7 @@ Issue: $ARGUMENTS
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - Locally, use the session's worktree. Do not make a second one, and do not move or rename its directory, because that breaks the running session. In a cloud session, enter no worktree. Use the designated branch if the session names one, and otherwise the issue's `<n>-<slug>` branch, in the current directory. A session is a cloud session when `printenv CLAUDE_CODE_REMOTE` prints `true`.
 - Run plain git commands, one at a time, in the current directory: no `cd … &&` and no `git -C`. Claude Code blocks git commands that it cannot confirm stay inside the worktree.
+- The arguments are `#<n>`, with a `PENDING resume <k> of 3` suffix when step 6 of an earlier run in this session scheduled this run with `send_later`. The suffix changes nothing before step 6.
 - Deviations:
   1. A bug in the way of the issue: fix it, and name the fix in the PR.
   2. A missing guard that the issue needs: add it, and name it in the PR.
@@ -62,7 +63,9 @@ Issue: $ARGUMENTS
    - `## Deviations`: only if a deviation rule was used, one line for each.
 6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number.
    - **FAIL:** fix each gap and each failed check that its report names, and go back to step 4. If it fails a second time, stop and ask.
-   - **PENDING:** stop. Name each pending check, and tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again. A PENDING verdict does not count as one of the two failures.
+   - **PENDING:** name each pending check. A PENDING verdict does not count as one of the two failures. Then, the first that applies:
+     - **In a cloud session, with a resume left:** the session is a cloud session (step 2's `printenv CLAUDE_CODE_REMOTE` printed `true`), and the arguments carry no `PENDING resume <k> of 3` or carry one with `<k>` below 3; `<k>` is 0 when they carry none. Call the `send_later` tool with `delay_minutes` 10, the name `execute #<n>: PENDING resume <k+1> of 3` and the message `/engineering:execute #<n> PENDING resume <k+1> of 3`. Say that the run resumes itself in 10 minutes, and end the turn. The message starts a run in this session that resumes on this branch and calls verify again, and its arguments carry the count, so at most three resumes follow one PENDING verdict after another.
+     - **Otherwise** (not a cloud session, or the third resume got PENDING): stop. Tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again.
 
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
