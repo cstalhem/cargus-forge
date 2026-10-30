@@ -27,3 +27,5 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 - Run headless skill tests as `env -u CLAUDE_CODE_SESSION_ID claude -p --session-id <new uuid>`, so they do not write into the current session (see skill: plugin-testing).
 - Pass `--allowedTools=Skill`, with `=`, when a `claude -p` test calls a skill that has `allowed-tools` through the Skill tool (see skill: plugin-testing).
 - When a skill injects a file with `` !`cat …` ``, check in its verify step that the file exists; `claude plugin validate` does not (see skill: plugin-testing).
+- Load a plugin under test from inside the session's working folder; an injected `cat` from a `--plugin-dir` outside it is refused (see skill: plugin-testing).
+- Test a pop-up or a permission prompt in an interactive session through tmux, because `claude -p` has neither (see skill: plugin-testing).
