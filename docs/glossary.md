@@ -46,3 +46,7 @@ _Avoid_: feature flag, option
 **Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it.
 
 **Gap**: A scenario or `Term` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
+
+**Designated branch**: The branch that a Claude Code cloud session's system prompt names for it to push to; when a session has one, it is the issue branch.
+
+**Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, or the designated branch in a cloud session that names one.
