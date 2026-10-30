@@ -45,8 +45,10 @@ _Avoid_: feature flag, option
 
 **Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it.
 
-**Gap**: A scenario or `Term` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
+**Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
 
 **Designated branch**: The branch that a Claude Code cloud session's system prompt names for it to push to; when a session has one, it is the issue branch.
 
 **Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, or the designated branch in a cloud session that names one.
+
+**ADR decision**: A line in an issue's `## Decisions` that tells execute to write a new ADR or edit an existing one in `docs/adr/`, holding the decision and its rejected alternatives.
