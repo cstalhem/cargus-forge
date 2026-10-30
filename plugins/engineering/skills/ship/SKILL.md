@@ -26,9 +26,10 @@ Umbrella issue: $ARGUMENTS
    - On a conflict, stop, list the files, and ask.
    - Run the checks in `commands.md`. If one fails, stop and report it.
    - Run `git push origin <branch>`. verify grades only a pushed head.
-5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
+5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. It returns the verdict, the URL of the comment it posted and each gap. Keep the URL for step 6. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
 6. **Final PR.** If `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&base=main&state=open&per_page=100'` shows no PR, run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<umbrella title>" -f head=<branch> -f base=main -F body=@<path>`, with the final PR body from `formats.md` written to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `main` or it is a draft. The body has:
    - one paragraph on what the feature does;
+   - one line `Verify: **PASS**, <URL of the umbrella's verify comment>`, with the URL from step 5;
    - one `Closes #<n>` line for each sub-issue that is still open, then one for the umbrella. Run `gh api 'repos/{owner}/{repo}/issues/<n>/sub_issues?per_page=100'` again for the current state. Where the close-sub-issue workflow runs, it has closed each sub-issue whose PR merged, so often only the umbrella line is left.
 7. **Hand off.** Run `gh pr checks <pr> --watch`. Show the PR URL and the result of its checks, and name any check that fails. The user reviews and merges it.
    - If `gh pr checks` is refused, such as by an HTTP 403 from GraphQL, do not wait for the checks. Read the PR's head SHA with `gh api repos/{owner}/{repo}/pulls/<pr> --jq .head.sha`. Then read its check runs once with `gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?per_page=100' --jq '(.check_runs | length), (.check_runs[] | {name, status, conclusion})'`, page by page as the rules say.

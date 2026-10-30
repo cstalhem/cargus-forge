@@ -59,10 +59,12 @@ A decision that settles one domain term, in the `## Decisions` section of an umb
 Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. An issue whose work writes a `Term` entry lists `docs/glossary.md` under `## Files`.
 
 ## Final PR body
-The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch.
+The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch. The `Verify` line links the umbrella's verify comment, because ship runs verify on the umbrella before the PR exists.
 
 ```markdown
 <one paragraph: what the feature does>
+
+Verify: **PASS**, <URL of the umbrella's verify comment>
 
 Closes #<open sub-issue>
 Closes #<umbrella>
