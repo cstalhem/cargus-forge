@@ -53,3 +53,6 @@ _Avoid_: feature flag, option
 **Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, or the designated branch in a cloud session that names one.
 
 **ADR decision**: A line in an issue's `## Decisions` that tells execute to write a new ADR or edit an existing one in `docs/adr/`, holding the decision and its rejected alternatives.
+
+**Autopilot**: The unattended Build runner: an hourly scheduled task starts a fresh cloud session that runs `/engineering:autopilot`, which starts a child session for each ready issue's execute, one at a time, answers each child's questions, squash-merges each sub-issue PR that verify marked ready, starts ship once an umbrella's sub-issues are done, and hands an issue or a ready PR to you with one comment and one push notification.
+_Avoid_: job, automation, orchestrator, cron job
