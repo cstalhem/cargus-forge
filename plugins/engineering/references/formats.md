@@ -58,6 +58,15 @@ A decision that settles one domain term, in the `## Decisions` section of an umb
 
 Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. An issue whose work writes a `Term` entry lists `docs/glossary.md` under `## Files`.
 
+## ADR decision
+A decision that tells execute to write a new ADR or edit an existing one in `docs/adr/`, in the `## Decisions` section of an umbrella issue or an issue. It holds what the ADR needs from the discuss rounds, because execute sees only the issue. `references/adr.md` says when a decision earns one.
+
+```markdown
+- D<n> · ADR: <ADR-NNN | new: <title>> · <decision in one sentence> · Rejected: <alternative>: <why>; <alternative>: <why>
+```
+
+`ADR-NNN` edits that ADR. `new: <title>` makes a new ADR, which execute numbers when it writes it. An issue whose work writes an ADR lists its file and `docs/adr/README.md` under `## Files`.
+
 ## Final PR body
 The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch. The `Verify` line links the umbrella's verify comment, because ship runs verify on the umbrella before the PR exists.
 
