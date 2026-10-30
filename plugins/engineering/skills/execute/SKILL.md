@@ -1,6 +1,6 @@
 ---
 name: execute
-description: Take one ready issue to a draft PR, in the session's worktree locally or on the session's designated branch in a cloud session. Gets onto the issue branch, builds until the issue's verify command passes, opens the draft PR, then calls verify.
+description: Take one ready issue to a draft PR, in the session's worktree locally, or in the current directory in a cloud session, on its designated branch if it names one. Gets onto the issue branch, builds until the issue's verify command passes, opens the draft PR, then calls verify.
 argument-hint: "<#issue>"
 disable-model-invocation: true
 allowed-tools:
@@ -14,7 +14,7 @@ Issue: $ARGUMENTS
 
 ## Rules
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
-- Locally, use the session's worktree. Do not make a second one, and do not move or rename its directory, because that breaks the running session. In a cloud session, use the designated branch in the current directory, and enter no worktree.
+- Locally, use the session's worktree. Do not make a second one, and do not move or rename its directory, because that breaks the running session. In a cloud session, enter no worktree. Use the designated branch if the session names one, and otherwise the issue's `<n>-<slug>` branch, in the current directory. A session is a cloud session when `printenv CLAUDE_CODE_REMOTE` prints `true`.
 - Run plain git commands, one at a time, in the current directory: no `cd … &&` and no `git -C`. Claude Code blocks git commands that it cannot confirm stay inside the worktree.
 - Deviations:
   1. A bug in the way of the issue: fix it, and name the fix in the PR.
@@ -22,7 +22,7 @@ Issue: $ARGUMENTS
   3. A broken check or tool that blocks the issue: fix it.
   4. A change to the architecture or to a scenario: stop and ask.
   5. The issue fails the size test: stop. Name the criterion that fails and what you found. Commit and push the work so far with `git push -u origin <branch>`. Then:
-     - a sub-issue: if the branch has no open PR, open a draft PR as in step 5, with the same title, first line, base and read-back. Its body is the first line and one line that names the failing criterion. A later run on the narrowed sub-issue then resumes, from this PR in a cloud session and from the issue branch locally, and its step 5 rewrites the PR's title and body. Then call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
+     - a sub-issue: if the branch has no open PR, open a draft PR as in step 5, with the same title, first line, base and read-back. Its body is the first line and one line that names the failing criterion. A later run on the narrowed sub-issue then resumes, from this PR in a session with a designated branch and from the issue branch otherwise, and its step 5 rewrites the PR's title and body. Then call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
      - a single issue: open no PR, because its branch becomes the feature branch. Tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
   6. A new domain name that the code needs and that no `Term` decision and no glossary entry covers, or a rename of a domain name: if it passes the gate in `domain-model.md`, add or edit its entry in `docs/glossary.md` in the same PR, as `domain-model.md` says, and name the entry under the PR's `## Deviations`.
 
@@ -32,7 +32,7 @@ Issue: $ARGUMENTS
    - **Base:** for a sub-issue, the parent's feature branch: the one branch that `git ls-remote --heads origin 'refs/heads/<parent>-*'` lists, by the branch pattern in `references/issue-tracker.md`. Stop if it lists none, or more than one. For a single issue, `main`, the default branch.
    - **Blockers:** read the issue's blockers, and their state, from its `dependencies/blocked_by` links only. If an open issue blocks a single issue, stop. If one blocks a sub-issue, list the merged PRs into the base with `gh api 'repos/{owner}/{repo}/pulls?base=<base>&state=closed&per_page=100' --jq 'length, (.[] | select(.merged_at) | {number, body})'`, page by page as the rules say. A repo without the close-sub-issue workflow leaves a merged sub-issue open, so an open blocker counts as merged when a merged PR's first line names it as its issue ("Sub-issue #<b> of" or "for #<b>"). A mention elsewhere in a body does not count. Name each such PR and go on. Stop and name each open blocker that has no such PR.
    - **Terms:** the issue's `Term` decisions are its own `D<n> · Term:` lines, and each `#<umbrella> D<n>` line in its `## Decisions` whose decision in the umbrella is a `Term` decision. Read that decision's text in the body that the `/parent` call returns.
-2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes` and `git ls-remote --heads origin 'refs/heads/<n>-*'`, which lists the issue's branch. The session is in a worktree when the git dir and the common dir differ.
+2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes`, `printenv CLAUDE_CODE_REMOTE` and `git ls-remote --heads origin 'refs/heads/<n>-*'`, which lists the issue's branch. The session is in a worktree when the git dir and the common dir differ.
    - **Sync:** the cases below that say "sync" run these on the issue branch `<branch>`:
      1. Run `git fetch origin <base> <branch>`. If it fails, for example because `<branch>` is not on the remote, stop and ask.
      2. Run `git rev-list --left-right --count HEAD...origin/<branch>`, which counts the commits only on `HEAD` and only on `origin/<branch>`. If they have diverged (both counts above 0), stop and ask. If `HEAD` is behind `origin/<branch>`, run `git merge --ff-only origin/<branch>`, and stop and ask if it fails.
@@ -40,8 +40,13 @@ Issue: $ARGUMENTS
      - **An open PR whose first line names #<n>** ("Sub-issue #<n> of" or `Closes #<n>`): resume. Stop and ask if the PR's base is not `<base>`. Sync as above. Then read `git log --oneline origin/<base>..HEAD` to see what is done.
      - **No open PR, with no changes and no commits that are not on a remote:** start the branch at the base, so the PR holds only this issue's work. Run `git fetch origin <base>`. If `git ls-remote --heads origin 'refs/heads/<branch>'` lists the branch, run `git fetch origin <branch>`, and stop and ask if `git log --oneline origin/<base>..origin/<branch>` shows commits. Then run `git reset --hard origin/<base>`.
      - **Anything else** (an open PR for another issue, changes, or commits that are not on a remote): stop, show what the branch holds, and ask.
+   - **In a cloud session with no designated branch, not on the issue's branch:** enter no worktree, and the cases after this one do not apply. `HEAD` can be detached or on any other branch.
+     - **No changes and no commits that are not on a remote:**
+       1. If `git ls-remote` lists no branch for the issue, create `<n>-<slug>` from `<base>` as the rules say, with the branch pattern from `references/issue-tracker.md`.
+       2. Sync as above, and run `git switch <branch>` between its fetch and its count. If `git ls-remote` listed the issue's branch, then read `git log --oneline origin/<base>..HEAD` to see what is done.
+     - **Anything else** (changes, commits that are not on a remote, or a `git switch` that fails): stop, show what the checkout holds, and ask.
    - **On the issue's branch:** resume. Sync as above. Then read `git log --oneline origin/<base>..HEAD` to see what is done.
-   - **Not in a worktree:** enter a new one with the EnterWorktree tool, then go on as in the next case.
+   - **Not in a worktree, locally:** enter a new one with the EnterWorktree tool, then go on as in the next case.
    - **In a worktree on its own new branch (Remote Control names it `worktree-…`), with no changes and no commits that are not on a remote:**
      1. If `git ls-remote` lists no branch for the issue, create `<n>-<slug>` from `<base>` as the rules say, with the branch pattern from `references/issue-tracker.md`.
      2. Sync as above, and run `git switch <branch>` between its fetch and its count. A local `<branch>` that already existed can be behind, and the count finds that. Then run `git branch -D <the worktree's old branch>`.
