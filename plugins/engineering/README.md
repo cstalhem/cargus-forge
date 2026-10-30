@@ -32,7 +32,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 |---|---|
 | `/engineering:setup` | Writes the repo profile and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
-| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then opens a draft PR. |
+| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 
@@ -68,7 +68,7 @@ flowchart TD
 
 **Shape** turns a request into issues. discuss asks questions until none is left, with a recommended answer for each. It then runs the size test: an issue fits one session when it delivers one behaviour, one verify command proves it, every file it changes can be named, and no design question is open. Work that passes becomes a single issue. Work that fails becomes an umbrella issue, which slice splits into sub-issues that each pass, on a feature branch.
 
-**Build** takes one issue to a merged PR. execute builds the issue and opens a draft PR. verify grades the PR against the issue's scenarios and marks it ready on a pass. You review and merge it: a single issue's PR into `main`, a sub-issue's PR into the feature branch. Once every sub-issue has merged, ship opens the final PR that takes the feature branch into `main`.
+**Build** takes one issue to a merged PR. execute opens a draft PR after its first commit and builds the issue on it. verify grades the PR against the issue's scenarios and marks it ready on a pass. You review and merge it: a single issue's PR into `main`, a sub-issue's PR into the feature branch. Once every sub-issue has merged, ship opens the final PR that takes the feature branch into `main`.
 
 Run `/engineering:next` at any point to see where things stand and what to run next. The process terms are defined in the [glossary](../../docs/glossary.md).
 
