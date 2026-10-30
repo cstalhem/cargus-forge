@@ -52,11 +52,10 @@ Issue: $ARGUMENTS
 4. **Check.** Run the issue's Verify command and the pre-PR checks in `commands.md`. If one fails, go back to step 3.
 5. **PR.** Run `git push -u origin <branch>`. If the branch has no open PR yet (`gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&state=open&per_page=100'`), run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<issue title>" -f head=<branch> -f base=<base> -F draft=true -F body=@<path>`. If it has one, as after deviation 5, rewrite its title and body with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -f title="<issue title>" -F body=@<path>`. Write the body to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `<base>`, it is not a draft, or its title or body is not the one you wrote. The body has:
    - a first line: for a sub-issue, "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."; for a single issue, `Closes #<n>`;
-   - `## What it delivers`: the changes, file by file;
-   - `## Verify`: each command and its result, and what the commands do not prove;
+   - `## What it delivers`: one bullet for each change, each naming the decision it serves (`D<n>` or `#<umbrella> D<n>`) or the scenario it makes pass. Do not list the changes per file;
    - `## Deviations`: only if a deviation rule was used, one line for each.
 6. **Hand off.** Call the Skill tool with `engineering:verify` and the PR number.
-   - **FAIL:** fix what its report names, failed checks included, and go back to step 4. If it fails a second time, stop and ask.
+   - **FAIL:** fix each gap and each failed check that its report names, and go back to step 4. If it fails a second time, stop and ask.
    - **PENDING:** stop. Name each pending check, and tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again. A PENDING verdict does not count as one of the two failures.
 
 ## Glossary
