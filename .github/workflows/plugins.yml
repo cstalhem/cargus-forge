@@ -43,3 +43,21 @@ jobs:
           fetch-depth: 0
       # Always against main, so a feature branch bumps once for the whole umbrella.
       - run: scripts/check-version-bump.sh origin/main
+
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      # Every tracked test script runs, so a new one needs no workflow edit.
+      - name: Run each test script
+        run: |
+          status=0
+          for t in $(git ls-files '*.test.sh'); do
+            if ! bash "$t"; then
+              echo "::error::$t failed"
+              status=1
+            fi
+          done
+          exit "$status"
