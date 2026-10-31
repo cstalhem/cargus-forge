@@ -56,3 +56,5 @@ _Avoid_: feature flag, option
 
 **Autopilot**: The unattended Build runner: an hourly scheduled task starts a fresh cloud session that runs `/engineering:autopilot`, which starts a child session for each ready issue's execute, one at a time, answers each child's questions, squash-merges each sub-issue PR that verify marked ready, starts ship once an umbrella's sub-issues are done, and hands an issue or a ready PR to you with one comment and one push notification.
 _Avoid_: job, automation, orchestrator, cron job
+
+**Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.

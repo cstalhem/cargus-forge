@@ -25,7 +25,7 @@ Umbrella issue: $ARGUMENTS
 3. **Branch.** If the session is not on the feature branch, run `git status --porcelain`. With no changes, run `git fetch origin <branch>` and `git switch <branch>`. Otherwise, or if the switch fails, stop and ask.
 4. **Merge main.** Run `git fetch origin main <branch>` and `git merge --ff-only origin/<branch>`. If that fails, or `git rev-list origin/<branch>..HEAD` prints anything, stop and ask, because the local branch holds work that no PR reviewed. Then run `git merge --no-edit origin/main`.
    - On a conflict, stop, list the files, and ask.
-   - Run the checks in `commands.md`. If one fails, stop and report it.
+   - Run each pre-PR check (each row of `docs/agents/commands.md` whose task ends with `(pre-PR check)`, and no other row; none if `commands.md` has no such row or does not exist). If one fails, stop and report it.
    - Run `git push origin <branch>`. verify grades only a pushed head.
 5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. It returns the verdict, the URL of the comment it posted and each gap. Keep the URL for step 6. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
 6. **Final PR.** If `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&base=main&state=open&per_page=100'` shows no PR, run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<umbrella title>" -f head=<branch> -f base=main -F body=@<path>`, with the final PR body from `formats.md` written to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `main` or it is a draft. The body has:
