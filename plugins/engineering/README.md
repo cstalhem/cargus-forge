@@ -93,7 +93,7 @@ Then start a cloud session on the repo at claude.ai/code and run `/engineering:a
 | Name | `engineering: autopilot` |
 | Schedule | every hour, `0 * * * *`. The server anchors it to the minute you created it, so the runs do not all start on the hour. |
 | Each run | a fresh Claude Code cloud session in the environment of the session that created it, on this repo, with the prompt `/engineering:autopilot` |
-| Model | the model of the session that created it, for every run and every phase |
+| Model | execute children run on Sonnet; every other run, the hourly run and each ship child, runs on the scheduled task's model, the model of the session that created it |
 
 A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the sessions it starts, the comments it posts and `status.sh` are its record.
 
@@ -109,7 +109,7 @@ Each run takes these steps in order, and ends its turn when a step says so:
 2. **Children.** A child is a session tagged `autopilot`, titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. While a child is working, the run starts nothing and ends. A child that stopped on a question gets an answer: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
 3. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
 4. **Ship.** When every sub-issue of an umbrella issue is done and it has no open final PR, Autopilot starts a child `ship #<u>`.
-5. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order.
+5. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order. The child runs on Sonnet, because execute is nearly all the tokens and a sized sub-issue does not need the strongest model.
 6. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one, and a push notification.
 
 A child is a cloud session on the repo with the typed prompt `/engineering:execute #<n>` or `/engineering:ship #<u>`, and one line in its system prompt that tells it to report to Autopilot's session when its turn ends: finished, stopped on a question, or stopped for another reason. The report starts the next run. A child loads the plugin from the environment it inherits, as [Turning it on](#turning-it-on) says. A child whose typed prompt did not load as a skill reports `<title>: stopped: engineering plugin not loaded in this environment` and does nothing else, and Autopilot hands the issue off.
