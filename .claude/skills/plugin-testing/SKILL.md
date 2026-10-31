@@ -47,6 +47,7 @@ tmux capture-pane -p -t t | grep -v '^\s*$' | tail -40               # read the 
   - A skill's `allowed-tools` hold after an AskUserQuestion answer, through several pop-ups in one turn, but not after the user's next message.
   - `Edit(<path>)` covers the Write tool; a `Write(<path>)` rule never matches.
   - `{owner}/{repo}` in a `gh api` rule matches as literal text.
+  - A `*` in the middle of a Bash rule matches one path segment of varying text (2.1.316): `Bash(gh api -X POST repos/{owner}/{repo}/pulls/*/ccr/ready_for_review)` pre-approves that call for any PR number, in `default` and `auto` mode, and a sibling path such as `ccr/convert_to_draft` is still denied.
   - A `gh api` GET needs approval like any other `gh api` call.
   - A write to the session's scratchpad needs no approval, and a write to `/tmp` does.
 
