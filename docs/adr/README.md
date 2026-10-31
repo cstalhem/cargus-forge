@@ -10,3 +10,4 @@ Each ADR states one current decision. ADRs are living documents, and git holds t
 | [ADR-005](ADR-005-engineering-replaces-older-plugins.md) | Engineering replaces knowledge-system and adr-management | active | |
 | [ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md) | Engineering runs in cloud sessions | active | builds on ADR-001, ADR-002 |
 | [ADR-007](ADR-007-question-delete-simplify-first.md) | Question, delete and simplify before speeding up or automating | active | |
+| [ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md) | Autopilot builds ready issues unattended | active | builds on ADR-001, ADR-004, ADR-006 |
