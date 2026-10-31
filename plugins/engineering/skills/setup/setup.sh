@@ -29,6 +29,12 @@
 #                            than half do not match; and a line `- #<n> · <branches>` for each
 #                            open issue with one or more `<n>-*` branches. Another convention and
 #                            each such issue also give a warning with a suggested action.
+#   ### Conversion issue     a line `- #<n> · <title> · by marker` (or `by title`) for each open
+#                            issue that is the conversion issue, or `- none` (#164). The marker
+#                            `<!-- engineering:setup conversion issue -->` on a line of the body
+#                            wins; only without one, a title with `convert` and `plugin` or
+#                            `engineering`. An issue with a plugin label (`status:*` or
+#                            `umbrella`) and one `<n>-*` branch gets no branch warning.
 #   ### Docs                 a line `- <kind> · <path>` for each doc that setup found, or `- none`
 #                            (#151 D2): `adr` for an ADR folder other than `docs/adr/`, and
 #                            `glossary` for a glossary-like file other than `docs/glossary.md`,
@@ -312,7 +318,10 @@ facts_branches() {
     || fail "cannot read the remote branches."
   # The issues endpoint lists PRs too.
   read_list 'repos/{owner}/{repo}/issues?state=open'
-  issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not) | .number] | sort' 2>/dev/null) \
+  # An issue with a plugin label (`status:*` or `umbrella`) is one that the plugin works on.
+  issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not)
+      | {number, plugin: ([(.labels // [])[] | (.name // empty)] | any(startswith("status:") or . == "umbrella"))}]
+      | sort_by(.number)' 2>/dev/null) \
     || fail "cannot read the open issues."
   # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to
   # 128 KiB (#179 D1).
@@ -339,17 +348,41 @@ facts_branches() {
           "F - convention: `<n>-<slug>`"
         end
       end,
-      ($issues[] as $n
+      ($issues[] as $i
+       | $i.number as $n
        | [$b[] | select(startswith("\($n)-"))] as $mine
        | select($mine | length > 0)
        | "F - #\($n) · \($mine | names)",
-         if ($mine | length) == 1 then
+         if ($mine | length) == 1 and $i.plugin then
+           empty
+         elif ($mine | length) == 1 then
            "W Open issue #\($n) has a branch that matches `\($n)-*`: \($mine | names). The plugin'"'"'s skills take it as the branch of #\($n) and build on it. If it holds other work, rename it so that its name does not start with `\($n)-`. Setup changes no branch."
          else
            "W Open issue #\($n) has \($mine | length) branches that match `\($n)-*`: \($mine | names). The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #\($n), and rename the others. Setup changes no branch."
          end)' 2>/dev/null) || fail "cannot read the remote branches."
   line '### Branches'
   add_lines "$out"
+  line
+}
+
+# The open conversion issue (#164). It reads the open issues that facts_branches left in
+# `items`. An issue holds the marker when a line of its body is the marker, which setup puts at
+# the start of the issue it creates. Only when none does, the title is the fallback: lowercased,
+# it contains `convert` and either `plugin` or `engineering`. A closed issue does not count, so
+# the list holds open issues only (D2).
+facts_conversion() {
+  local marker='<!-- engineering:setup conversion issue -->' out
+  out=$(printf '%s' "$items" | jq -r --arg marker "$marker" '
+    [.[] | select(has("pull_request") | not)] as $open
+    | [$open[] | select((.body // "") | split("\n") | any(rtrimstr("\r") == $marker))] as $marked
+    | (if ($marked | length) > 0 then [$marked[] | {n: .number, t: .title, by: "marker"}]
+       else [$open[] | select((.title // "") | ascii_downcase | contains("convert") and (contains("plugin") or contains("engineering")))
+             | {n: .number, t: .title, by: "title"}] end) as $found
+    | if ($found | length) == 0 then "- none"
+      else $found[] | "- #\(.n) · \(.t | gsub("[\r\n]+"; " ")) · by \(.by)" end' 2>/dev/null) \
+    || fail "cannot read the open issues."
+  line '### Conversion issue'
+  line "$out"
   line
 }
 
@@ -417,6 +450,7 @@ facts_files
 facts_behaviours
 facts_commands
 facts_branches
+facts_conversion
 facts_docs
 
 line '## Warnings'
