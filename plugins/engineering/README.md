@@ -79,7 +79,14 @@ Autopilot is the unattended Build runner. You shape requests in discuss and revi
 
 ### Turning it on
 
-Start a cloud session on the repo at claude.ai/code and run `/engineering:autopilot`. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in the scheduled tasks list on claude.ai:
+Autopilot's children are cloud sessions that inherit the environment, and a child loads the engineering plugin only when the environment provides it: the plugins synced from claude.ai do not reach a session that Autopilot starts, and a cloud session never installs a repo's `enabledPlugins` setting. Give the environment the plugin first, in the environment's settings on claude.ai:
+
+- **This repo**, whose checkout holds the plugin's source: set the environment variable `CLAUDE_CODE_PLUGIN_DIRS` to the absolute path of `plugins/engineering` in the checkout, `/home/user/cargus-forge/plugins/engineering`. Every session in the environment then loads the plugin in place from the checkout, so a child runs the plugin at the commit it checked out, and `claude plugin list` shows it as `engineering@inline`.
+- **Another repo**: add `claude plugin marketplace add cstalhem/cargus-forge` and `claude plugin install engineering@cargus-forge` to the environment's setup script. The script's result is reused for about a week, or until the script or the allowed network hosts change, so edit the script to pick up a new plugin version sooner.
+
+Each run checks this with `claude plugin list` and stops with these instructions when the environment does not provide the plugin.
+
+Then start a cloud session on the repo at claude.ai/code and run `/engineering:autopilot`. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in the scheduled tasks list on claude.ai:
 
 | Setting | Value |
 |---|---|
@@ -98,13 +105,14 @@ Pause or delete the scheduled task in the scheduled tasks list on claude.ai. Whi
 
 Each run takes these steps in order, and ends its turn when a step says so:
 
-1. **Children.** A child is a session tagged `autopilot`, titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. While a child is working, the run starts nothing and ends. A child that stopped on a question gets an answer: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
-2. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
-3. **Ship.** When every sub-issue of an umbrella issue is done and it has no open final PR, Autopilot starts a child `ship #<u>`.
-4. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order.
-5. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one, and a push notification.
+1. **Plugin.** The run checks with `claude plugin list` that the environment provides the engineering plugin to children, as [Turning it on](#turning-it-on) says, and stops with those instructions otherwise.
+2. **Children.** A child is a session tagged `autopilot`, titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. While a child is working, the run starts nothing and ends. A child that stopped on a question gets an answer: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
+3. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
+4. **Ship.** When every sub-issue of an umbrella issue is done and it has no open final PR, Autopilot starts a child `ship #<u>`.
+5. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order.
+6. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one, and a push notification.
 
-A child is a cloud session on the repo with the typed prompt `/engineering:execute #<n>` or `/engineering:ship #<u>`, and one line in its system prompt that tells it to report to Autopilot's session when its turn ends: finished, stopped on a question, or stopped for another reason. The report starts the next run. A child session has no engineering plugin installed, so the same line tells it to follow the skill file from the repo's checkout when the typed prompt did not load as a skill.
+A child is a cloud session on the repo with the typed prompt `/engineering:execute #<n>` or `/engineering:ship #<u>`, and one line in its system prompt that tells it to report to Autopilot's session when its turn ends: finished, stopped on a question, or stopped for another reason. The report starts the next run. A child loads the plugin from the environment it inherits, as [Turning it on](#turning-it-on) says. A child whose typed prompt did not load as a skill reports `<title>: stopped: engineering plugin not loaded in this environment` and does nothing else, and Autopilot hands the issue off.
 
 ### The four hand-offs
 
@@ -114,7 +122,7 @@ When Autopilot cannot go on, it hands the work to you with one comment and one p
 |---|---|---|
 | A child waits on a permission prompt | `Autopilot: stopped, <title> (<session>) waits on a permission prompt that no one can answer unattended` | the issue |
 | A child asks a fourth question after three answers | `Autopilot: stopped, <title> (<session>) asked a fourth question after three answers: <question>` | the issue |
-| A child stopped for another reason, such as execute sending a single issue back to discuss | `Autopilot: stopped, <title> (<session>) stopped: <reason>` | the issue |
+| A child stopped for another reason, such as execute sending a single issue back to discuss, or the engineering plugin not loaded in the child | `Autopilot: stopped, <title> (<session>) stopped: <reason>` | the issue |
 | A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
 
 Open the session the comment names to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself. Autopilot leaves a handed-off issue alone: the child session keeps its claim on the issue, so no later run starts another child for it.
