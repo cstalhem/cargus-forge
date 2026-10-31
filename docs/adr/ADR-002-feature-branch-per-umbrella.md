@@ -6,7 +6,7 @@ status: active
 
 # ADR-002: One feature branch for each umbrella issue
 
-- **Decision:** Each umbrella issue gets a feature branch. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. One final PR merges the feature into `main` and closes the umbrella issue.
+- **Decision:** Each umbrella issue gets a feature branch. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. Autopilot squash-merges a sub-issue PR once verify marks it ready; the user merges single-issue PRs and final PRs. One final PR merges the feature into `main` and closes the umbrella issue.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md)
 
 ## Details
@@ -17,6 +17,7 @@ status: active
   - It is optional for each repo: the file being in `.github/workflows/` is the setting. The plugin ships it as `plugins/engineering/templates/close-sub-issue.yml`, the source of truth, and this repo runs a byte-identical copy.
   - A workflow runs from the copy on the PR's base branch, so a feature branch cut before the workflow landed closes no sub-issue until it merges `main`. Its final PR closes them.
 - **The final PR body** has one `Closes #n` line for each sub-issue that is still open, and one for the umbrella. Where the workflow runs, that is usually only the umbrella.
+- **Who merges:** Autopilot squash-merges a sub-issue PR once verify has marked it ready, and reads back that it merged ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)). A single issue's PR and a final PR wait for the user, who reviews and merges them. A sub-issue PR reaches the feature branch with no human review, so the final PR carries every deviation of the merged sub-issue PRs for that review.
 - **Umbrella-scope verify** runs on the feature branch and gates the final PR. A gap between sub-issues is found before it reaches `main`.
 - `main` is merged into the feature branch before the final PR, and also when the branch falls behind. Merge, not rebase.
 - A one-session issue with no umbrella uses a branch from `main` and one PR into `main` with `Closes #n`.
@@ -30,6 +31,7 @@ status: active
 - **Close sub-issues only at the final PR:** every downstream sub-issue reads as blocked until ship, the umbrella shows no progress, and agents must reason about whether an open blocker is done.
 - **A label for merged sub-issues:** it fixes neither GitHub's Blocked icon nor the umbrella's progress bar, and it is a second status to repair.
 - **Match the sub-issue from the head branch name:** cloud sessions name branches `claude/…`, so the name is unreliable.
+- **The user merges every sub-issue PR:** a step with no decision in it between verify and ship, which needs an interactive session for each sub-issue.
 
 ## Consequences
 - A feature branch can drift from `main` while a feature is in progress.

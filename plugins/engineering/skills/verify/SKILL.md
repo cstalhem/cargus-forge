@@ -3,7 +3,9 @@ name: verify
 description: Grade a PR against its issue's scenarios, or a feature branch against its umbrella issue's scenarios, with a fresh-context agent, and in PR scope by the PR's check runs too. Posts one comment with a verdict of PASS, FAIL or PENDING, and marks a passing PR ready. execute and ship call it.
 argument-hint: "<#PR or #umbrella issue>"
 user-invocable: false
-allowed-tools: Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+allowed-tools:
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(gh api -X POST repos/{owner}/{repo}/pulls/*/ccr/ready_for_review)
 ---
 
 # verify
@@ -15,6 +17,7 @@ Target: $ARGUMENTS
 - A fresh-context agent does the grading, never you. Give it numbers and branch names only, never your own account of the work: a summary is a claim, not evidence.
 - Post exactly one comment for each run.
 - Change no code, and push nothing. verify reports, and the caller fixes.
+- The REST call that marks a PR ready, `gh api -X POST repos/{owner}/{repo}/pulls/<pr>/ccr/ready_for_review`, is pre-approved in this skill's `allowed-tools`, so no permission prompt and no classifier judges it. Write it exactly in that form, with the bare PR number in place of `<pr>` and nothing else on the line, because the rule matches that text only.
 
 ## Steps
 1. **Scope.** Read `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md`. Use the bare number, without `#`, in every command. Run `gh api repos/{owner}/{repo}/pulls/<n>`.

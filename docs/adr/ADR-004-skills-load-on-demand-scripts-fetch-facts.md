@@ -9,9 +9,9 @@ status: active
 - **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total.
 
 ## Details
-- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`. `research` is not built (#200), and neither is the plan page (#201).
+- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`, `autopilot`. `research` is not built (#200), and neither is the plan page (#201).
 - **Called skills:** `slice`, `verify`. `reflect` is not built (#202). `grill`, `tdd` and `ste-writing` are not built and have no request.
-- **Calls go one way.** A typed skill calls called skills. It never calls another typed skill.
+- **Calls go one way.** A typed skill calls called skills. It never calls another typed skill. Autopilot starts a Build phase through a child session whose prompt is the typed `/engineering:execute #<n>` or `/engineering:ship #<u>` ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)): the prompt types the skill, so execute keeps its required argument and `disable-model-invocation`, and no skill calls a typed skill.
 - **Scripted facts:**
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
   - Each command is pre-approved in `allowed-tools`.
@@ -27,10 +27,11 @@ status: active
 
 ## Rejected alternatives
 - **All skills invoked by the model:** every description is always in context, and phases start without you.
+- **execute invocable by the model, so that Autopilot could call it as a skill:** every description is always in context, and phases start without the user. A child session's typed prompt starts the phase instead.
 - **The model fetches facts with tool calls:** it can skip a fact or fetch it a different way, and it uses more turns and context.
 - **A large framework:** GSD core has about 95,000 lines of instructions and loads 35,000 to 40,000 tokens before its plan phase starts.
 
 ## Consequences
 - Each new fact that a skill needs, needs a script, and each script needs a pre-approval line.
-- The model cannot start a Build phase without you.
+- The model cannot start a Build phase on its own. Autopilot can start one, through a child session whose prompt types the skill, and only once you created its scheduled task ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)).
 - Scripted facts work in Remote Control sessions.
