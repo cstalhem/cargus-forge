@@ -72,7 +72,7 @@ Take the steps in order. Each one says whether the run goes on or ends.
 A hand-off writes one comment and sends one push, in that order, and nothing else:
 1. Write the comment's body to a file as the rules say. On an issue, the body is `Autopilot: stopped, <why>`, one line that names the child's session id in its why. On a PR, the body is the `Autopilot: ready for your review: …` line from step 9.
 2. Post it with `gh api -X POST repos/{owner}/{repo}/issues/<n>/comments -F body=@<path>`, where `<n>` is the issue number, or the PR number, because a PR takes comments on the issues path. Read it back with `gh api repos/{owner}/{repo}/issues/comments/<id>`, with the `id` from the post. If the post or the read-back fails, stop and say so: without the comment there is no record, and the next run would hand the same thing off again.
-3. Call the `PushNotification` tool once, with `status` `proactive` and one line under 200 characters: `Autopilot: stopped on #<n>, <why, shortened>` for an issue, or the push line from step 9 for a PR. A "not sent" result is the tool's and not a failure: the comment is the record.
+3. If the `PushNotification` tool is not in your tools, load it first with the `ToolSearch` tool, query `select:PushNotification`: a cloud session defers it until then. Then call the `PushNotification` tool once, with `status` `proactive` and one line under 200 characters: `Autopilot: stopped on #<n>, <why, shortened>` for an issue, or the push line from step 9 for a PR. A "not sent" result is the tool's and not a failure: the comment is the record.
 4. Reply with one line, `Autopilot: handed off #<n>, <why>.` or `Autopilot: handed off PR #<pr>.`, and leave the issue or the PR: take the next child or PR, or the next step.
 
 ## Children
