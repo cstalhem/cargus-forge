@@ -373,6 +373,51 @@ lacks 'setup.sh error:'
 done_check
 
 setup
+check "an open issue with a plugin label and one <n>-* branch gets no warning, one with more branches or no label does (#164)"
+branches 7-a 8-b 9-c 10-d 10-e 11-f
+page 1 '[{"number":7,"labels":[{"name":"status:ready"}]},{"number":8,"labels":[{"name":"umbrella"}]},{"number":9,"labels":[{"name":"bug"}]},{"number":10,"labels":[{"name":"status:ready"}]},{"number":11}]'
+run
+has '- #7 · `7-a`' '- #8 · `8-b`' '- Open issue #9 has a branch that matches `9-*`' \
+  '- Open issue #10 has 2 branches that match `10-*`' '- Open issue #11 has a branch that matches `11-*`'
+lacks 'Open issue #7 ' 'Open issue #8 '
+done_check
+
+setup
+check "an open issue whose body holds the marker line is the conversion issue, even when its title says nothing (#164)"
+page 1 '[{"number":3,"title":"Setup items","body":"<!-- engineering:setup conversion issue -->\n/engineering:setup found"},{"number":4,"title":"convert plugin","body":"x"},{"number":5,"title":"Other","body":"a marker <!-- engineering:setup conversion issue --> inside a line"}]'
+run
+has "### Conversion issue$nl- #3 · Setup items · by marker$nl"
+lacks '#4 ·' '#5 ·' 'by title'
+done_check
+
+setup
+check "with no marker, a title with convert and plugin or engineering names the conversion issue (#164)"
+page 1 '[{"number":4,"title":"Engineering: Convert this repo","body":"x"},{"number":5,"title":"convert the build","body":"x"},{"number":6,"title":"Plugin notes","body":null}]'
+run
+has "### Conversion issue$nl- #4 · Engineering: Convert this repo · by title$nl"
+lacks '#5 ·' '#6 ·'
+done_check
+
+setup
+check "more than one match names each one (#164)"
+page 1 '[{"number":4,"title":"convert to plugin"},{"number":5,"title":"convert to engineering"}]'
+run
+has '- #4 · convert to plugin · by title' '- #5 · convert to engineering · by title'
+done_check
+
+setup
+check "with no open issue that matches, the conversion issue is none, and a PR does not count (#164)"
+page 1 '[{"number":4,"title":"convert plugin","pull_request":{}},{"number":5,"title":"Fix a bug"}]'
+run
+has "### Conversion issue$nl- none$nl"
+done_check
+
+check "SKILL.md writes the marker as the first line of the issue it creates (#164)"
+ok=1; why=''; out=''
+grep -qF 'Its first line is `<!-- engineering:setup conversion issue -->`' "$here/../SKILL.md" || miss "SKILL.md does not put the marker first"
+done_check
+
+setup
 check "docs: ADR folders and glossaries the plugin cannot see give warnings, rule docs are listed, and none is changed"
 mkdir -p docs/adr doc/decisions architecture/records wiki .github/PULL_REQUEST_TEMPLATE src/decisions notes vendor
 printf '# x\n' | tee docs/adr/0001-a.md doc/decisions/0001-a.md doc/decisions/0002-b.md \
