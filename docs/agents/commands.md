@@ -1,10 +1,11 @@
 # Commands
 
-This repo has no build, tests or lint. A plugin is checked by validating it and by loading it in a session.
+This repo has no build or lint. A plugin is checked by validating it and by loading it in a session, and the tests are the `*.test.sh` scripts.
 
 | Task | Command |
 |---|---|
 | Validate a plugin (pre-PR check) | `claude plugin validate ./plugins/<name> --strict` |
+| Run the tests (pre-PR check) | `for t in $(git ls-files '*.test.sh'); do bash "$t" > /dev/null || exit 1; done` |
 | Load a plugin for a test, without installing it | `claude --plugin-dir ./plugins/<name>` |
 | Reload an installed plugin after an edit | `/reload-plugins` |
 
