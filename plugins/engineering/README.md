@@ -75,7 +75,7 @@ Run `/engineering:next` at any point to see where things stand and what to run n
 
 ## Autopilot
 
-Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in cloud sessions until a single issue's PR or the final PR is ready for your review. It runs only in a Claude Code cloud session, because it needs the session and scheduled task tools there, and it stops with one line anywhere else.
+Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in cloud sessions until a single issue's PR or the final PR is ready for your review. It runs only in a Claude Code cloud session, because it needs the session and scheduled task tools there, which reach a run through the `Claude_Code_Remote` connector on its scheduled task, and it stops with one line anywhere else.
 
 ### Turning it on
 
@@ -93,7 +93,10 @@ Then start a cloud session on the repo at claude.ai/code and run `/engineering:a
 | Name | `engineering: autopilot` |
 | Schedule | every hour, `0 * * * *`. The server anchors it to the minute you created it, so the runs do not all start on the hour. |
 | Each run | a fresh Claude Code cloud session in the environment of the session that created it, on this repo, with the prompt `/engineering:autopilot` |
-| Model | execute children run on Sonnet; every other run, the hourly run and each ship child, runs on the scheduled task's model, the model of the session that created it |
+| Model | execute children run on Sonnet; the hourly run and each ship child run on the scheduled task's model, which the run that creates the scheduled task sets to its own model |
+| Connector | `Claude_Code_Remote`, stored on the scheduled task. It gives each run the session and scheduled-task tools. |
+
+A scheduled task created by hand in the claude.ai dialog stores no connector and no model, because the dialog cannot offer `Claude_Code_Remote` and has no model field, so its runs have no session tools and run on the default model. A run on such a scheduled task says so in one line and sends one push notification, and a manual run that finds an existing scheduled task without the connector or the model says what it lacks. Delete it on claude.ai and run `/engineering:autopilot` by hand, which proposes a new one.
 
 A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the sessions it starts, the comments it posts and `status.sh` are its record.
 
