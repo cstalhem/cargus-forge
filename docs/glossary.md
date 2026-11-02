@@ -44,7 +44,7 @@ _Avoid_: feature flag, option
 
 **Conversion issue**: The one request that setup creates after a yes, which lists each finding it reported with its suggested action.
 
-**Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it.
+**Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it; for a request that automates or delegates work, it also asks where the human boundary lies.
 
 **Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
 
@@ -64,3 +64,8 @@ _Avoid_: warning, conflict, conversion item
 
 **Rule**: One line in a file under `.claude/rules/` that says what code in this repo does or never does; Claude Code loads it into every session, or when a file matching the file's `paths` is read. Setup proposes rules, verify grades a PR against them, and execute's reflect step adds them.
 _Avoid_: convention, guideline
+
+**Human boundary**: The line in an automated or delegated process between the steps the user keeps and the steps that must never wait for the user; discuss's challenge asks where it lies, and later rounds design for it.
+
+**Trace**: A numbered walk through one dated run of a design, one line per step: who acts, what it reads or keeps, and whether it waits for the user; discuss shows one for each design that adds a part that runs.
+_Avoid_: walkthrough, dry run
