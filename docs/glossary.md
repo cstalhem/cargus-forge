@@ -58,3 +58,6 @@ _Avoid_: feature flag, option
 _Avoid_: job, automation, orchestrator, cron job
 
 **Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.
+
+**Rule**: One line in a file under `.claude/rules/` that says what code in this repo does or never does; Claude Code loads it into every session, or when a file matching the file's `paths` is read. Setup proposes rules, verify grades a PR against them, and execute's reflect step adds them.
+_Avoid_: convention, guideline
