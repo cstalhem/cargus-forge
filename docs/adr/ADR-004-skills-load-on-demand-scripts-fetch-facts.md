@@ -10,7 +10,8 @@ status: active
 
 ## Details
 - **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`, `autopilot`. `research` is not built (#200), and neither is the plan page (#201).
-- **Called skills:** `slice`, `verify`. `reflect` is not built (#202). `grill`, `tdd` and `ste-writing` are not built and have no request.
+- **Called skills:** `slice`, `verify`. `grill`, `tdd` and `ste-writing` are not built and have no request.
+- **Reflect is a step of execute, not a skill.** It asks once, after the checks pass, what the work proved that a rule should hold, and it writes each evidenced proposal into the issue's PR.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill. Autopilot starts a Build phase through a child session whose prompt is the typed `/engineering:execute #<n>` or `/engineering:ship #<u>` ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)): the prompt types the skill, so execute keeps its required argument and `disable-model-invocation`, and no skill calls a typed skill.
 - **Scripted facts:**
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
@@ -29,6 +30,7 @@ status: active
 - **All skills invoked by the model:** every description is always in context, and phases start without you.
 - **execute invocable by the model, so that Autopilot could call it as a skill:** every description is always in context, and phases start without the user. A child session's typed prompt starts the phase instead.
 - **The model fetches facts with tool calls:** it can skip a fact or fetch it a different way, and it uses more turns and context.
+- **A called `reflect` skill:** one more skill body for a step with one question and no reusable discipline.
 - **A large framework:** GSD core has about 95,000 lines of instructions and loads 35,000 to 40,000 tokens before its plan phase starts.
 
 ## Consequences
