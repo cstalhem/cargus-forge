@@ -42,7 +42,7 @@ _Avoid_: repo config, agent docs
 **Optional behaviour**: A per-repo behaviour of the plugin that is on when its file is in the repo, such as `.github/workflows/close-sub-issue.yml`; setup offers each one.
 _Avoid_: feature flag, option
 
-**Conversion issue**: The one request that setup creates after a yes, which lists each conversion item it reported with a suggested action. A conversion item is something in an existing repo that differs from the plugin's process: an open issue's colliding branches, another branch convention, ADRs or a glossary that the plugin cannot see, or a line that conflicts with the contract.
+**Conversion issue**: The one request that setup creates after a yes, which lists each finding it reported with its suggested action.
 
 **Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it.
 
@@ -58,3 +58,6 @@ _Avoid_: feature flag, option
 _Avoid_: job, automation, orchestrator, cron job
 
 **Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.
+
+**Finding**: Something setup reports about an existing repo and leaves as it is, because it differs from the plugin's process or the plugin cannot see it: a repo setting, a branch, a doc or a line that conflicts with the contract. Each one comes with the action the user can take, and the conversion issue lists them all.
+_Avoid_: warning, conflict, conversion item
