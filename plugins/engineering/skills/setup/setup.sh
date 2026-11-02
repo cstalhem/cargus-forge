@@ -15,7 +15,9 @@
 #   ## Facts
 #   ### Repo                 `- repo:` and `- allow_squash_merge:` lines.
 #   ### Files                a line `- <path> · <state>` for the repo profile,
-#                            `docs/agents/commands.md`: present or missing (#181 D2).
+#                            `docs/agents/commands.md`: present or missing (#181 D2), and one for
+#                            `.claude/rules/`: `present (<n> files)` when it holds a `.md` file,
+#                            else `missing` (#217 D1).
 #   ### Optional behaviours  a line `- <name> · <path> · <state>` for each optional behaviour:
 #                            missing, current or differs. A file that differs gets a fenced
 #                            `diff -u` block under its line, from the repo's file (`-`) to what
@@ -23,6 +25,12 @@
 #   ### Commands             a line `- <command> · <source>` for each command found in
 #                            `package.json`, a Makefile, `pyproject.toml` and the run lines of
 #                            `.github/workflows/*`, or `- none` (#85 D7).
+#   ### Stack                the repo's stack (#217 D3): a line `- language: <name> · <n> files`
+#                            for each known file extension in `git ls-files`, by count; a line
+#                            `- <manifest>: <name>, …` for each `package.json`, `pyproject.toml`,
+#                            `go.mod`, `Cargo.toml` and `Gemfile` at the top of the repo, with its
+#                            dependency names and no versions (#217 D2); a line `- config: <path>`
+#                            for each linter or formatter config; or `- none`.
 #   ### Branches             the remote branches, leaving out the default branch, `dependabot/*`
 #                            and `renovate/*` (#151 D1): how many match `<n>-*`; the convention,
 #                            `<n>-<slug>`, or another one with its most common prefix when more
@@ -131,12 +139,19 @@ add_diff() {
 }
 
 facts_files() {
-  local path=docs/agents/commands.md
+  local path=docs/agents/commands.md rules=.claude/rules n=0
   line '### Files'
   if [ -f "$path" ]; then
     line "- \`$path\` · present"
   else
     line "- \`$path\` · missing"
+  fi
+  # A folder with no .md file, as an empty folder, is missing (#217 D1).
+  [ ! -d "$rules" ] || n=$(find "$rules" -type f -name '*.md' | wc -l | tr -d ' ')
+  if [ "$n" -gt 0 ]; then
+    line "- \`$rules/\` · present ($n files)"
+  else
+    line "- \`$rules/\` · missing"
   fi
   line
 }
@@ -297,6 +312,180 @@ facts_commands() {
   line
 }
 
+stack=''
+
+# Adds the line of a manifest: $1 is its name, $2 its dependency names, one on each line. The
+# names are sorted and have no version (#217 D2).
+stack_manifest() {
+  local joined
+  joined=$(printf '%s\n' "$2" | LC_ALL=C sort -u | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
+  stack+="- $1: ${joined:-none}"$'\n'
+}
+
+# package.json: dependencies and devDependencies.
+stack_package_json() {
+  local names
+  [ -f package.json ] || return
+  if names=$(jq -r '((.dependencies // {}) + (.devDependencies // {})) | keys[]' package.json 2>/dev/null); then
+    stack_manifest package.json "$names"
+  else
+    stack+="- package.json: not valid JSON, so its dependencies were not read"$'\n'
+  fi
+}
+
+# pyproject.toml: the requirements in `[project] dependencies`, `[project.optional-dependencies]`
+# and `[dependency-groups]`, which are quoted strings in an array, named up to their version or
+# extras, and the keys of the poetry dependency tables, except `python`.
+stack_pyproject() {
+  local names
+  [ -f pyproject.toml ] || return
+  names=$(awk '
+    # Prints the name that each quoted string of s starts with, and ends the array at a `]`.
+    function reqs(s,   b) {
+      gsub(/\{[^}]*\}/, "", s)
+      while (match(s, /"[^"]*"|\047[^\047]*\047/)) {
+        b = substr(s, RSTART + 1, RLENGTH - 2)
+        s = substr(s, RSTART + RLENGTH)
+        sub(/^[ \t]+/, "", b)
+        if (match(b, /^[A-Za-z0-9][A-Za-z0-9._-]*/)) print substr(b, 1, RLENGTH)
+      }
+      sub(/#.*/, "", s)
+      if (s ~ /\]/) arr = 0
+    }
+    /^[ \t]*\[/ {
+      table = $0
+      gsub(/^[ \t]*\[+[ \t]*|[ \t]*\]+.*$/, "", table)
+      arr = 0; mode = ""
+      if (table ~ /^tool\.poetry\.(dev-dependencies|dependencies|group\.[^.]+\.dependencies)$/) mode = "keys"
+      else if (table == "project.optional-dependencies" || table == "dependency-groups") mode = "any"
+      else if (table == "project") mode = "dependencies"
+      next
+    }
+    mode == "keys" && /^[ \t]*[A-Za-z0-9_.-]+[ \t]*=/ {
+      key = $0; sub(/^[ \t]*/, "", key); sub(/[ \t]*=.*$/, "", key)
+      if (key != "python") print key
+      next
+    }
+    arr { reqs($0); next }
+    (mode == "any" || mode == "dependencies") && /^[ \t]*[A-Za-z0-9_.-]+[ \t]*=[ \t]*\[/ {
+      key = $0; sub(/^[ \t]*/, "", key); sub(/[ \t]*=.*$/, "", key)
+      if (mode == "any" || key == "dependencies") { arr = 1; rest = $0; sub(/^[^[]*\[/, "", rest); reqs(rest) }
+    }' pyproject.toml 2>/dev/null) || fail "cannot read pyproject.toml."
+  stack_manifest pyproject.toml "$names"
+}
+
+# go.mod: the modules of its `require` lines, except the indirect ones.
+stack_go_mod() {
+  local names
+  [ -f go.mod ] || return
+  names=$(awk '
+    /^[ \t]*\/\// { next }
+    /^require[ \t]*\(/ { inreq = 1; next }
+    inreq && /^[ \t]*\)/ { inreq = 0; next }
+    inreq && NF && !/\/\/[ \t]*indirect/ { print $1; next }
+    /^require[ \t]+[^( \t]/ && !/\/\/[ \t]*indirect/ { print $2 }' go.mod 2>/dev/null) || fail "cannot read go.mod."
+  stack_manifest go.mod "$names"
+}
+
+# Cargo.toml: the keys of its dependency tables (`dependencies`, `dev-dependencies`,
+# `build-dependencies`, `workspace.dependencies`, and those under `target.*`), and the name
+# of a `[dependencies.<name>]` table.
+stack_cargo() {
+  local names
+  [ -f Cargo.toml ] || return
+  names=$(awk '
+    /^[ \t]*\[/ {
+      table = $0
+      gsub(/^[ \t]*\[+[ \t]*|[ \t]*\]+.*$/, "", table)
+      keys = (table ~ /(^|\.)(dev-|build-)?dependencies$/)
+      if (match(table, /(^|\.)(dev-|build-)?dependencies\./)) print substr(table, RSTART + RLENGTH)
+      next
+    }
+    keys && match($0, /^[ \t]*[A-Za-z0-9_-]+[ \t]*[.=]/) {
+      key = substr($0, RSTART, RLENGTH); gsub(/^[ \t]+|[ \t]*[.=]$/, "", key)
+      print key
+    }' Cargo.toml 2>/dev/null) || fail "cannot read Cargo.toml."
+  stack_manifest Cargo.toml "$names"
+}
+
+# Gemfile: the name of each `gem` line.
+stack_gemfile() {
+  local names
+  [ -f Gemfile ] || return
+  names=$(sed -nE "s/^[[:space:]]*gem[[:space:]]+[\"']([^\"']+).*/\1/p" Gemfile 2>/dev/null) || fail "cannot read Gemfile."
+  stack_manifest Gemfile "$names"
+}
+
+# The linter and formatter configs at the top of the repo, and the `[tool.black]`, `[tool.ruff]`
+# and `[tool.mypy]` tables of pyproject.toml, which are the only config that black has.
+stack_configs() {
+  local f tools
+  for f in \
+    .eslintrc .eslintrc.js .eslintrc.cjs .eslintrc.mjs .eslintrc.json .eslintrc.yml .eslintrc.yaml \
+    eslint.config.js eslint.config.mjs eslint.config.cjs eslint.config.ts eslint.config.mts eslint.config.cts \
+    .prettierrc .prettierrc.json .prettierrc.json5 .prettierrc.yml .prettierrc.yaml .prettierrc.toml \
+    .prettierrc.js .prettierrc.cjs .prettierrc.mjs \
+    prettier.config.js prettier.config.cjs prettier.config.mjs prettier.config.ts \
+    biome.json biome.jsonc ruff.toml .ruff.toml .flake8 mypy.ini .mypy.ini \
+    .golangci.yml .golangci.yaml .golangci.toml .golangci.json rustfmt.toml .rustfmt.toml \
+    .rubocop.yml .editorconfig; do
+    if [ -f "$f" ]; then stack+="- config: $f"$'\n'; fi
+  done
+  [ -f pyproject.toml ] || return
+  tools=$(awk '
+    /^[ \t]*\[/ {
+      table = $0
+      gsub(/^[ \t]*\[+[ \t]*|[ \t]*\]+.*$/, "", table)
+      if (match(table, /^tool\.(black|ruff|mypy)(\.|$)/)) {
+        table = substr(table, 1, RLENGTH); sub(/\.$/, "", table)
+        if (!(table in seen)) { seen[table] = 1; print "- config: pyproject.toml [" table "]" }
+      }
+    }' pyproject.toml 2>/dev/null) || fail "cannot read pyproject.toml."
+  [ -z "$tools" ] || stack+="$tools"$'\n'
+}
+
+# The repo's stack (#217 D3): its languages by file count, the dependency names of the manifests
+# at the top of the repo, and its linter and formatter configs. A language is a file extension
+# in the table below, so a file with another extension counts for no language. The files are
+# the ones that `git ls-files` lists, ignored files left out, as in facts_docs. The model
+# picks the stack components from these lines and detects nothing itself.
+facts_stack() {
+  local files languages
+  files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
+    || fail "git ls-files: $files"
+  languages=$(printf '%s\n' "$files" | awk '
+    BEGIN {
+      n = split("py:Python js:JavaScript mjs:JavaScript cjs:JavaScript jsx:JavaScript ts:TypeScript mts:TypeScript cts:TypeScript tsx:TypeScript go:Go rs:Rust rb:Ruby java:Java kt:Kotlin cs:C# php:PHP swift:Swift c:C h:C cc:C++ cpp:C++ hpp:C++ sh:Shell bash:Shell", pairs, " ")
+      for (i = 1; i <= n; i++) { split(pairs[i], kv, ":"); lang[kv[1]] = kv[2] }
+    }
+    {
+      base = $0; sub(/.*\//, "", base)
+      if (match(base, /\.[^.]+$/) && RSTART > 1) {
+        ext = tolower(substr(base, RSTART + 1))
+        if (ext in lang) count[lang[ext]]++
+      }
+    }
+    END { for (l in count) print count[l] "\t" l }' 2>/dev/null \
+    | LC_ALL=C sort -t "$(printf '\t')" -k1,1nr -k2,2 \
+    | awk -F '\t' '{ print "- language: " $2 " · " $1 " files" }') \
+    || fail "cannot read the list of the repo's files."
+  stack=''
+  [ -z "$languages" ] || stack+="$languages"$'\n'
+  stack_package_json
+  stack_pyproject
+  stack_go_mod
+  stack_cargo
+  stack_gemfile
+  stack_configs
+  line '### Stack'
+  if [ -z "$stack" ]; then
+    line '- none'
+  else
+    report+=$stack
+  fi
+  line
+}
+
 # Adds each line of $1 that starts with `F ` to the report, and each one that starts with
 # `W ` to the findings (a `W` line is a finding), without that start.
 add_lines() {
@@ -451,6 +640,7 @@ facts_repo
 facts_files
 facts_behaviours
 facts_commands
+facts_stack
 facts_branches
 facts_conversion
 facts_docs

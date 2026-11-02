@@ -61,3 +61,6 @@ _Avoid_: job, automation, orchestrator, cron job
 
 **Finding**: Something setup reports about an existing repo and leaves as it is, because it differs from the plugin's process or the plugin cannot see it: a repo setting, a branch, a doc or a line that conflicts with the contract. Each one comes with the action the user can take, and the conversion issue lists them all.
 _Avoid_: warning, conflict, conversion item
+
+**Rule**: One line in a file under `.claude/rules/` that says what code in this repo does or never does; Claude Code loads it into every session, or when a file matching the file's `paths` is read. Setup proposes rules, verify grades a PR against them, and execute's reflect step adds them.
+_Avoid_: convention, guideline

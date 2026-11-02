@@ -22,6 +22,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 
 - It shows what it will write, then what it found but will not change, on one screen, then asks numbered questions, each with a recommended answer. In an interactive session you answer in a pop-up: `Apply everything recommended`, `Choose item by item` (a yes or no for each question) or `Write nothing`. Setup then writes in the same turn, so its pre-approved commands run without asking again. Where there is no pop-up, as in `claude -p`, answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
 - After your yes, it writes the repo profile, which is only `docs/agents/commands.md`: the build, test and lint commands it detected. The plugin takes `main` as the default branch, so the profile does not record it.
+- When the repo has no `.claude/rules/` files, it proposes rules for `.claude/rules/` from the repo's docs, its tool configs and the stack, as one line each with its source, and writes the accepted ones as `.claude/rules/<area>.md`. For the stack it researches the web: one research agent for each component, at most four, in parallel, each returning findings with the URL of its docs, which show as `docs: <url>`. Without network access the agents return `no network`, and setup says so and proposes rules from what the model knows, as `proposed`. A candidate that one command can check becomes a pre-PR check row of the repo profile instead. A repo that already has rules keeps them: setup reports `.claude/rules/` as kept and asks nothing.
 - It offers each optional behaviour. Today that is the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch.
 - On an existing repo, it reports each finding, something that differs from the plugin's process, such as other branch names or conflicting docs, and gives the action you can take. It leaves each finding as it is, and offers one issue that lists them all.
 - It commits, pushes and labels nothing. It lists the files it wrote, and you commit them on a branch and open a PR.
@@ -30,9 +31,9 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 
 | Command | What it does |
 |---|---|
-| `/engineering:setup` | Writes the repo profile and turns on optional behaviours. |
+| `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
-| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, in a draft PR it opens after its first commit. |
+| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules the work proved to `.claude/rules/`, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
