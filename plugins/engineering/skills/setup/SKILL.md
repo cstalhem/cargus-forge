@@ -19,6 +19,7 @@ allowed-tools:
 
 ## Rules
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
+- The research agents of step 2's Rules part are the one exception to the first rule above: they read the web, with WebSearch and WebFetch. Setup reads the web nowhere else.
 - The `## Facts` and `## Warnings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, other than the read-back in step 6, and do not change them.
 - Setup writes files to the working tree only. It does not commit, push, open a PR, add a label, create a branch or change a repo setting. Its one GitHub write is the conversion issue of step 7, and only after the user accepts its question.
 - `apply.sh` writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md` and the files under `.claude/rules/`, with the Write or Edit tool.
@@ -41,8 +42,18 @@ allowed-tools:
      - `missing`: create it from the Commands template at the end of this skill. Use form 1 with the proposed rows, or form 2 when you propose none. One question for the whole file.
      - `present`: keep it. Read it, and find each proposed command that its table lacks. Each one is its own question, which adds that row to the table.
    - **Rules**, the `.claude/rules/` line under `### Files`:
-     - `present (<n> files)`: the repo owns it. Show reports ``- `.claude/rules/` · kept``, and proposes no rule. No question.
-     - `missing`: build the candidate rules. Read the files that the `rules` lines under `### Docs` name, with the Read tool, one call per file, to learn which conventions the repo already states. Read the tool configs listed as `config:` under `### Stack`, and the repo's other docs and layout, for conventions that no rule doc states. Add what you know of the languages, frameworks and tools under `### Stack`, where Claude would plausibly get a convention of this repo wrong without a rule. Each candidate is one line that says what code in the repo does or never does: no code, no rationale. Its source is `repo: <path>` when a repo file shows it, and `proposed` when it comes from what you know of the stack.
+     - `present (<n> files)`: the repo owns it. Show reports ``- `.claude/rules/` · kept``, and proposes no rule. No question, and launch no research agent.
+     - `missing`: build the candidate rules. Read the files that the `rules` lines under `### Docs` name, with the Read tool, one call per file, to learn which conventions the repo already states. Read the tool configs listed as `config:` under `### Stack`, and the repo's other docs and layout, for conventions that no rule doc states.
+       - **Research.** Launch one research agent for each stack component, in parallel, in one message, with the Agent tool, `subagent_type: general-purpose`, never a fork. A component is a `language:` or `framework|tool:` line under `### Stack`; `config:` lines are not components. Launch at most four: when there are more, take the first four lines in the order of `### Stack`, which lists languages first, by file count. Brief each agent with this text, filled in:
+         ```
+         Component: <name from the Stack line>.
+         The repo's own convention lines, which are already covered: <each convention line that the rule docs state, or "none">.
+         Use WebSearch and WebFetch to read the component's official docs and widely used guides. Find conventions for using it that Claude would plausibly get wrong in this repo without a rule. Return a finding only if you can name its source URL. Do not return a well-known language feature, a generic best practice, or a pattern that this repo does not use: check the repo's files for that. Do not return a line that the repo's own convention lines already state.
+         Return at most ten lines, each `- <rule> · <url>`, where the rule is one line that says what code does or never does, with no code and no rationale, and the url is the one page that shows it. Return nothing else. If your fetches fail, return the single line `no network`.
+         ```
+       - Add what you know of the components that no agent covered, or whose agent returned `no network`, where Claude would plausibly get a convention of this repo wrong without a rule.
+       - Each candidate is one line that says what code in the repo does or never does: no code, no rationale. Its source is `repo: <path>` when a repo file shows it, `docs: <url>` when a research agent's finding gave it, and `proposed` when it comes from what you know of the stack.
+       - When every agent returned `no network`, every candidate that is not from the repo has the source `proposed`, and the `### Rules` part says so.
        - Drop a candidate that restates a line of the repo's CLAUDE.md, AGENTS.md or CONTRIBUTING.md, or a convention that a linter or formatter config in the repo enforces.
        - A candidate that one command can check is not a rule: add it to the `commands.md` proposal above as a `(pre-PR check)` row.
        - Group the rest into areas. An area is a folder when `### Stack` or the repo layout maps it to one, such as `src/api/**`, and its file gets those `paths`. A cross-cutting area gets no `paths`. The file is `.claude/rules/<area>.md`, with the area written as a lowercase slug.
@@ -59,7 +70,7 @@ allowed-tools:
    1. `## Setup for <repo>`.
    2. `### Files`: one line for the repo profile, `- docs/agents/commands.md · <state>`, where the state is `create`, or `kept` for a `commands.md` that is present. Then one line for the rules, ``- `.claude/rules/` · <state>``, where the state is `create`, `kept` for a folder that is present, or `none to propose` when no candidate is left.
    3. `### Commands`: the proposed table with a source for each row, or form 2's sentence when you propose none. For a kept `commands.md`, only the commands that its table lacks, or `- none`.
-   4. `### Rules`, only when the state of `.claude/rules/` is `create`: for each area, `#### <area> · paths: <globs>`, or `#### <area> · no paths`, then one line `- <rule> · <source>` for each of its rules, where the source is `repo: <path>` or `proposed`.
+   4. `### Rules`, only when the state of `.claude/rules/` is `create`: for each area, `#### <area> · paths: <globs>`, or `#### <area> · no paths`, then one line `- <rule> · <source>` for each of its rules, where the source is `repo: <path>`, `docs: <url>` or `proposed`. When every research agent returned `no network`, the part starts with the line `No network: every research agent returned \`no network\`, so each rule that is not from the repo is \`proposed\`.`
    5. `### Optional behaviours`: one line for each, `- <name> · <path> · <state>`, where the state is `add`, `up to date` or `differs`. An `add` or `differs` line ends with ` · recommended: <answer>, because <reason>`, and has the diff under a `differs` line.
    6. `### Conversion issue`, only when the Facts list one: `- #<n> · <title>` for each, as the Facts print it.
    7. `### Warnings`: the lines under `## Warnings`, as printed.
