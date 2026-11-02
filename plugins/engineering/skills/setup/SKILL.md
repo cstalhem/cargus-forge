@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Write a repo's profile for the plugin and turn on its optional behaviours. Shows the facts from setup.sh on one screen, asks numbered questions, then writes the accepted files to the working tree and lists them to commit. It commits, pushes and labels nothing, and opens no PR. Its one GitHub write, after a yes, is one issue that lists what to convert.
+description: Write a repo's profile for the plugin, propose rules for `.claude/rules/`, and turn on its optional behaviours. Shows the facts from setup.sh on one screen, asks numbered questions, then writes the accepted files to the working tree and lists them to commit. It commits, pushes and labels nothing, and opens no PR. Its one GitHub write, after a yes, is one issue that lists what to convert.
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
@@ -10,6 +10,7 @@ allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md")
   - Bash(git rev-parse --show-prefix)
   - Edit(docs/agents/commands.md)
+  - Edit(.claude/rules/*)
   - 'Bash(gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin''s process" -F body=@*)'
   - Bash(gh api repos/{owner}/{repo}/issues/*)
 ---
@@ -20,11 +21,12 @@ allowed-tools:
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - The `## Facts` and `## Warnings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, other than the read-back in step 6, and do not change them.
 - Setup writes files to the working tree only. It does not commit, push, open a PR, add a label, create a branch or change a repo setting. Its one GitHub write is the conversion issue of step 7, and only after the user accepts its question.
-- `apply.sh` writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md`, with the Write or Edit tool.
+- `apply.sh` writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md` and the files under `.claude/rules/`, with the Write or Edit tool.
 - The repo owns `docs/agents/commands.md` once setup has written it: never rewrite that file, and only add the rows that the user accepts.
+- The repo owns `.claude/rules/` once it holds a file: setup writes no rule into it and asks nothing about rules.
 - An optional behaviour's file is a byte-identical copy of its template. Never edit one.
 - The branch pattern `<n>-<slug>` and squash merge are fixed in the plugin's `references/issue-tracker.md`. Ask about neither.
-- On an existing repo, setup reports and changes nothing else. It renames, deletes or creates no branch, and it edits no doc other than the repo profile: not the ADRs, glossaries, CLAUDE.md, AGENTS.md, CONTRIBUTING.md or PR templates under `### Docs`.
+- On an existing repo, setup reports and changes nothing else. It renames, deletes or creates no branch, and it edits no doc other than the repo profile, and creates no file other than the rules files under `.claude/rules/`: not the ADRs, glossaries, CLAUDE.md, AGENTS.md, CONTRIBUTING.md or PR templates under `### Docs`.
 - Judge a conflict only against the plugin's contract in the Contract section at the end of this skill. A line conflicts when it says something that the contract does not allow, such as another branch pattern, a merge style other than squash, or another PR target or `Closes` rule. A line that only adds to the contract does not.
 
 ## Steps
@@ -38,6 +40,13 @@ allowed-tools:
      - Propose the commands: from `### Commands`, and from the README.md, CONTRIBUTING.md and CLAUDE.md of the repo if they name a command that the Facts lack. Read each of the three files with the Read tool, one call per file, and run no Bash command to read them. A file that does not exist names no command. Take the commands that a developer runs to build, test, lint, format or type-check the code. One row for each task, with the command that runs locally rather than a CI step that wraps it. Leave out install, deploy and release steps, and shell lines that only set up CI. A task that should pass before every PR ends with `(pre-PR check)`. Give each row its source.
      - `missing`: create it from the Commands template at the end of this skill. Use form 1 with the proposed rows, or form 2 when you propose none. One question for the whole file.
      - `present`: keep it. Read it, and find each proposed command that its table lacks. Each one is its own question, which adds that row to the table.
+   - **Rules**, the `.claude/rules/` line under `### Files`:
+     - `present (<n> files)`: the repo owns it. Show reports ``- `.claude/rules/` · kept``, and proposes no rule. No question.
+     - `missing`: build the candidate rules. Read the files that the `rules` lines under `### Docs` name, with the Read tool, one call per file, to learn which conventions the repo already states. Read the tool configs listed as `config:` under `### Stack`, and the repo's other docs and layout, for conventions that no rule doc states. Add what you know of the languages, frameworks and tools under `### Stack`, where Claude would plausibly get a convention of this repo wrong without a rule. Each candidate is one line that says what code in the repo does or never does: no code, no rationale. Its source is `repo: <path>` when a repo file shows it, and `proposed` when it comes from what you know of the stack.
+       - Drop a candidate that restates a line of the repo's CLAUDE.md, AGENTS.md or CONTRIBUTING.md, or a convention that a linter or formatter config in the repo enforces.
+       - A candidate that one command can check is not a rule: add it to the `commands.md` proposal above as a `(pre-PR check)` row.
+       - Group the rest into areas. An area is a folder when `### Stack` or the repo layout maps it to one, such as `src/api/**`, and its file gets those `paths`. A cross-cutting area gets no `paths`. The file is `.claude/rules/<area>.md`, with the area written as a lowercase slug.
+       - One question for the whole set of files. If no candidate is left, ask none.
    - **Optional behaviours**, each line under `### Optional behaviours`:
      - `missing`: one question to add it, with its recommendation.
      - `current`: up to date. No question.
@@ -48,14 +57,15 @@ allowed-tools:
      - The suggested action of a branch warning is the one that the warning states. For an ADR folder, move its ADRs into `docs/adr/`. For a glossary, move its terms into `docs/glossary.md`. For a flagged line, edit or remove it so that it agrees with the contract.
 3. **Show.** Your reply is these parts, in this order, and nothing else:
    1. `## Setup for <repo>`.
-   2. `### Files`: one line for the repo profile, `- docs/agents/commands.md · <state>`, where the state is `create`, or `kept` for a `commands.md` that is present.
+   2. `### Files`: one line for the repo profile, `- docs/agents/commands.md · <state>`, where the state is `create`, or `kept` for a `commands.md` that is present. Then one line for the rules, ``- `.claude/rules/` · <state>``, where the state is `create`, `kept` for a folder that is present, or `none to propose` when no candidate is left.
    3. `### Commands`: the proposed table with a source for each row, or form 2's sentence when you propose none. For a kept `commands.md`, only the commands that its table lacks, or `- none`.
-   4. `### Optional behaviours`: one line for each, `- <name> · <path> · <state>`, where the state is `add`, `up to date` or `differs`. An `add` or `differs` line ends with ` · recommended: <answer>, because <reason>`, and has the diff under a `differs` line.
-   5. `### Conversion issue`, only when the Facts list one: `- #<n> · <title>` for each, as the Facts print it.
-   6. `### Warnings`: the lines under `## Warnings`, as printed.
-   7. `### Conflicts`: one line for each line that step 2 flagged in the `rules` docs, `- <path> · "<the line, quoted>" · <what the contract says instead>`, or `- none`. Then the line `Setup edits none of these files.`
-   8. `### Questions`: the numbered questions. Each one names the file it writes and what it writes, and the conversion question names the issue's title, says that it has no label, and gives the number of items it lists. Then, only when the AskUserQuestion tool is not in your tools, the line `Answer "yes", or "yes, except <numbers>".`
-   If step 2 found no question, replace part 8 with the line `Everything is up to date. Setup writes nothing.`, and end.
+   4. `### Rules`, only when the state of `.claude/rules/` is `create`: for each area, `#### <area> · paths: <globs>`, or `#### <area> · no paths`, then one line `- <rule> · <source>` for each of its rules, where the source is `repo: <path>` or `proposed`.
+   5. `### Optional behaviours`: one line for each, `- <name> · <path> · <state>`, where the state is `add`, `up to date` or `differs`. An `add` or `differs` line ends with ` · recommended: <answer>, because <reason>`, and has the diff under a `differs` line.
+   6. `### Conversion issue`, only when the Facts list one: `- #<n> · <title>` for each, as the Facts print it.
+   7. `### Warnings`: the lines under `## Warnings`, as printed.
+   8. `### Conflicts`: one line for each line that step 2 flagged in the `rules` docs, `- <path> · "<the line, quoted>" · <what the contract says instead>`, or `- none`. Then the line `Setup edits none of these files.`
+   9. `### Questions`: the numbered questions. Each one names the file it writes and what it writes, and the rules question names each `.claude/rules/<area>.md` file with its number of rules, and the conversion question names the issue's title, says that it has no label, and gives the number of items it lists. Then, only when the AskUserQuestion tool is not in your tools, the line `Answer "yes", or "yes, except <numbers>".`
+   If step 2 found no question, replace part 9 with the line `Everything is up to date. Setup writes nothing.`, and end.
 4. **Answer.** Claude Code ends the pre-approvals of this skill's `allowed-tools` when the user sends a message, and an answer in AskUserQuestion's pop-up is not a message. So take the answer in the pop-up when the tool is in your tools, and run steps 5 to 8 in the same turn as the answer.
    - **Pop-up:** if the AskUserQuestion tool is in your tools, call it in the same turn as the screen, right after it, with one question, `Apply the answers to the questions above?`, header `Setup`, and the options `Apply everything recommended`, `Choose item by item` and `Write nothing`. Do not search for the tool: if it is not in your tools, take the typed answer.
      - `Apply everything recommended` accepts every question.
@@ -67,8 +77,9 @@ allowed-tools:
 5. **Apply.** Write the accepted files in this order:
    1. If the user accepted an optional behaviour, run `apply.sh` once, as its own Bash call, with no pipe, redirect or chain: `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/apply.sh"`, then `--behaviour <name>` for each accepted optional behaviour. Send it alone, with no other tool call in the same message, and wait for its result before the next call. It prints each path it wrote. If it fails or is refused, it wrote nothing: show its `apply.sh error:` line, or say that it was refused, write no other file, create no issue, and stop.
    2. If the user accepted the `commands.md` question, write the file with the Write tool, in the form that step 3 showed, without the template's comments and without the source of each row.
-   3. For each accepted command that a kept `commands.md` lacks, add its row at the end of the file's table with the Edit tool. If the file has no table, add form 1's table at the end of the file, with the accepted rows.
-6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. Each path that `apply.sh` printed must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If a check fails, stop and name the file and what differs.
+   3. If the user accepted the rules question, write each `.claude/rules/<area>.md` with the Write tool, in the form that step 3 showed, without the sources. A file with `paths` starts with the frontmatter `---`, `paths:`, one line `  - "<glob>"` for each glob, and `---`. Then comes the heading `# <Area>`, and then one line `- <rule>` for each rule: no code, no rationale and no source tag. A cross-cutting area has no frontmatter.
+   4. For each accepted command that a kept `commands.md` lacks, add its row at the end of the file's table with the Edit tool. If the file has no table, add form 1's table at the end of the file, with the accepted rows.
+6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. Each path that `apply.sh` printed must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If step 5 wrote rules files, the `.claude/rules/` line of the output must read `present (<n> files)` with the number of files that step 5 wrote, and each file must hold each accepted rule. If a check fails, stop and name the file and what differs.
 7. **Conversion issue.** Only if the user accepted the conversion question:
    1. Write the body with the Write tool to a new file, as the rules say. Its first line is `<!-- engineering:setup conversion issue -->`, then comes the line `/engineering:setup found these items, which differ from the plugin's process. Setup changed none of them.`, then `## Items`, then one line for each conversion item from step 2: `- <what setup found> · suggested action: <action>`. Name each branch, path and quoted line as the screen did.
    2. Run `gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin's process" -F body=@<path>`, as its own Bash call. Pass no `labels` field.
