@@ -140,9 +140,9 @@ check "a new repo: prints the facts, every file missing, no commands, branches o
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
 has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
-  "### Files$nl- \`docs/agents/commands.md\` · missing$nl$nl" \
+  "### Files$nl- \`docs/agents/commands.md\` · missing$nl- \`.claude/rules/\` · missing$nl$nl" \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · missing' \
-  "### Commands$nl- none" \
+  "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Branches" \
   "### Branches$nl- branches: none other than the default branch, \`dependabot/*\` and \`renovate/*\`$nl" \
   "### Docs$nl- none$nl" \
   "## Warnings$nl- none"
@@ -261,7 +261,122 @@ setup
 check "a package.json that is not valid JSON is reported among the commands, not as an error"
 printf '{ "scripts": \n' > package.json
 run
-has '### Commands' '- package.json is not valid JSON, so its scripts were not read'
+has '### Commands' '- package.json is not valid JSON, so its scripts were not read' \
+  '- package.json: not valid JSON, so its dependencies were not read'
+done_check
+
+setup
+check "stack: languages are counted by extension, sorted by count then name, and an unknown extension counts for no language (#217 D3)"
+mkdir -p lib sub
+touch a.py lib/b.py LEGACY.PY c.ts sub/d.tsx main.go lib.rs data.xyz notes.md Makefile .gitignore
+run
+want=$(printf '%s\n' '- language: Python · 3 files' '- language: TypeScript · 2 files' '- language: Go · 1 files' '- language: Rust · 1 files')
+[ "$(printf '%s\n' "$out" | grep '^- language:')" = "$want" ] || miss "the language lines are not $want"
+has "### Commands$nl- none$nl$nl### Stack$nl- language: Python"
+lacks 'xyz' 'Markdown' "### Stack$nl- none" '- Makefile' '- config:'
+done_check
+
+setup
+check "stack: each manifest kind gives a line with its sorted dependency names and no versions (#217 D2)"
+printf '%s\n' '{ "name": "w", "dependencies": { "react": "^18", "express": "4" }, "devDependencies": { "vitest": "1", "typescript": "5" } }' > package.json
+printf '%s\n' \
+  '[project]' \
+  'name = "widget"' \
+  'dependencies = [' \
+  '  "requests>=2",' \
+  "  \"fastapi[all]>=0.1; python_version > '3.8'\"," \
+  ']' \
+  '' \
+  '[project.optional-dependencies]' \
+  'dev = ["pytest>=7", "requests"]' \
+  '' \
+  '[dependency-groups]' \
+  'lint = ["flake8-bugbear", {include-group = "dev"}]' \
+  '' \
+  '[tool.poetry.dependencies]' \
+  'python = "^3.11"' \
+  'django = { version = "^4" }' > pyproject.toml
+printf '%s\n' \
+  'module example.com/widget' \
+  '' \
+  'go 1.22' \
+  '' \
+  'require (' \
+  '	github.com/gin-gonic/gin v1.9.0' \
+  '	golang.org/x/text v0.3.0 // indirect' \
+  ')' \
+  '' \
+  'require github.com/stretchr/testify v1.8.0' > go.mod
+printf '%s\n' \
+  '[package]' \
+  'name = "widget"' \
+  'version = "0.1.0"' \
+  '' \
+  '[dependencies]' \
+  'serde = "1"' \
+  'tokio = { version = "1", features = ["full"] }' \
+  'anyhow.workspace = true' \
+  '' \
+  '[dev-dependencies]' \
+  'criterion = "0.5"' \
+  '' \
+  '[dependencies.clap]' \
+  'version = "4"' > Cargo.toml
+printf '%s\n' \
+  "source 'https://rubygems.org'" \
+  "gem 'rails', '~> 7.0'" \
+  '  gem "rspec"' \
+  "# gem 'commented'" > Gemfile
+run
+has "### Stack$nl- package.json: express, react, typescript, vitest$nl" \
+  '- pyproject.toml: django, fastapi, flake8-bugbear, pytest, requests'"$nl" \
+  '- go.mod: github.com/gin-gonic/gin, github.com/stretchr/testify'"$nl" \
+  '- Cargo.toml: anyhow, clap, criterion, serde, tokio'"$nl" \
+  "- Gemfile: rails, rspec$nl"
+lacks '^18' 'x/text' 'commented' 'dev,' 'include-group' '- language:' "### Stack$nl- none"
+done_check
+
+setup
+check "stack: a manifest with no dependencies gives its line with none"
+printf '%s\n' '{ "name": "w" }' > package.json
+run
+has "### Stack$nl- package.json: none$nl$nl"
+done_check
+
+setup
+check "stack: each linter and formatter config present gives a config line (#217 D3)"
+mkdir -p docs
+touch .eslintrc.json prettier.config.js biome.json ruff.toml .flake8 mypy.ini .golangci.yml rustfmt.toml .rubocop.yml .editorconfig
+printf '%s\n' '[tool.black]' 'line-length = 88' '' '[tool.ruff.lint]' 'select = ["E"]' '' '[tool.ruff.format]' > pyproject.toml
+run
+has '- config: .eslintrc.json' '- config: prettier.config.js' '- config: biome.json' '- config: ruff.toml' \
+  '- config: .flake8' '- config: mypy.ini' '- config: .golangci.yml' '- config: rustfmt.toml' \
+  '- config: .rubocop.yml' '- config: .editorconfig' '- config: pyproject.toml [tool.black]' \
+  '- config: pyproject.toml [tool.ruff]'
+lacks '[tool.mypy]' '- config: .prettierrc' "### Stack$nl- none"
+[ "$(printf '%s\n' "$out" | grep -c 'tool.ruff')" = 1 ] || miss "[tool.ruff] is not one line"
+done_check
+
+setup
+check ".claude/rules/ holding a .md file, in a subfolder too, is present with the count of .md files (#217 D1)"
+mkdir -p .claude/rules/deep
+printf 'x\n' > .claude/rules/a.md
+printf 'x\n' > .claude/rules/deep/b.md
+printf 'x\n' > .claude/rules/notes.txt
+run
+has '- `docs/agents/commands.md` · missing'"$nl"'- `.claude/rules/` · present (2 files)'"$nl$nl"
+lacks '`.claude/rules/` · missing'
+done_check
+
+setup
+check ".claude/rules/ that is absent or holds no .md file is missing, an empty folder too (#217 D1)"
+run
+has '- `.claude/rules/` · missing'
+mkdir -p .claude/rules/empty
+touch .claude/rules/.gitkeep .claude/rules/notes.txt
+run
+has '- `.claude/rules/` · missing'
+lacks '· present ('
 done_check
 
 setup
