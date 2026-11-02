@@ -28,19 +28,21 @@
 #                            `<n>-<slug>`, or another one with its most common prefix when more
 #                            than half do not match; and a line `- #<n> · <branches>` for each
 #                            open issue with one or more `<n>-*` branches. Another convention and
-#                            each such issue also give a warning with a suggested action.
+#                            each such issue also give a finding.
 #   ### Conversion issue     a line `- #<n> · <title> · by marker` (or `by title`) for each open
 #                            issue that is the conversion issue, or `- none` (#164). The marker
 #                            `<!-- engineering:setup conversion issue -->` on a line of the body
 #                            wins; only without one, a title with `convert` and `plugin` or
 #                            `engineering`. An issue with a plugin label (`status:*` or
-#                            `umbrella`) and one `<n>-*` branch gets no branch warning.
+#                            `umbrella`) and one `<n>-*` branch gets no branch finding.
 #   ### Docs                 a line `- <kind> · <path>` for each doc that setup found, or `- none`
 #                            (#151 D2): `adr` for an ADR folder other than `docs/adr/`, and
 #                            `glossary` for a glossary-like file other than `docs/glossary.md`,
-#                            each with a warning; `rules` for the CLAUDE.md, AGENTS.md,
+#                            each with a finding; `rules` for the CLAUDE.md, AGENTS.md,
 #                            CONTRIBUTING.md and PR templates, which the model reads and judges.
-#   ## Warnings              a line `- <warning>` for each warning, or `- none`.
+#   ## Findings              a line `- <finding>` for each finding, or `- none`. A finding is
+#                            what setup reports and leaves as it is, and ends with the action that
+#                            the user can take.
 
 set -u
 
@@ -85,7 +87,7 @@ behaviours=(
 )
 
 report=''
-warnings=()
+findings=()
 line() { report+="$*"$'\n'; }
 
 top=$(git rev-parse --show-toplevel 2>&1) || fail "git rev-parse --show-toplevel: $top"
@@ -108,11 +110,11 @@ facts_repo() {
   line
 
   if [ "$default_branch" != main ]; then
-    warnings+=("The default branch is \`$default_branch\`, not \`main\`. The plugin's skills take \`main\` as the default branch.")
+    findings+=("The default branch is \`$default_branch\`, not \`main\`. Rename the default branch to \`main\`, or expect the plugin's skills to take \`main\`.")
   fi
   case $squash in
-    false) warnings+=("\`allow_squash_merge\` is off, but the plugin squash-merges every PR. Setup changes no repo setting.") ;;
-    unknown) warnings+=("\`allow_squash_merge\` is unknown, because the token cannot read the repo's merge settings. The plugin squash-merges every PR.") ;;
+    false) findings+=("\`allow_squash_merge\` is off, but the plugin squash-merges every PR. Turn on squash merge under Settings, General, Pull Requests.") ;;
+    unknown) findings+=("\`allow_squash_merge\` is unknown, because the token cannot read the repo's merge settings. The plugin squash-merges every PR. Check under Settings, General, Pull Requests that squash merge is on.") ;;
   esac
 }
 
@@ -296,13 +298,13 @@ facts_commands() {
 }
 
 # Adds each line of $1 that starts with `F ` to the report, and each one that starts with
-# `W ` to the warnings, without that start.
+# `W ` to the findings (a `W` line is a finding), without that start.
 add_lines() {
   local l
   while IFS= read -r l; do
     case $l in
       'F '*) line "${l#F }" ;;
-      'W '*) warnings+=("${l#W }") ;;
+      'W '*) findings+=("${l#W }") ;;
     esac
   done <<<"$1"
 }
@@ -343,7 +345,7 @@ facts_branches() {
         if ($other | length) * 2 > $total then
           ($other | map(prefix) | group_by(.) | map({p: .[0], c: length}) | sort_by(-.c, .p) | .[0]) as $top
           | "F - convention: another one, most common prefix `\($top.p)` (\($top.c) of \($total) branches)",
-            "W \($other | length) of \($total) branches do not match `<n>-*`, and their most common prefix is `\($top.p)` (\($top.c) branches). The plugin uses `<n>-<slug>`: its skills find the branch of issue #<n> by that name. Setup renames no branch."
+            "W \($other | length) of \($total) branches do not match `<n>-*`, and their most common prefix is `\($top.p)` (\($top.c) branches). The plugin uses `<n>-<slug>`: its skills find the branch of issue #<n> by that name. Name the branch of each new issue `<n>-<slug>`."
         else
           "F - convention: `<n>-<slug>`"
         end
@@ -356,9 +358,9 @@ facts_branches() {
          if ($mine | length) == 1 and $i.plugin then
            empty
          elif ($mine | length) == 1 then
-           "W Open issue #\($n) has a branch that matches `\($n)-*`: \($mine | names). The plugin'"'"'s skills take it as the branch of #\($n) and build on it. If it holds other work, rename it so that its name does not start with `\($n)-`. Setup changes no branch."
+           "W Open issue #\($n) has a branch that matches `\($n)-*`: \($mine | names). The plugin'"'"'s skills take it as the branch of #\($n) and build on it. If it holds other work, rename it so that its name does not start with `\($n)-`."
          else
-           "W Open issue #\($n) has \($mine | length) branches that match `\($n)-*`: \($mine | names). The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #\($n), and rename the others. Setup changes no branch."
+           "W Open issue #\($n) has \($mine | length) branches that match `\($n)-*`: \($mine | names). The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #\($n), and rename the others."
          end)' 2>/dev/null) || fail "cannot read the remote branches."
   line '### Branches'
   add_lines "$out"
@@ -428,11 +430,11 @@ facts_docs() {
       for (i = 1; i <= k; i++) {
         d = order[i]; c = adr[d] " file" (adr[d] == 1 ? "" : "s")
         print "F - adr · `" d "/` · " c
-        print "W `" d "/` looks like an ADR folder (" c "), which the plugin cannot see: it reads ADRs only in `docs/adr/`. Setup moves no file."
+        print "W `" d "/` looks like an ADR folder (" c "), which the plugin cannot see: it reads ADRs only in `docs/adr/`. Move its ADRs into `docs/adr/`."
       }
       for (i = 1; i <= g; i++) {
         print "F - glossary · `" glossary[i] "`"
-        print "W `" glossary[i] "` looks like a glossary, which the plugin cannot see: it reads terms only in `docs/glossary.md`. Setup edits no file."
+        print "W `" glossary[i] "` looks like a glossary, which the plugin cannot see: it reads terms only in `docs/glossary.md`. Move its terms into `docs/glossary.md`."
       }
       for (i = 1; i <= r; i++) print "F - rules · `" rules[i] "`"
       if (k + g + r == 0) print "F - none"
@@ -442,7 +444,7 @@ facts_docs() {
   line
 }
 
-# The report: one section after the other, then the warnings that the sections gave.
+# The report: one section after the other, then the findings that the sections gave.
 line '## Facts'
 line
 facts_repo
@@ -453,11 +455,11 @@ facts_branches
 facts_conversion
 facts_docs
 
-line '## Warnings'
-if [ "${#warnings[@]}" -eq 0 ]; then
+line '## Findings'
+if [ "${#findings[@]}" -eq 0 ]; then
   line '- none'
 else
-  for w in "${warnings[@]}"; do line "- $w"; done
+  for w in "${findings[@]}"; do line "- $w"; done
 fi
 
 printf '%s' "$report"

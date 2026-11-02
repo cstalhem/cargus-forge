@@ -85,7 +85,7 @@ run --behaviour close-sub-issue
 expect "commands.md and other files are unchanged, only the named path is added" \
   test "$(tree | grep -v -e " ./$workflow\$")" = "$before"
 expect "the files are the ones named" \
-  test "$(cd "$repo" && find . -type f | sort | tr '\n' ' ')" \
+  test "$(cd "$repo" && find . -type f | LC_ALL=C sort | tr '\n' ' ')" \
     = "./.github/workflows/close-sub-issue.yml ./docs/agents/commands.md ./other.txt "
 
 # Errors: one `apply.sh error:` line, exit 1, and nothing written.
