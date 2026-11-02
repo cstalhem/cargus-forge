@@ -110,6 +110,10 @@ run() {
   calls=$(grep -vxF 'api repos/{owner}/{repo}' "$GH_LOG" \
     | grep -vx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=[0-9]*')
   [ -z "$calls" ] || miss "unexpected gh calls: $calls"
+  # The screen says once that setup changes none of the findings, so no finding says it. The
+  # pattern is a regex, so that this file does not hold the sentences themselves.
+  [[ "$out" =~ Setup[[:space:]]+(changes|renames|edits|moves)[[:space:]]+no ]] \
+    && miss "a line of the output holds a Setup ... no ... sentence"
 }
 
 has() { local t; for t in "$@"; do [[ "$out" == *"$t"* ]] || miss "missing: $t"; done; }
@@ -136,7 +140,7 @@ done_check() {
 nl=$'\n'
 
 setup
-check "a new repo: prints the facts, every file missing, no commands, branches or docs, and no warnings"
+check "a new repo: prints the facts, every file missing, no commands, branches or docs, and no findings"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
 has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
@@ -145,8 +149,8 @@ has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Branches" \
   "### Branches$nl- branches: none other than the default branch, \`dependabot/*\` and \`renovate/*\`$nl" \
   "### Docs$nl- none$nl" \
-  "## Warnings$nl- none"
-lacks 'issue-tracker' '- default branch:'
+  "## Findings$nl- none"
+lacks 'issue-tracker' '- default branch:' '## Warnings'
 grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=1' "$GH_LOG" \
   || miss "the open issues were not read with gh api REST"
 done_check
@@ -178,25 +182,27 @@ has '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · differs' \
 done_check
 
 setup
-check "a default branch other than main gives a warning"
+check "a default branch other than main gives a finding that ends with the action"
 gh_repo develop
 run
-has 'The default branch is `develop`, not `main`. The plugin'"'"'s skills take `main` as the default branch.'
-lacks "## Warnings$nl- none" '#85' '- default branch:'
+has 'The default branch is `develop`, not `main`. Rename the default branch to `main`, or expect the plugin'"'"'s skills to take `main`.'
+lacks "## Findings$nl- none" '#85' '- default branch:'
 done_check
 
 setup
-check "allow_squash_merge off gives a warning"
+check "allow_squash_merge off gives a finding that ends with the action to turn it on"
 gh_repo main false
 run
-has '- allow_squash_merge: `false`' '- `allow_squash_merge` is off'
+has '- allow_squash_merge: `false`' \
+  '- `allow_squash_merge` is off, but the plugin squash-merges every PR. Turn on squash merge under Settings, General, Pull Requests.'
 done_check
 
 setup
-check "allow_squash_merge that the token cannot read is unknown, with a warning"
+check "allow_squash_merge that the token cannot read is unknown, with a finding"
 gh_repo main none
 run
-has '- allow_squash_merge: `unknown`' '- `allow_squash_merge` is unknown'
+has '- allow_squash_merge: `unknown`' '- `allow_squash_merge` is unknown' \
+  'Check under Settings, General, Pull Requests that squash merge is on.'
 done_check
 
 setup
@@ -388,26 +394,26 @@ has '- `docs/agents/commands.md` · present'
 done_check
 
 setup
-check "an open issue with one <n>-* branch gives a warning with a suggested action, and no branch changes"
+check "an open issue with one <n>-* branch gives a finding with a suggested action, and no branch changes"
 branches 7-login 70-other 9-a-pr 12-closed
 issues 7 pr:9
 run
 has '- branches: 4 of 4 match `<n>-*`, leaving out the default branch, `dependabot/*` and `renovate/*`' \
   '- convention: `<n>-<slug>`' \
   '- #7 · `7-login`' \
-  '- Open issue #7 has a branch that matches `7-*`: `7-login`. The plugin'"'"'s skills take it as the branch of #7 and build on it. If it holds other work, rename it so that its name does not start with `7-`. Setup changes no branch.'
+  '- Open issue #7 has a branch that matches `7-*`: `7-login`. The plugin'"'"'s skills take it as the branch of #7 and build on it. If it holds other work, rename it so that its name does not start with `7-`.'
 lacks '`70-other`' '#9' '#12' 'another one'
 [ "$(git ls-remote --heads origin | wc -l | tr -d ' ')" = 5 ] || miss "the remote does not hold its 5 branches"
 done_check
 
 setup
-check "an open issue with more than one <n>-* branch gives a warning with a suggested action"
+check "an open issue with more than one <n>-* branch gives a finding with a suggested action"
 branches 12-a 12-b 3-only
 issues 12 3
 run
 has '- #3 · `3-only`' \
   '- #12 · `12-a`, `12-b`' \
-  '- Open issue #12 has 2 branches that match `12-*`: `12-a`, `12-b`. The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #12, and rename the others. Setup changes no branch.' \
+  '- Open issue #12 has 2 branches that match `12-*`: `12-a`, `12-b`. The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #12, and rename the others.' \
   '- Open issue #3 has a branch that matches `3-*`'
 [[ "$out" == *'- #3 · '*'- #12 · '* ]] || miss "the issues are not in number order"
 done_check
@@ -418,7 +424,7 @@ branches feature/a feature/b fix/c 12-x dependabot/npm/x renovate/y renovate/z
 run
 has '- branches: 1 of 4 match `<n>-*`' \
   '- convention: another one, most common prefix `feature/` (2 of 4 branches)' \
-  '- 3 of 4 branches do not match `<n>-*`, and their most common prefix is `feature/` (2 branches). The plugin uses `<n>-<slug>`'
+  '- 3 of 4 branches do not match `<n>-*`, and their most common prefix is `feature/` (2 branches). The plugin uses `<n>-<slug>`: its skills find the branch of issue #<n> by that name. Name the branch of each new issue `<n>-<slug>`.'
 lacks 'dependabot/npm/x' 'renovate/y' 'renovate/z'
 done_check
 
@@ -488,7 +494,7 @@ lacks 'setup.sh error:'
 done_check
 
 setup
-check "an open issue with a plugin label and one <n>-* branch gets no warning, one with more branches or no label does (#164)"
+check "an open issue with a plugin label and one <n>-* branch gets no finding, one with more branches or no label does (#164)"
 branches 7-a 8-b 9-c 10-d 10-e 11-f
 page 1 '[{"number":7,"labels":[{"name":"status:ready"}]},{"number":8,"labels":[{"name":"umbrella"}]},{"number":9,"labels":[{"name":"bug"}]},{"number":10,"labels":[{"name":"status:ready"}]},{"number":11}]'
 run
@@ -533,7 +539,7 @@ grep -qF 'Its first line is `<!-- engineering:setup conversion issue -->`' "$her
 done_check
 
 setup
-check "docs: ADR folders and glossaries the plugin cannot see give warnings, rule docs are listed, and none is changed"
+check "docs: ADR folders and glossaries the plugin cannot see give findings with the action to move them, rule docs are listed, and none is changed"
 mkdir -p docs/adr doc/decisions architecture/records wiki .github/PULL_REQUEST_TEMPLATE src/decisions notes vendor
 printf '# x\n' | tee docs/adr/0001-a.md doc/decisions/0001-a.md doc/decisions/0002-b.md \
   architecture/records/first.md notes/ADR-007-c.md docs/glossary.md CONTEXT.md wiki/Glossary.md \
@@ -553,8 +559,8 @@ has "### Docs$nl- adr · \`architecture/records/\` · 1 file$nl- adr · \`doc/de
   '- rules · `AGENTS.md`' \
   '- rules · `CLAUDE.md`' \
   '- rules · `CONTRIBUTING.md`' \
-  '- `doc/decisions/` looks like an ADR folder (2 files), which the plugin cannot see: it reads ADRs only in `docs/adr/`. Setup moves no file.' \
-  '- `wiki/Glossary.md` looks like a glossary, which the plugin cannot see: it reads terms only in `docs/glossary.md`. Setup edits no file.'
+  '- `doc/decisions/` looks like an ADR folder (2 files), which the plugin cannot see: it reads ADRs only in `docs/adr/`. Move its ADRs into `docs/adr/`.' \
+  '- `wiki/Glossary.md` looks like a glossary, which the plugin cannot see: it reads terms only in `docs/glossary.md`. Move its terms into `docs/glossary.md`.'
 lacks 'adr · `docs/adr/`' 'glossary · `docs/glossary.md`' 'src/decisions' 'vendor/' 'README.md'
 done_check
 

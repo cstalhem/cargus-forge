@@ -1,6 +1,6 @@
 # Engineering
 
-Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot.
+Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot, autopilot-t3.
 
 The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. It works in a local Claude Code session and in a Claude Code cloud session.
 
@@ -20,11 +20,11 @@ Install the plugin from this repo's marketplace:
 
 Then run `/engineering:setup` once per repo, from its top folder. Plugin updates reach the repo without a re-run, because the plugin's own rules stay in the plugin.
 
-- It shows what it found on one screen, then asks numbered questions, each with a recommended answer. In an interactive session you answer in a pop-up: `Apply everything recommended`, `Choose item by item` (a yes or no for each question) or `Write nothing`. Setup then writes in the same turn, so its pre-approved commands run without asking again. Where there is no pop-up, as in `claude -p`, answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
+- It shows what it will write, then what it found but will not change, on one screen, then asks numbered questions, each with a recommended answer. In an interactive session you answer in a pop-up: `Apply everything recommended`, `Choose item by item` (a yes or no for each question) or `Write nothing`. Setup then writes in the same turn, so its pre-approved commands run without asking again. Where there is no pop-up, as in `claude -p`, answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
 - After your yes, it writes the repo profile, which is only `docs/agents/commands.md`: the build, test and lint commands it detected. The plugin takes `main` as the default branch, so the profile does not record it.
 - When the repo has no `.claude/rules/` files, it proposes rules for `.claude/rules/` from the repo's docs, its tool configs and the stack, as one line each with its source, and writes the accepted ones as `.claude/rules/<area>.md`. For the stack it researches the web: one research agent for each component, at most four, in parallel, each returning findings with the URL of its docs, which show as `docs: <url>`. Without network access the agents return `no network`, and setup says so and proposes rules from what the model knows, as `proposed`. A candidate that one command can check becomes a pre-PR check row of the repo profile instead. A repo that already has rules keeps them: setup reports `.claude/rules/` as kept and asks nothing.
 - It offers each optional behaviour. Today that is the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch.
-- On an existing repo, it reports what differs from the plugin's process, such as other branch names or conflicting docs, and offers one issue that lists them.
+- On an existing repo, it reports each finding, something that differs from the plugin's process, such as other branch names or conflicting docs, and gives the action you can take. It leaves each finding as it is, and offers one issue that lists them all.
 - It commits, pushes and labels nothing. It lists the files it wrote, and you commit them on a branch and open a PR.
 
 ## Commands
@@ -37,6 +37,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
+| `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: the same run with T3's scheduled task, threads and worktrees. See [Autopilot on T3 Code](#autopilot-on-t3-code). |
 
 Two more skills run only when another skill calls them:
 
@@ -76,7 +77,7 @@ Run `/engineering:next` at any point to see where things stand and what to run n
 
 ## Autopilot
 
-Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in cloud sessions until a single issue's PR or the final PR is ready for your review. It runs only in a Claude Code cloud session, because it needs the session and scheduled task tools there, and it stops with one line anywhere else.
+Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in cloud sessions until a single issue's PR or the final PR is ready for your review. It runs only in a Claude Code cloud session, because it needs the session and scheduled task tools there, which reach a run through the `Claude_Code_Remote` connector on its scheduled task, and it stops with one line anywhere else. On a T3 Code host, `/engineering:autopilot-t3` runs the same Autopilot with T3's tools; see [Autopilot on T3 Code](#autopilot-on-t3-code).
 
 ### Turning it on
 
@@ -94,7 +95,10 @@ Then start a cloud session on the repo at claude.ai/code and run `/engineering:a
 | Name | `engineering: autopilot` |
 | Schedule | every hour, `0 * * * *`. The server anchors it to the minute you created it, so the runs do not all start on the hour. |
 | Each run | a fresh Claude Code cloud session in the environment of the session that created it, on this repo, with the prompt `/engineering:autopilot` |
-| Model | execute children run on Sonnet; every other run, the hourly run and each ship child, runs on the scheduled task's model, the model of the session that created it |
+| Model | execute children run on Sonnet; the hourly run and each ship child run on the scheduled task's model, which the run that creates the scheduled task sets to its own model |
+| Connector | `Claude_Code_Remote`, stored on the scheduled task. It gives each run the session and scheduled-task tools. |
+
+A scheduled task created by hand in the claude.ai dialog stores no connector and no model, because the dialog cannot offer `Claude_Code_Remote` and has no model field, so its runs have no session tools and run on the default model. A run on such a scheduled task says so in one line and sends one push notification, and a manual run that finds an existing scheduled task without the connector or the model says what it lacks. Delete it on claude.ai and run `/engineering:autopilot` by hand, which proposes a new one.
 
 A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the sessions it starts, the comments it posts and `status.sh` are its record.
 
@@ -127,6 +131,52 @@ When Autopilot cannot go on, it hands the work to you with one comment and one p
 | A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
 
 Open the session the comment names to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself. Autopilot leaves a handed-off issue alone: the child session keeps its claim on the issue, so no later run starts another child for it.
+
+## Autopilot on T3 Code
+
+`/engineering:autopilot-t3` is Autopilot on a [T3 Code](https://github.com/pingdotgg/t3code) host: a machine that runs `t3` as a service, with this repo as one of its projects. The run is the same as [Autopilot](#autopilot), from the facts step to the hand-offs, and only the platform layer changes: a T3 scheduled task starts each hourly run as a fresh thread in its own worktree, the `t3-code` MCP tools, which T3 gives every thread, replace the cloud session tools, each child is a thread in its own worktree, and the child's report instruction is a queued message instead of a line in its system prompt. The skill runs only in a T3 Code thread, where the `orchestrator_capabilities` tool is in its tools, and stops with one line anywhere else.
+
+### Preparing the host
+
+1. Install T3 Code and run `t3` as a service, so the host runs scheduled tasks while no one watches it.
+2. Run `gh auth login` on the host as the user that runs `t3`, with access to the repo. The skills read and write GitHub through `gh api`.
+3. Install the plugin on the host: `claude plugin marketplace add cstalhem/cargus-forge` and `claude plugin install engineering@cargus-forge`. Each run checks with `claude plugin list` that an installed copy is there, because a child thread loads the plugin from it, and stops with these two commands otherwise. The plugins synced from claude.ai do not reach a thread that T3 starts.
+4. Add the repo as a T3 project, with `main` as its base ref. Each run and each child works in a worktree from `main` on the remote.
+5. In the project's settings, set the worktree cleanup to remove settled worktrees. The hourly run and every child are threads in their own worktrees, so the cleanup keeps the host from filling up.
+
+Then open a thread on the project and run `/engineering:autopilot-t3`, on the model and in the runtime mode you want for the hourly run: the scheduled task inherits both from the thread that creates it. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in T3's scheduled tasks list:
+
+| Setting | Value |
+|---|---|
+| Title | `engineering: autopilot` |
+| Schedule | every hour: an interval of 3600000 ms, counted from the moment it was created |
+| Each run | a fresh thread in its own worktree from the project's base ref, with the prompt `/engineering:autopilot-t3` |
+| Model and modes | this thread's model, runtime mode and interaction mode, inherited when the task was created. The hourly run and each ship child run on them; each execute child runs on Sonnet. |
+
+Pause or delete the scheduled task in that list. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
+
+### What a T3 run does
+
+Each run renames its thread to `autopilot <ISO timestamp>`, so the hourly runs are told apart in the thread list, and takes the steps of [What a run does](#what-a-run-does) with T3's tools:
+
+- A child is a thread titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. Each child is launched in its own worktree from `main` on the remote, in `full-access` runtime mode, because no one answers an approval prompt unattended. An execute child runs on the current Sonnet model of the run's provider; a ship child inherits the run's model.
+- Right after the launch, the child gets one queued message that tells it to report to the run's thread when its work ends: `<title>: finished`, `<title>: stopped on a question` or `<title>: stopped: <reason>`, with the PR and, for a question, its recommended answer. The report arrives as a message in the run's thread and starts the next run.
+- A child that stopped on a question gets an answer, at most three times, through its pending request and a queued message that starts with `Autopilot: answer <k> of 3`. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
+- Autopilot merges each ready sub-issue PR, starts ship and execute children one at a time, and comments on a ready single-issue PR or final PR, as in a cloud session.
+
+T3 Connect sends the push notifications: it pushes to your devices when a thread finishes, fails or asks, so the run sends none of its own.
+
+### The three hand-offs
+
+A hand-off is one comment, and the comment is the record: Autopilot never hands the same thing off twice. `<title>` is the child's title and `<thread>` its thread id. Children run in `full-access` mode, so the permission-prompt hand-off of a cloud session has no T3 case.
+
+| Hand-off | Comment | Where |
+|---|---|---|
+| A child asks a fourth question after three answers | `Autopilot: stopped, <title> (<thread>) asked a fourth question after three answers: <question>` | the issue |
+| A child stopped for another reason, such as execute sending a single issue back to discuss, or the engineering plugin not loaded in the child | `Autopilot: stopped, <title> (<thread>) stopped: <reason>` | the issue |
+| A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
+
+Open the thread the comment names in T3 Code to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself.
 
 ## Status
 
