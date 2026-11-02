@@ -8,6 +8,8 @@ allowed-tools:
   - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
   - Edit(.claude/rules/*)
   - Edit(.claude/skills/*)
+  - Bash(date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ)
+  - Bash(date -u -v+10M +%Y-%m-%dT%H:%M:%SZ)
 ---
 
 # execute
@@ -18,7 +20,7 @@ Issue: $ARGUMENTS
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - Locally, use the session's worktree. Do not make a second one, and do not move or rename its directory, because that breaks the running session. In a cloud session, enter no worktree. Use the designated branch if the session names one, and otherwise the issue's `<n>-<slug>` branch, in the current directory. A session is a cloud session when `printenv CLAUDE_CODE_REMOTE` prints `true`.
 - Run plain git commands, one at a time, in the current directory: no `cd … &&` and no `git -C`. Claude Code blocks git commands that it cannot confirm stay inside the worktree.
-- The arguments are `#<n>`, with a `PENDING resume <k> of 3` suffix when step 7 of an earlier run in this session scheduled this run with `send_later`. The suffix changes nothing before step 6.
+- The arguments are `#<n>`, with a `PENDING resume <k> of 3` suffix when step 7 of an earlier run in this session scheduled this run with `send_later` or `schedule_task`. The suffix changes nothing before step 6.
 - Deviations:
   1. A bug in the way of the issue: fix it, and name the fix in the PR.
   2. A missing guard that the issue needs: add it, and name it in the PR.
@@ -37,7 +39,7 @@ Issue: $ARGUMENTS
    - **Blockers:** read the issue's blockers, and their state, from its `dependencies/blocked_by` links only. If an open issue blocks a single issue, stop. If one blocks a sub-issue, list the merged PRs into the base with `gh api 'repos/{owner}/{repo}/pulls?base=<base>&state=closed&per_page=100' --jq 'length, (.[] | select(.merged_at) | {number, body})'`, page by page as the rules say. A repo without the close-sub-issue workflow leaves a merged sub-issue open, so an open blocker counts as merged when a merged PR's first line names it as its issue ("Sub-issue #<b> of" or "for #<b>"). A mention elsewhere in a body does not count. Name each such PR and go on. Stop and name each open blocker that has no such PR.
    - **Terms:** the issue's `Term` decisions are its own `D<n> · Term:` lines, and each `#<umbrella> D<n>` line in its `## Decisions` whose decision in the umbrella is a `Term` decision. Read that decision's text in the body that the `/parent` call returns.
    - **ADRs:** the issue's `ADR` decisions are its own `D<n> · ADR:` lines, and each `#<umbrella> D<n>` line in its `## Decisions` whose decision in the umbrella is an `ADR` decision. Read its text in the same body.
-2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes`, `printenv CLAUDE_CODE_REMOTE` and `git ls-remote --heads origin 'refs/heads/<n>-*'`, which lists the issue's branch. The session is in a worktree when the git dir and the common dir differ.
+2. **Worktree.** Run `git rev-parse --abbrev-ref HEAD`, `git rev-parse --absolute-git-dir`, `git rev-parse --path-format=absolute --git-common-dir`, `git status --porcelain`, `git rev-list HEAD --not --remotes`, `printenv CLAUDE_CODE_REMOTE` and `git ls-remote --heads origin 'refs/heads/<n>-*'`, which lists the issue's branch. The session is in a worktree when the git dir and the common dir differ. Also check whether the `orchestrator_capabilities` tool (`mcp__t3-code__orchestrator_capabilities`) is in your tools, as a tool listed as deferred counts, and load nothing: the session is then a T3 Code thread, which step 7 uses.
    - **Sync:** the cases below that say "sync" run these on the issue branch `<branch>`:
      1. Run `git fetch origin <base> <branch>`. If it fails, for example because `<branch>` is not on the remote, stop and ask.
      2. Run `git rev-list --left-right --count HEAD...origin/<branch>`, which counts the commits only on `HEAD` and only on `origin/<branch>`. If they have diverged (both counts above 0), stop and ask. If `HEAD` is behind `origin/<branch>`, run `git merge --ff-only origin/<branch>`, and stop and ask if it fails.
@@ -72,7 +74,8 @@ Issue: $ARGUMENTS
    - **FAIL:** fix each gap and each failed check that its report names, and go back to step 4. If it fails a second time, stop and ask.
    - **PENDING:** name each pending check. A PENDING verdict does not count as one of the two failures. Then, the first that applies:
      - **In a cloud session, with a resume left:** the session is a cloud session (step 2's `printenv CLAUDE_CODE_REMOTE` printed `true`), and the arguments carry no `PENDING resume <k> of 3` or carry one with `<k>` below 3; `<k>` is 0 when they carry none. Call the `send_later` tool with `delay_minutes` 10, the name `execute #<n>: PENDING resume <k+1> of 3` and the message `/engineering:execute #<n> PENDING resume <k+1> of 3`. Say that the run resumes itself in 10 minutes, and end the turn. The message starts a run in this session that resumes on this branch and calls verify again, and its arguments carry the count, so at most three resumes follow one PENDING verdict after another.
-     - **Otherwise** (not a cloud session, or the third resume got PENDING): stop. Tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again.
+     - **In a T3 Code thread, with a resume left:** the session is not a cloud session, step 2 found the `orchestrator_capabilities` tool in its tools, and the arguments carry no `PENDING resume <k> of 3` or carry one with `<k>` below 3; `<k>` is 0 when they carry none. Load the `schedule_task` tool with the `ToolSearch` tool, query `select:mcp__t3-code__schedule_task`. Run `date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+10M +%Y-%m-%dT%H:%M:%SZ`, which prints the time 10 minutes ahead with GNU `date` or, failing that, BSD `date`. Call `schedule_task` with the title `execute #<n>: PENDING resume <k+1> of 3`, the prompt `/engineering:execute #<n> PENDING resume <k+1> of 3`, `schedule` `{"type": "once", "runAt": "<that time>"}` and `bindToCurrentThread` true. Check its result: it must show a `once` schedule with a `nextRunAt`. If the call fails, or the result does not, stop as in the next bullet and say that the host needs a T3 Code build with one-time scheduled tasks (v0.1.7, or a nightly from 2026-11-01 on). Otherwise say that the run resumes itself in 10 minutes, and end the turn. The prompt posts into this thread at that time and starts a run that resumes on this branch and calls verify again, and its arguments carry the count, so at most three resumes follow one PENDING verdict after another. The spent task stays in T3's scheduled tasks list until T3 deletes it with its thread: delete none.
+     - **Otherwise** (neither a cloud session nor a T3 Code thread, `schedule_task` failed, or the third resume got PENDING): stop. Tell the user to run `/engineering:execute #<n>` again once CI has finished. That run resumes on this branch and calls verify again.
 
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
