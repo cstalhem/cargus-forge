@@ -5,7 +5,7 @@ A marketplace monorepo of Claude Code plugins for knowledge management, note-tak
 ## Repository layout
 
 - `plugins/<name>/` — one self-contained plugin each:
-  - `.claude-plugin/plugin.json` — manifest (`name`, `description`, `version`, `author`)
+  - `.claude-plugin/plugin.json` — manifest (`name`, `description`, `author`)
   - `skills/<skill>/SKILL.md`, `agents/`, `hooks/hooks.json` — components, auto-discovered when the plugin is installed
 - `.claude-plugin/marketplace.json` — root marketplace listing every plugin (`name`, `source`, `description`)
 - `README.md` — human-facing plugin index
@@ -18,7 +18,7 @@ Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management
 
 - Test a plugin without installing it: `claude --plugin-dir ./plugins/<name>` (takes precedence over an installed copy of the same name)
 - After editing an installed plugin: `/reload-plugins` (reloads skills, agents, hooks, and plugin MCP/LSP servers without a restart)
-- Validate before opening a PR: `claude plugin validate ./plugins/<name>` (add `--strict` to treat warnings as errors)
+- Validate before opening a PR: `scripts/validate-plugins.sh` (runs `claude plugin validate --json` on each plugin and the marketplace root)
 
 ## Component authoring
 
