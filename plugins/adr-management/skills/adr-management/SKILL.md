@@ -47,19 +47,14 @@ Two related conventions:
 The rest of this guide uses `docs/adr/` and `docs/designs/` as placeholders —
 substitute the project's actual paths.
 
-## When to Activate
-
-- Creating a new architecture decision.
-- Evaluating whether a decision warrants an ADR or a design document.
-- Updating an existing ADR because a decision was refined, extended, or reversed.
-- Reviewing ADR quality or structure.
-
 ## Core Principles
 
 1. **One ADR = one decision area.** Each ADR owns one question the architecture
    answers ("how are events stored?", "what is the sharing boundary?"). The
    decision must have rejected alternatives. If there are no meaningful
-   alternatives, it belongs in a design document, not an ADR.
+   alternatives, it belongs in a design document, not an ADR. Tightly coupled
+   decisions (same discussion, same use case) may share an ADR, but each stays
+   clearly identifiable.
 2. **ADRs are living documents.** The body always states the **current**
    decision. When a decision is refined or changed, edit the ADR in place; when
    an earlier choice is abandoned, move it into Rejected alternatives with the
@@ -104,6 +99,8 @@ ADR answers?**
 | Decision reversed or replaced                               | Rewrite the ADR; move the old approach to Rejected alternatives with why it was dropped |
 | New question with its own alternatives (passes litmus test) | New ADR; if it narrows what an existing ADR says, edit that ADR too                     |
 | Decision area no longer relevant                            | Set `status: deprecated`; keep the file with one line saying why                        |
+
+When editing in place, remove nothing from Rejected alternatives.
 
 A reversal is not lost history: the abandoned approach becomes the strongest
 kind of rejected alternative — one with empirical evidence ("initially built
@@ -173,6 +170,10 @@ rationale lives. Never leave an existing ADR asserting something the new
 decision has made false, and never patch it with an "amended by" annotation —
 fix the text itself.
 
+Cross-references are plain links in the body ("Builds on", or inline where
+another ADR establishes a fact). They are one-directional and informational —
+no back-link bookkeeping.
+
 ### Step 5: Update any open-questions log
 
 If the project tracks open design questions (e.g. an `open-design-areas.md` or a
@@ -206,11 +207,10 @@ analysis, implementation specifics), create a companion design document:
 
 ### Reference Files
 
-For detailed best practices, industry sources, and the full rationale behind
-these guidelines (including when the living-document model fits and when the
-classical immutable-ADR model is the better choice):
+For industry sources, what typically qualifies for an ADR and what to skip, and
+when the living-document model fits and when the classical immutable-ADR model
+is the better choice:
 
 - **`references/best-practices.md`** — ADR best practices compiled from AWS,
   Google Cloud, Microsoft Azure, Martin Fowler, and the ADR GitHub organisation,
-  adapted to a living-document model. Includes the decision table for when to
-  create/edit/deprecate and length guidelines.
+  adapted to a living-document model.
