@@ -262,23 +262,14 @@ Claude Code loads `CLAUDE.md`, not `AGENTS.md`. Resolve the real L1 file from th
 
 Insert the template into the real L1 file, replacing `{L1_FILE}` with its filename. Place it after the main project content but before any MCP/tools section if one exists. If the file doesn't exist yet, create it with the full project overview content followed by the Knowledge System section.
 
-### Step 5: Staging area
-
-The staging area uses individual `staging_*.md` files in the project's memory directory (the same directory as `MEMORY.md`), with index lines in `MEMORY.md`. This integrates with the auto-memory system rather than conflicting with it.
-
-Read the staging convention reference from this skill's references directory:
-`${CLAUDE_SKILL_DIR}/references/memory-staging-template.md`
-
-No files need to be created at init time — staging files are created on demand by the heal skill when minor issues are discovered during work. The convention reference is for your understanding of the format.
-
-### Step 6: Critical patterns file
+### Step 5: Critical patterns file
 
 Create `.claude/rules/critical-patterns.md` for high-impact WRONG/CORRECT patterns. Read the template from this skill's references directory:
 `${CLAUDE_SKILL_DIR}/references/critical-patterns-template.md`
 
 Write the template content to `.claude/rules/critical-patterns.md`. This file starts with HTML comments documenting the format — actual entries are added as mistakes are discovered during work.
 
-### Step 7: Summary
+### Step 6: Summary
 
 Present what was created:
 
