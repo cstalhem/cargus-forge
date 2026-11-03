@@ -5,7 +5,8 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh")
-  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/apply.sh" *)
+  - Bash(mkdir -p .github/workflows)
+  - Bash(cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml)
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/templates/commands.md")
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md")
   - Bash(git rev-parse --show-prefix)
@@ -22,7 +23,7 @@ allowed-tools:
 - The research agents of step 2's Rules part are the one exception to the first rule above: they read the web, with WebSearch and WebFetch. Setup reads the web nowhere else.
 - The `## Facts` and `## Findings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, other than the read-back in step 6, and do not change them.
 - Setup writes files to the working tree only. It does not commit, push, open a PR, add a label, create a branch or change a repo setting. Its one GitHub write is the conversion issue of step 7, and only after the user accepts its question.
-- `apply.sh` writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md` and the files under `.claude/rules/`, with the Write or Edit tool.
+- The `cp` of step 5.1 writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md` and the files under `.claude/rules/`, with the Write or Edit tool.
 - The repo owns `docs/agents/commands.md` once setup has written it: never rewrite that file, and only add the rows that the user accepts.
 - The repo owns `.claude/rules/` once it holds a file: setup writes no rule into it and asks nothing about rules.
 - An optional behaviour's file is a byte-identical copy of its template. Never edit one.
@@ -31,7 +32,7 @@ allowed-tools:
 - Judge a line of a `rules` doc only against the plugin's contract in the Contract section at the end of this skill. The line is a finding when it says something that the contract does not allow, such as another branch pattern, a merge style other than squash, or another PR target or `Closes` rule. A line that only adds to the contract is not.
 
 ## Steps
-1. **Check.** If the output of `setup.sh` at the end of this skill is a `setup.sh error:` line instead of the Facts, show that line and stop. Run `git rev-parse --show-prefix`, as its own Bash call. If it prints a path, the session is not at the top of the repo, where `apply.sh` writes: say to start the session there, and stop.
+1. **Check.** If the output of `setup.sh` at the end of this skill is a `setup.sh error:` line instead of the Facts, show that line and stop. Run `git rev-parse --show-prefix`, as its own Bash call. If it prints a path, the session is not at the top of the repo, where the `cp` writes a relative path: say to start the session there, and stop.
 2. **Plan.** Work out the screen from the Facts. Each part that needs a decision becomes one numbered question, written so that "yes" is the recommended answer.
    - **Branches**, the lines under `### Branches`: their findings say what to do. No question.
    - **Docs**, the lines under `### Docs`:
@@ -86,11 +87,11 @@ allowed-tools:
    - **Typed answer:** otherwise the user's next message answers the questions. "yes" accepts every question. "yes, except <numbers>" accepts every question but those. "no" accepts none.
    If the answer changes a proposal, such as a row of the commands table, show the changed proposal and ask again, in the same way. If the answer is unclear, ask again. If it accepts no question, reply `Setup wrote nothing.`, and end: write no file and create no issue.
 5. **Apply.** Write the accepted files in this order:
-   1. If the user accepted an optional behaviour, run `apply.sh` once, as its own Bash call, with no pipe, redirect or chain: `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/apply.sh"`, then `--behaviour <name>` for each accepted optional behaviour. Send it alone, with no other tool call in the same message, and wait for its result before the next call. It prints each path it wrote. If it fails or is refused, it wrote nothing: show its `apply.sh error:` line, or say that it was refused, write no other file, create no issue, and stop.
+   1. If the user accepted close-sub-issue, run `mkdir -p .github/workflows`, then `cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml`, each as its own Bash call, with no pipe, redirect or chain, alone in its message, and wait for its result before the next call. If one fails or is refused, say so, write no other file, create no issue, and stop.
    2. If the user accepted the `commands.md` question, write the file with the Write tool, in the form that step 3 showed, without the template's comments and without the source of each row.
    3. If the user accepted the rules question, write each `.claude/rules/<area>.md` with the Write tool, in the form that step 3 showed, without the sources. A file with `paths` starts with the frontmatter `---`, `paths:`, one line `  - "<glob>"` for each glob, and `---`. Then comes the heading `# <Area>`, and then one line `- <rule>` for each rule: no code, no rationale and no source tag. A cross-cutting area has no frontmatter.
    4. For each accepted command that a kept `commands.md` lacks, add its row at the end of the file's table with the Edit tool. If the file has no table, add form 1's table at the end of the file, with the accepted rows.
-6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. Each path that `apply.sh` printed must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If step 5 wrote rules files, the `.claude/rules/` line of the output must read `present (<n> files)` with the number of files that step 5 wrote, and each file must hold each accepted rule. If a check fails, stop and name the file and what differs.
+6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. The close-sub-issue path that step 5.1 copied must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If step 5 wrote rules files, the `.claude/rules/` line of the output must read `present (<n> files)` with the number of files that step 5 wrote, and each file must hold each accepted rule. If a check fails, stop and name the file and what differs.
 7. **Conversion issue.** Only if the user accepted the conversion question:
    1. Write the body with the Write tool to a new file, as the rules say. Its first line is `<!-- engineering:setup conversion issue -->`, then comes the line `/engineering:setup reported these findings, which differ from the plugin's process. Setup changed none of them.`, then `## Findings`, then one line for each finding from step 2: `- <what setup found> · suggested action: <action>`. Name each branch, path and quoted line as the screen did.
    2. Run `gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin's process" -F body=@<path>`, as its own Bash call. Pass no `labels` field.
