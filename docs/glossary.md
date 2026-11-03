@@ -59,7 +59,7 @@ _Avoid_: job, automation, orchestrator, cron job
 
 **Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.
 
-**Finding**: Something setup reports about an existing repo and leaves as it is, because it differs from the plugin's process or the plugin cannot see it: a repo setting, a branch, a doc or a line that conflicts with the contract. Each one comes with the action the user can take, and the conversion issue lists them all.
+**Finding**: Something that setup or an anneal reports about an existing repo, with the action it needs. Setup leaves its findings as they are and lists them in the conversion issue; an anneal routes each one to a fix sub-issue, a request or a drop.
 _Avoid_: warning, conflict, conversion item
 
 **Rule**: One line in a file under `.claude/rules/` that says what code in this repo does or never does; Claude Code loads it into every session, or when a file matching the file's `paths` is read. Setup proposes rules, verify grades a PR against them, and execute's reflect step adds them.
@@ -78,3 +78,6 @@ _Avoid_: retry, poll
 
 **T3 Code thread**: A Claude session that T3 Code starts on its host, recognised by the orchestrator_capabilities tool in its tools; on a T3 Code host it takes the place of a cloud session.
 _Avoid_: T3 session
+
+**Anneal**: A typed run of `/engineering:anneal` that has agents study the whole repo by area and check each finding, then turns each confirmed finding into a fix sub-issue under one umbrella issue or into a request, bold rewrites included, with the rule that would have made each fix unneeded; it changes no code itself.
+_Avoid_: sweep, simplifier, audit, job
