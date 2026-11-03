@@ -120,7 +120,9 @@ expect "the feature branch is <u>-anneal-<date>, created from origin/main and re
   bash -c 'grep -qF "\`<u>-anneal-<date>\`" <<<"$1" && grep -qF "from \`origin/main\` as the rules say, and read it back" <<<"$1"' _ "$umbrella"
 expect "the rules say how to create a branch with git push" grep -qF 'git push origin <sha>:refs/heads/<n>-<slug>' "$plugin/references/rules.md"
 expect "a sub-issue is titled Anneal <date> · <area>: <title>" has "$subissues" 'titled `Anneal <date> · <area>: <title>`'
-expect "a sub-issue's parent is read back" has "$subissues" 'issues/<s>/parent --jq .number'
+expect "the rules say how to set a sub-issue's parent" grep -qF 'sub_issues -F sub_issue_id=<id>' "$plugin/references/rules.md"
+expect "a sub-issue's parent is set and read back as the rules say" \
+  has "$subissues" 'set its parent to the umbrella `<u>` and read the parent back, as the rules say'
 expect "a sub-issue gets no blocked-by link" has "$subissues" 'Set no "blocked by" link'
 expect "a fix with a rule gets the rule scenario" \
   grep -qF 'WHEN .claude/rules/<area>.md is read THEN it holds <rule>' "$skill"
