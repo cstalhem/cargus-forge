@@ -28,35 +28,18 @@ set -u
 human=false
 [ "${1:-}" = "--human" ] && human=true
 
-fail() {
-  local msg
-  msg=$(printf '%s' "$*" | tr '\r\n' '  ')
-  printf 'status.sh error: %s\n' "$msg"
+# `fail`, `read_list` and `read_branches` come from the plugin's shared file. `fail` does not
+# exist until it is loaded, so a missing file prints its own error line.
+lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
+if [ ! -f "$lib" ]; then
+  printf '%s error: cannot find %s\n' "$(basename "$0")" "$lib"
   exit 0
-}
+fi
+. "$lib"
 
 for tool in gh jq git; do
   command -v "$tool" >/dev/null 2>&1 || fail "$tool is not installed."
 done
-
-# Reads a list page by page, 100 items a page, without following GitHub's next-page link.
-# $1 is the path. Sets `items` to one JSON array with every item. Call it in the main shell,
-# not in a pipe or `$(…)`, so that its `fail` ends the script and its error text is printed.
-read_list() {
-  local path=$1 sep='?' page=1 out count all='[]'
-  case $path in *\?*) sep='&' ;; esac
-  while :; do
-    out=$(gh api "$path${sep}per_page=100&page=$page" 2>&1) || fail "gh api $path: $out"
-    count=$(printf '%s' "$out" | jq 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
-      || fail "gh api $path did not return a list: $out"
-    # Through stdin, not `--argjson`: a page of issue bodies can pass the 128 KB limit of one
-    # command-line argument.
-    all=$(printf '%s\n%s\n' "$all" "$out" | jq -s '.[0] + .[1]' 2>/dev/null) || fail "could not join the pages of $path."
-    [ "$count" -lt 100 ] && break
-    page=$((page + 1))
-  done
-  items=$all
-}
 
 repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot read the current repo with gh api: $repo"
 
@@ -86,9 +69,7 @@ pulls=$(printf '%s' "$items" | jq '
             | if . == null then null else ((.n // .c) | tonumber) end)
   })' 2>/dev/null) || fail "cannot read the open PRs."
 
-remote=$(git ls-remote --heads origin 2>&1) || fail "git ls-remote --heads origin: $remote"
-branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/||p' | jq -R . 2>/dev/null | jq -s . 2>/dev/null) \
-  || fail "cannot read the remote branches."
+read_branches
 
 # Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
 # "blocked by" link. A blocker counts while its issue is open and, in this repo, not merged:
