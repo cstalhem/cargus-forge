@@ -10,7 +10,7 @@ The reasons behind the rules for shipping a change to a plugin in this marketpla
 
 ## Reasons
 
-- **Validate:** `scripts/validate-plugins.sh` runs `claude plugin validate --json` on each plugin and the marketplace root and fails on every error and warning except the missing-version one. Wrong field types (e.g. a string where an array is expected) are load errors; unrecognized fields are warnings only.
+- **Validate:** wrong field types (e.g. a string where an array is expected) are load errors; unrecognized fields are warnings only.
 - **Merge:** squash-merge, so the PR becomes one commit and `main` stays linear, and delete the branch. The squash message is the PR title and description, so write the description for `git log`. Do not rebase-merge: it replays each commit and drops merge commits, so a branch that merged `main` in hits the same conflicts again.
 
 ## Anti-Patterns
