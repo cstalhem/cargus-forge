@@ -109,7 +109,7 @@ The template is artifact-ready: it has no `<!doctype>`, `<html>`, `<head>` or `<
   - *Read time:* the visible layer's word count (the text in `<main>` outside every `<details>`) divided by 230, rounded up.
   - *Depth:* the depth you were given.
   - *Tags:* 3 to 6 tags merged from the notes' `tags`.
-- **`<title>`:** replace "Research Report Template" with a short name for the report, 2 to 4 words (e.g. "Azure Landing Zone Networking"), and delete the comment under it. Use the same name in the top bar. The restated question goes in the `<h1>`.
+- **`<title>`:** the report name, 2 to 4 words, also in the top bar.
 - **Description:** fill the `description` meta tag with one sentence stating the answer.
 - **Writing:** plain, direct English. No em dashes. No filler or hype words. State the answer before the explanation.
   - One idea per paragraph. Aim for sentences under 25 words.
@@ -132,15 +132,13 @@ When asked to update a report, rebuild it at the same report path: copy the temp
    python3 "<check script>" "<report path>" "<topic folder>"
    ```
 
-   It prints one line per problem and nothing when the report passes. An `ERROR` line is a failure: a leftover `{{` placeholder, an em dash, a finding without a `<details>` block, a citation without a matching source, or a note link to a missing note. Fix every `ERROR` and run the script again, until it exits 0. A `WARNING` line means the visible layer or the `<h1>` is over its target: cut it back, unless that would drop part of the answer. Never edit the script, and never finish with an `ERROR` left. If the script cannot run, report back that the check did not run and why.
+   It prints one line per problem and nothing when the report passes. An `ERROR` line is a failure: a leftover `{{` placeholder, an em dash, a finding without a `<details>` block, an in-page link without a target, or a note link to a missing note. Fix every `ERROR` and run the script again, until it exits 0. A `WARNING` line means the visible layer or the `<h1>` is over its target: cut it back, unless that would drop part of the answer. Never edit the script, and never finish with an `ERROR` left. If the script cannot run, report back that the check did not run and why.
 2. Then check what the script does not:
-   1. The `<title>` is no longer "Research Report Template".
-   2. Every source in the index is cited at least once.
-   3. Every contents link points to an existing ID.
-   4. No unused template blocks or template instruction comments remain in the markup. Comments inside `<style>` and the scripts stay.
-   5. Every takeaway links to an existing finding and has a confidence level.
-   6. The number of findings fits the depth, every `h2` is a sentence that states a finding, and every visible finding paragraph has 2 to 3 sentences.
-   7. Every open gap you were given appears under open questions.
+   1. Every source in the index is cited at least once.
+   2. No unused template blocks or template instruction comments remain in the markup. Comments inside `<style>` and the scripts stay.
+   3. Every takeaway has a confidence level.
+   4. The number of findings fits the depth, every `h2` is a sentence that states a finding, and every visible finding paragraph has 2 to 3 sentences.
+   5. Every open gap you were given appears under open questions.
 
    If you change the report while fixing these, run the check script again.
 
