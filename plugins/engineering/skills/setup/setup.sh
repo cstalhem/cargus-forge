@@ -84,6 +84,10 @@ line() { report+="$*"$'\n'; }
 top=$(git rev-parse --show-toplevel 2>&1) || fail "git rev-parse --show-toplevel: $top"
 cd "$top" 2>/dev/null || fail "cannot enter the repo's top directory $top."
 
+# The repo's files, ignored files left out, read once for every section that needs them.
+files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
+  || fail "git ls-files: $files"
+
 facts_repo() {
   local out
   out=$(gh api 'repos/{owner}/{repo}' 2>&1) || fail "gh api repos/{owner}/{repo}: $out"
@@ -430,12 +434,10 @@ stack_configs() {
 # The repo's stack (#217 D3): its languages by file count, the dependency names of the manifests
 # at the top of the repo, and its linter and formatter configs. A language is a file extension
 # in the table below, so a file with another extension counts for no language. The files are
-# the ones that `git ls-files` lists, ignored files left out, as in facts_docs. The model
+# the ones that `git ls-files` lists once at the top, ignored files left out. The model
 # picks the stack components from these lines and detects nothing itself.
 facts_stack() {
-  local files languages
-  files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
-    || fail "git ls-files: $files"
+  local languages
   languages=$(printf '%s\n' "$files" | awk '
     BEGIN {
       n = split("py:Python js:JavaScript mjs:JavaScript cjs:JavaScript jsx:JavaScript ts:TypeScript mts:TypeScript cts:TypeScript tsx:TypeScript go:Go rs:Rust rb:Ruby java:Java kt:Kotlin cs:C# php:PHP swift:Swift c:C h:C cc:C++ cpp:C++ hpp:C++ sh:Shell bash:Shell", pairs, " ")
@@ -559,16 +561,14 @@ facts_conversion() {
 }
 
 # The docs that the plugin cannot see, or whose rules can conflict with it (#151 D2). It lists
-# the repo's files with `git ls-files`, so ignored files are left out. An ADR folder is a
+# the repo's files that `git ls-files` lists once at the top, so ignored files are left out. An ADR folder is a
 # folder other than `docs/adr/` with a doc file in it, where the folder's name is an ADR name,
 # the file's name starts with `adr` and a number, or the folder is the one that `.adr-dir`
 # names (adr-tools). A glossary-like file is a doc file named like a glossary, other than
 # `docs/glossary.md`. The rule docs are CLAUDE.md, AGENTS.md, CONTRIBUTING.md and the PR
 # templates, in the places that Claude Code and GitHub read them.
 facts_docs() {
-  local files adr_dir='' out
-  files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
-    || fail "git ls-files: $files"
+  local adr_dir='' out
   if [ -f .adr-dir ]; then
     adr_dir=$(head -n 1 .adr-dir 2>/dev/null | tr -d '\r') || fail "cannot read .adr-dir."
     adr_dir=$(printf '%s' "$adr_dir" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's#^\./##' -e 's#/*$##')
