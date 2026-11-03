@@ -12,3 +12,4 @@ Each ADR states one current decision. ADRs are living documents, and git holds t
 | [ADR-007](ADR-007-question-delete-simplify-first.md) | Question, delete and simplify before speeding up or automating | active | |
 | [ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md) | Autopilot builds ready issues unattended | active | builds on ADR-001, ADR-004, ADR-006 |
 | [ADR-009](ADR-009-conventions-are-claude-code-rules.md) | Conventions are Claude Code rules in the repo | active | |
+| [ADR-010](ADR-010-anneal-shapes-fixes-without-discuss.md) | An anneal shapes behaviour-preserving fixes without discuss | active | builds on ADR-008 |

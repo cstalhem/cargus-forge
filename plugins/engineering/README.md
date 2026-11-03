@@ -1,6 +1,6 @@
 # Engineering
 
-Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot, autopilot-t3.
+Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot, autopilot-t3, anneal.
 
 The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. It works in a local Claude Code session and in a Claude Code cloud session.
 
@@ -38,6 +38,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
 | `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: the same run with T3's scheduled task, threads and worktrees. See [Autopilot on T3 Code](#autopilot-on-t3-code). |
+| `/engineering:anneal` | Has agents study the whole repo by area, and turns each confirmed finding into a fix sub-issue under one umbrella issue, or into a request. See [Anneal](#anneal). |
 
 Two more skills run only when another skill calls them:
 
@@ -179,6 +180,22 @@ A hand-off is one comment, and the comment is the record: Autopilot never hands 
 | A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
 
 Open the thread the comment names in T3 Code to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself.
+
+## Anneal
+
+An anneal makes the repo simpler for the next change, with the same behaviour for users. You start each one by hand with `/engineering:anneal`; a scheduled anneal is a later request, once hand-started runs have shown that its routes can be trusted. It asks no question, and changes no file in the repo: it writes only GitHub issues and one feature branch.
+
+An anneal does this:
+
+1. It stops unless `HEAD` is the same commit as `origin/main` after a fetch.
+2. It reads `CLAUDE.md`, `.claude/rules/`, `docs/adr/`, `docs/glossary.md` and the repo's files, and picks at most six areas.
+3. It starts one investigator on Opus for each area, in parallel. Each returns at most five findings: a title, `file:line`, the change, why it is simpler, and the rule that would have made the fix unneeded. Bold rewrites are welcome, and no alternative an ADR rejects is proposed.
+4. It checks each finding with a fresh Sonnet agent that returns confirmed, corrected or refuted, and keeps a rule only when the code before the fix breaks it and the code after follows it.
+5. It merges related findings and routes each one. A **fix** keeps behaviour the same, passes the size test and has a verify command that fails before the work. A **request** is any other confirmed finding, every bold rewrite included. A refuted finding is dropped.
+6. It writes each request as an issue titled `Anneal <date> · <area>: <title>`, with no `## Scenarios`, for `/engineering:discuss` to shape. When at least one finding is a fix, it also writes an umbrella issue `Anneal <date>`, the feature branch `<umbrella>-anneal-<date>`, and one sub-issue for each fix, with its rule as a scenario.
+7. It shows each URL, the count of findings for each area and route, and the next step.
+
+Autopilot builds the umbrella issue like any other, with no discuss. You can also run `/engineering:execute` on its first sub-issue by hand. The final PR into `main` is your review of the whole anneal.
 
 ## Status
 
