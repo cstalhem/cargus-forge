@@ -1491,12 +1491,7 @@
 
   <!-- ================= REPORT ================= -->
   <main id="report">
-    <!-- BLOCK: question + lead + takeaways (required). The h1 restates the
-         question concisely (at most 15 words); the user's own wording goes
-         in the scope block. The lead answers it (at most 60 words). Each
-         takeaway links to the finding that supports it (href and number
-         match that finding) and states its confidence: High, Medium or Low,
-         with data-level set to high, medium or low. -->
+    <!-- BLOCK: question + lead + takeaways (required) -->
     <section class="panel" id="summary">
       <div class="label">Question researched</div>
       <h1 tabindex="-1">{{QUESTION}}</h1>
@@ -1518,10 +1513,7 @@
       <button class="expand-all" id="expand-all" type="button" aria-expanded="false">Expand all</button>
     </div>
 
-    <!-- BLOCK: scope (required). The question as the user asked it, what
-         was covered, what was left out and why, decisions that shape the
-         result, and every research note used. A note link's hash is the
-         note's file name without ".md". -->
+    <!-- BLOCK: scope (required) -->
     <details class="callout scope" id="scope">
       <summary><span class="label">Scope and method</span></summary>
       <dl>
@@ -1543,13 +1535,7 @@
       </dl>
     </details>
 
-    <!-- ================= FINDINGS: repeat per finding =================
-         The h2 states the finding as a short sentence, not a topic label.
-         The one visible paragraph gives it in 2 to 3 sentences. Everything
-         else (evidence, tables, disagreements, caveats; about 300 words)
-         goes in the <details>, which ends with a "Full note" link to the
-         note behind the finding (hash: the note's file name without ".md").
-         Put the optional blocks below inside the <details> only. -->
+    <!-- BLOCK: finding (required) -->
     <section class="finding" id="s1">
       <div class="sec-rule"><span>01</span><i></i></div>
       <h2>{{FINDING_1_TITLE}}</h2>
@@ -1563,14 +1549,13 @@
           get a comma between them automatically.
         </p>
 
-        <!-- BLOCK: list (optional). ul.plain for bullets, ol.plain for steps. -->
+        <!-- BLOCK: list (optional) -->
         <ul class="plain">
           <li>{{LIST_ITEM}}</li>
           <li>{{LIST_ITEM}}</li>
         </ul>
 
-        <!-- BLOCK: quote (optional). Verbatim text only. Delete <cite> and
-             caption it as the report's own reading for a "key claim" variant. -->
+        <!-- BLOCK: quote (optional) -->
         <blockquote>
           <i></i>
           <div>
@@ -1591,10 +1576,7 @@
         <summary>Evidence and caveats</summary>
         <p>{{FINDING_EVIDENCE}}</p>
 
-        <!-- BLOCK: figure (optional). Mermaid renders natively in a Claude
-             Artifact, and through the mermaid script at the end when the
-             report is opened as a file. For pixel control, put an inline
-             <svg> in .frame instead. -->
+        <!-- BLOCK: figure (optional) -->
         <figure>
           <div class="frame">
             <pre class="mermaid">
@@ -1618,8 +1600,7 @@ flowchart LR
 {{CODE}}</pre>
         </div>
 
-        <!-- BLOCK: table (optional). Give numeric columns class="num" on the
-             th and every td, and put the unit in the header. -->
+        <!-- BLOCK: table (optional) -->
         <div class="wrap-x">
           <table>
             <thead>
@@ -1652,8 +1633,7 @@ flowchart LR
           <div><b>{{STAT_VALUE}}</b><span class="caption">{{STAT_MEANING}}<a class="ref" href="#src-1" aria-label="Source 1">1</a></span></div>
         </div>
 
-        <!-- BLOCK: chart (optional). One series, values labelled directly.
-             Set each .bar width as a % of the largest value. -->
+        <!-- BLOCK: chart (optional) -->
         <div class="chart">
           <h3>{{CHART_TITLE}}</h3>
           <p class="caption">{{CHART_UNIT_AND_DIRECTION}}</p>
@@ -1681,9 +1661,7 @@ flowchart LR
           <p class="caption" style="margin-top: 16px">Source<a class="ref" href="#src-1" aria-label="Source 1">1</a></p>
         </div>
 
-        <!-- BLOCK: callout (optional). Class: "callout" (note),
-             "callout caveat" (low confidence, single source) or
-             "callout disagree" (sources conflict). -->
+        <!-- BLOCK: callout (optional) -->
         <aside class="callout disagree">
           <div class="label">Sources disagree</div>
           <p>{{DISAGREEMENT}}</p>
