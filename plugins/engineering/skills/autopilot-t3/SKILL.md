@@ -5,6 +5,7 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/next/status.sh")
+  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/next/labels.sh")
   - Bash(claude plugin list)
   - Bash(git remote get-url origin)
   - Bash(date -u +%Y-%m-%dT%H:%M:%SZ)
@@ -45,7 +46,7 @@ Take the steps in order. Each one says whether the run goes on or ends.
      Then ask. If the AskUserQuestion tool is in your tools, call it with one question, `Create this scheduled task?`, header `Autopilot`, and the options `Create it` and `Not now`. Do not search for the tool: if it is not in your tools, end the turn with the line `Answer "yes" to create it, or "no".`, and the user's next message answers.
      - **Yes** (`Create it`, or a typed `yes` or `y`): call the `schedule_task` tool with the title `engineering: autopilot`, the prompt `/engineering:autopilot-t3`, `schedule` `{"type": "interval", "everyMs": 3600000}` and `bindToCurrentThread` false. Pass no `scheduledTaskId`, no `projectId` and no `enabled`: the task is new, in this thread's project, and enabled. If `schedule_task` fails, stop and show its error. Then read it back: call `list_scheduled_tasks` again and check that one task has the prompt `/engineering:autopilot-t3`. If none has, stop and say so. Otherwise show its `scheduledTaskId` and `nextRunAt` in one line. Go on to step 5.
      - **No**, or any other answer: create nothing, say in one line that no scheduled task was created and that the next `/engineering:autopilot-t3` run proposes it again. Go on to step 5.
-5. **Facts.** If the Facts section starts with `status.sh error:`, show that line and stop.
+5. **Facts.** If the Facts section starts with `status.sh error:`, show that line and stop. Otherwise run `bash "${CLAUDE_PLUGIN_ROOT}/skills/next/labels.sh"` once, as its own Bash call, which keeps the request label on GitHub. Act on nothing it prints: it exits 0, and an error line it prints costs only a stale label.
 6. **Children.** Read the children with the `t3_thread_list` tool, with `includeSubagents` false, page by page: pass each result's `nextCursor` as `cursor` while it is not null. Keep the threads whose title is `execute #<n>` or `ship #<u>`, and leave out this thread, `<parent>`. Read each child's state with `t3_thread_read`, with its `threadId` and `view` `messages`: it is working when `thread.activeRunId` is not null and `thread.pendingRequestCount` is 0.
    - **One is working:** reply with one line, `Autopilot: <title> is working (<thread id>).`, and end the turn. The child reports when its turn ends, and that report starts the next run.
    - **None is working:** read each child that is not working, in the order listed, and take the first case below that applies to it. A child that is not working keeps its claim unless it has been handed off: steps 9 and 10 start no child for its issue. A handed-off child keeps no claim. Read, for the child:
