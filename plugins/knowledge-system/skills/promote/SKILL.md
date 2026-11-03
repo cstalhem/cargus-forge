@@ -38,7 +38,7 @@ For each promotion candidate, use AskUserQuestion to present the options:
 - **Promote to skill** → Create or update a skill in `.claude/skills/`
 - **Promote to critical pattern** → Add a WRONG/CORRECT entry to `.claude/rules/critical-patterns.md`
 - **Keep in staging** → Leave for further validation
-- **Discard** → Delete
+- **Discard** → Delete; recommend it when the entry turned out to be wrong or situational, or duplicates an existing rule or skill
 
 Include the entry content and your recommendation in the question.
 
