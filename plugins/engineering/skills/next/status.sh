@@ -7,6 +7,13 @@
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
 # call sends its stderr to /dev/null, and the output is printed only once it is complete.
 #
+# With no argument it prints the output below, which Autopilot reads as its Facts. With
+# `--human` only the `## Report` part differs: it is the report for people that /engineering:next
+# shows (#283). Each issue is a bold line `**#<n>** <title> · <facts>`. A suggestion that is a
+# slash command gets its own fenced code block, so that it can be copied, and any other
+# suggestion ends the issue's line. A group with no issue has no heading, and no issue is left
+# out. The report ends with `**Next:**` and a code block, or with `**Next:** <suggestion>`.
+#
 # Output:
 #   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
@@ -17,6 +24,9 @@
 #               issue branch whose PR has merged. These are listed, never deleted.
 
 set -u
+
+human=false
+[ "${1:-}" = "--human" ] && human=true
 
 fail() {
   local msg
@@ -243,6 +253,7 @@ done < <(git worktree list --porcelain -z 2>/dev/null)
 
 out=$(jq -n -r \
   --arg repo "$repo" \
+  --argjson human "$human" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
   --argjson branches "$branches" \
@@ -317,9 +328,9 @@ out=$(jq -n -r \
       end;
     def label_of: {"needs-review": "needs review", "in-progress": "in progress", "ready": "ready",
                    "blocked": "blocked", "umbrella": "umbrella", "request": "request"}[.];
-    def line:
-      [ "- #\(.number) \(.title)" ]
-      + (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
+    # The facts of an issue, between its title and its suggestion.
+    def facts:
+      (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
       + (if .status == "umbrella" then
            subs_of(.number) as $s
            | issue_branches(.number) as $fb
@@ -329,9 +340,9 @@ out=$(jq -n -r \
                 else "\($fb | length) feature branches: \($fb | join(", "))" end) ]
          elif .status == "needs-review" or .status == "in-progress" then
            (if .pr then ["PR #\(.pr)"] else [] end)
-         else [] end)
-      + [ suggestion ]
-      | join(" · ");
+         else [] end);
+    def line:
+      [ "- #\(.number) \(.title)" ] + facts + [ suggestion ] | join(" · ");
     def blocker_lines:
       .blockers[] as $b
       | if ($b.ref | startswith("#")) | not then "  - blocked by \($b.ref)"
@@ -340,6 +351,15 @@ out=$(jq -n -r \
           | "  - blocked by #\($b.number) · \($x.status | label_of) · \($x | suggestion)"
         else "  - blocked by #\($b.number)"
         end;
+    # An issue in the report for people (#283 D3): a suggestion gets a code block only when it
+    # is a slash command. A blocker line keeps its command inline.
+    def human_entry:
+      suggestion as $s
+      | ($s | startswith("/engineering:")) as $command
+      | ([ "**#\(.number)** \(.title)" ] + facts + (if $command then [] else [ $s ] end) | join(" · ")),
+        (if $command then "```", $s, "```" else empty end),
+        blocker_lines,
+        "";
 
     [ {name: "Needs review", status: "needs-review"},
       {name: "In progress", status: "in-progress"},
@@ -364,24 +384,32 @@ out=$(jq -n -r \
     | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
     | ( [ $all[] | select(.status == "request") ][0] ) as $request
 
-    | "## Report",
-      "",
-      ( $cut[]
-        | "### \(.name)",
-          ( if (.items | length) == 0 then "- none"
-            else (.shown[] | line, blocker_lines),
-                 (if .more > 0 then "- and \(.more) more" else empty end)
-            end ),
-          "" ),
-      "Next: " + (
-        if $review then
+    | ( if $review then
           "review and merge PR #\($review.pr), for #\($review.number)"
         elif $doing then "/engineering:execute #\($doing.number)"
         elif $to_ship then "/engineering:ship #\($to_ship.number)"
         elif $ready then "/engineering:execute #\($ready.number)"
         elif $request then "/engineering:discuss #\($request.number)"
         else "nothing: no open issue waits for a step"
-        end),
+        end ) as $next
+
+    | "## Report",
+      "",
+      ( if $human then
+          ( $groups[] | select(.items | length > 0)
+            | "### \(.name)", "", (.items[] | human_entry) ),
+          ( if ($next | startswith("/engineering:")) then "**Next:**", "```", $next, "```"
+            else "**Next:** \($next)" end )
+        else
+          ( $cut[]
+            | "### \(.name)",
+              ( if (.items | length) == 0 then "- none"
+                else (.shown[] | line, blocker_lines),
+                     (if .more > 0 then "- and \(.more) more" else empty end)
+                end ),
+              "" ),
+          "Next: \($next)"
+        end ),
       "",
       "## Cleanup",
       "",
