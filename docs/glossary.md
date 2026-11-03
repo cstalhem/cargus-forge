@@ -72,3 +72,9 @@ _Avoid_: walkthrough, dry run
 
 **Hand-off**: The one comment, plus one push notification in a cloud session, with which Autopilot gives the user an issue it cannot go on with or a PR that is ready for review; the comment is its record, so Autopilot writes it once.
 _Avoid_: escalation, notification
+
+**PENDING resume**: A later run of execute that a PENDING verdict schedules in the same cloud session or T3 Code thread, 10 minutes ahead and at most three in a row; its arguments end with "PENDING resume <k> of 3", which carries the count.
+_Avoid_: retry, poll
+
+**T3 Code thread**: A Claude session that T3 Code starts on its host, recognised by the orchestrator_capabilities tool in its tools; on a T3 Code host it takes the place of a cloud session.
+_Avoid_: T3 session
