@@ -41,10 +41,10 @@ expect "step 2 checks for the orchestrator_capabilities tool, deferred counts" \
   grep -qE 'orchestrator_capabilities.*deferred|deferred.*orchestrator_capabilities' "$skill"
 expect "step 7 computes the time with date, GNU first and BSD as the fallback" \
   grep -qF "date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+10M +%Y-%m-%dT%H:%M:%SZ" <<<"$t3_step"
-expect "step 7 gives schedule_task the title execute #<n>: PENDING resume <k+1> of 3" \
-  grep -qF 'title `execute #<n>: PENDING resume <k+1> of 3`' <<<"$t3_step"
-expect "step 7 gives schedule_task the prompt /engineering:execute #<n> PENDING resume <k+1> of 3" \
-  grep -qF 'prompt `/engineering:execute #<n> PENDING resume <k+1> of 3`' <<<"$t3_step"
+expect "step 7 gives the resume the title execute #<n>: PENDING resume <k+1> of 3" \
+  grep -qF 'title `execute #<n>: PENDING resume <k+1> of 3`' "$skill"
+expect "step 7 gives the resume the prompt /engineering:execute #<n> PENDING resume <k+1> of 3" \
+  grep -qF 'prompt `/engineering:execute #<n> PENDING resume <k+1> of 3`' "$skill"
 expect "step 7 gives schedule_task a once schedule with runAt" \
   grep -qF '{"type": "once", "runAt": "<that time>"}' <<<"$t3_step"
 expect "step 7 binds the task to the current thread" grep -qF 'bindToCurrentThread` true' <<<"$t3_step"
