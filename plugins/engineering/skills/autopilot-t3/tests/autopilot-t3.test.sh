@@ -5,12 +5,9 @@ set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin=$(CDPATH= cd -- "$here/../../.." && pwd)
-root=$(CDPATH= cd -- "$plugin/../.." && pwd)
 skill=$plugin/skills/autopilot-t3/SKILL.md
 readme=$plugin/README.md
 manifest=$plugin/.claude-plugin/plugin.json
-marketplace=$root/.claude-plugin/marketplace.json
-root_readme=$root/README.md
 failures=0
 
 # expect <description> <command...>: the command must succeed.
@@ -56,13 +53,9 @@ done
 expect "the plugin README has an Autopilot on T3 Code section" \
   grep -qx '## Autopilot on T3 Code' "$readme"
 
-# The plugin's description names autopilot-t3 and is identical in the three listings.
+# The plugin's description names autopilot-t3 and opens the plugin README; scripts/check-descriptions.sh checks the other listings.
 description=$(jq -r .description "$manifest")
 expect "plugin.json's description names autopilot-t3" grep -qF 'autopilot-t3' <<<"$description"
-expect "marketplace.json's description is identical to plugin.json's" \
-  test "$(jq -r '.plugins[] | select(.name == "engineering") | .description' "$marketplace")" = "$description"
-expect "the root README's plugin index line is identical to plugin.json's description" \
-  grep -qxF -- "- **Engineering** (\`plugins/engineering\`): $description" "$root_readme"
 expect "the plugin README's first paragraph is plugin.json's description" \
   test "$(sed -n 3p "$readme")" = "$description"
 
