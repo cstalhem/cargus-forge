@@ -143,16 +143,13 @@ expect "the Report step names Autopilot or execute on the first sub-issue as the
 # Scenario 9: typed only.
 expect "the frontmatter has disable-model-invocation: true" has "$frontmatter" 'disable-model-invocation: true'
 
-# Scenario 10: the README and the description in four places.
+# Scenario 10: the README and the description in the plugin's own files; scripts/check-descriptions.sh checks the other listings.
 expect "the README's commands table lists /engineering:anneal" grep -qE '^\| `/engineering:anneal` \|' "$readme"
 expect "the README has an Anneal section" grep -qxF '## Anneal' "$readme"
 expect "the README's Anneal section says that you start it by hand" \
   bash -c 'awk "/^## Anneal/ { s = 1; next } /^## / { s = 0 } s" "$1" | grep -qF "You start each one by hand"' _ "$readme"
 desc=$(jq -r .description "$plugin/.claude-plugin/plugin.json")
 expect "plugin.json's description names anneal" has "$desc" 'anneal'
-expect "marketplace.json has the same description" \
-  test "$(jq -r '.plugins[] | select(.name == "engineering") | .description' "$root/.claude-plugin/marketplace.json")" = "$desc"
-expect "the root README has the same description" grep -qF -- "(\`plugins/engineering\`): $desc" "$root/README.md"
 expect "the plugin README has the same description" grep -qxF -- "$desc" "$readme"
 
 # Decisions: the glossary, ADR-010 and ADR-008.
