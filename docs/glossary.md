@@ -81,3 +81,6 @@ _Avoid_: T3 session
 
 **Anneal**: A typed run of `/engineering:anneal` that has agents study the whole repo by area and check each finding, then turns each confirmed finding into a fix sub-issue under one umbrella issue or into a request, bold rewrites included, with the rule that would have made each fix unneeded; it changes no code itself.
 _Avoid_: sweep, simplifier, audit, job
+
+**Request label**: The GitHub label `engineering:needs-discussion`, which `labels.sh` keeps on each open issue whose status is request, so a person browsing GitHub sees which issues need discuss; no skill reads it.
+_Avoid_: status label

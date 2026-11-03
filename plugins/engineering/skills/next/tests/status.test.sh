@@ -43,6 +43,8 @@ mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
+# A call with a flag before the path, such as `-X POST`, is a write: leave a mark.
+case $2 in -*) echo write > "$FIX/.wrote" ;; esac
 path=$2
 pre='repos/{owner}/{repo}'
 if [ "$path" = "$pre" ]; then echo o/r; exit 0; fi
@@ -82,8 +84,8 @@ full=$tmp/full
 mkdir "$full"
 cat > "$full/issues.json" <<'JSON'
 [
-  {"number":1,"title":"A request","body":"just an idea"},
-  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n"},
+  {"number":1,"title":"A request","body":"just an idea","labels":[{"name":"engineering:needs-discussion"},{"name":"bug"}]},
+  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n","labels":[{"name":"status:ready"}]},
   {"number":3,"title":"Blocked issue","body":"## Scenarios\n- WHEN a THEN b\n","issue_dependencies_summary":{"total_blocked_by":1}},
   {"number":4,"title":"In progress issue","body":"## Scenarios\n- WHEN a THEN b\n"},
   {"number":5,"title":"Needs review issue","body":"## Scenarios\n- WHEN a THEN b\n"},
@@ -268,6 +270,22 @@ expect "WHEN status.sh --human runs and the next step is not a slash command THE
 expect "WHEN status.sh --human runs and the next step is not a slash command THEN no code block follows the Next line" \
   bash -c '! sed -n "/^\*\*Next:\*\*/,/^## Cleanup/p" "$1" | grep -q "^\`\`\`"' _ "$tmp/none.human.out"
 
+echo "# --statuses"
+cat > "$tmp/full.statuses" <<'EXPECTED'
+[{"number":1,"status":"request","labels":["engineering:needs-discussion","bug"]},
+ {"number":2,"status":"ready","labels":["status:ready"]},
+ {"number":3,"status":"blocked","labels":[]},
+ {"number":4,"status":"in-progress","labels":[]},
+ {"number":5,"status":"needs-review","labels":[]},
+ {"number":6,"status":"umbrella","labels":[]},
+ {"number":7,"status":"ready","labels":[]},
+ {"number":8,"status":"umbrella","labels":[]}]
+EXPECTED
+jq -c . "$tmp/full.statuses" > "$tmp/full.statuses.expected"
+run_status "$full" --statuses > "$tmp/full.statuses.out"
+same "WHEN status.sh --statuses runs THEN it prints a JSON array with the number, status and label names of each open issue, and no pull request"   "$tmp/full.statuses.expected" "$tmp/full.statuses.out"
+expect "WHEN status.sh --statuses runs THEN it makes no write call"   test ! -e "$full/.wrote"
+
 echo "# errors"
 FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.plain.out"
 FAKE_GH_FAIL=1 run_status "$full" --human > "$tmp/err.human.out"
@@ -275,6 +293,9 @@ expect "WHEN status.sh runs with no argument and fails THEN it prints the one li
   bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^status.sh error: " "$1"' _ "$tmp/err.plain.out"
 same "WHEN status.sh --human fails THEN it prints the same one line as with no argument" \
   "$tmp/err.plain.out" "$tmp/err.human.out"
+FAKE_GH_FAIL=1 run_status "$full" --statuses > "$tmp/err.statuses.out"
+same "WHEN status.sh --statuses fails THEN it prints the same one line as with no argument" \
+  "$tmp/err.plain.out" "$tmp/err.statuses.out"
 
 echo "# the skills"
 skill=$skill_dir/SKILL.md

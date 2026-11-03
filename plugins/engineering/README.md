@@ -200,3 +200,5 @@ Autopilot builds the umbrella issue like any other, with no discuss. You can als
 ## Status
 
 `/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.
+
+To browse on GitHub, `labels.sh` keeps the yellow label `engineering:needs-discussion` on each open request, and removes it from every other issue. `/engineering:next` and both Autopilots run it, and it creates the label when the repo lacks it. No skill reads the label, and `labels.sh` changes no other label. The old labels `status:ready`, `status:in-progress`, `status:needs-review` and `umbrella` do nothing now: delete them by hand from the repo's Labels page.

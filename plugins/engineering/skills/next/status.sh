@@ -14,6 +14,9 @@
 # suggestion ends the issue's line. A group with no issue has no heading, and no issue is left
 # out. The report ends with `**Next:**` and a code block, or with `**Next:** <suggestion>`.
 #
+# With `--statuses` it prints one JSON line instead, an array with the number, status and
+# label names of each open issue, which labels.sh reads (#287 D4).
+#
 # Output:
 #   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
@@ -26,7 +29,9 @@
 set -u
 
 human=false
+statuses=false
 [ "${1:-}" = "--human" ] && human=true
+[ "${1:-}" = "--statuses" ] && statuses=true
 
 fail() {
   local msg
@@ -67,6 +72,7 @@ issues=$(printf '%s' "$items" | jq '
   def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");
   map(select(has("pull_request") | not) | {
     number, title,
+    labels: ((.labels // []) | map(.name)),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
     parent: (.parent_issue_url // null),
@@ -254,6 +260,7 @@ done < <(git worktree list --porcelain -z 2>/dev/null)
 out=$(jq -n -r \
   --arg repo "$repo" \
   --argjson human "$human" \
+  --argjson statuses "$statuses" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
   --argjson branches "$branches" \
@@ -393,7 +400,8 @@ out=$(jq -n -r \
         else "nothing: no open issue waits for a step"
         end ) as $next
 
-    | "## Report",
+    | if $statuses then ($all | map({number, status, labels}) | tojson) else
+      "## Report",
       "",
       ( if $human then
           ( $groups[] | select(.items | length > 0)
@@ -426,6 +434,7 @@ out=$(jq -n -r \
         else ($merged_branches | sort_by((.branch | capture("^(?<n>[0-9]+)").n | tonumber), .branch)[]
               | "- \(.branch) · PR #\(.pr) merged")
         end )
+    end
 ' 2>/dev/null) || fail "cannot build the report."
 
 printf '%s\n' "$out"
