@@ -4,7 +4,7 @@ description: Show where each open issue stands and suggest one next command. Lis
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")
+  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh" --human)
 ---
 
 # next
@@ -19,7 +19,7 @@ allowed-tools:
 ## Steps
 1. **Check.** If the Facts section starts with `status.sh error:`, show that line and stop.
 2. **Report.** Your reply is these parts, in this order, and nothing else:
-   1. The `## Report` part of the Facts exactly as printed: the `## Report` heading, each `### <group>` with its lines, then the `Next:` line.
+   1. The `## Report` part of the Facts exactly as printed: the `## Report` heading, each `### <group>` with its issues, their code blocks and their `- blocked by` lines, then the `**Next:**` line with its code block, if it has one. Keep each code fence as printed, so that each command stays copyable.
    2. Only if the `## Cleanup` part of the Facts lists a worktree or a branch, so that not both of its lists are `- none`: the `## Cleanup` part as printed, with its two `###` headings and their `- ` lines, without the indented `git` lines under each worktree.
    3. Only if `### Finished worktrees` lists a worktree: one last line, exactly `Remove these finished worktrees and their local branches? git worktree remove also deletes their ignored files. (yes/no)`
    Add no text before, between or after them: no summary and no comment. The reply's first line is the `## Report` heading. If the reply has no question, the skill ends here, and nothing is removed.
@@ -30,4 +30,4 @@ allowed-tools:
    When every call has succeeded, your reply is a `## Removed` heading, then the `- ` line of each worktree, as printed, one per line, and nothing else.
 
 ## Facts
-!`bash "${CLAUDE_SKILL_DIR}/status.sh"`
+!`bash "${CLAUDE_SKILL_DIR}/status.sh" --human`
