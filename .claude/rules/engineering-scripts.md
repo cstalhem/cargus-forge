@@ -6,3 +6,4 @@ paths:
 # Engineering scripts
 
 - A plugin script exists only to work out facts that one pre-approved command cannot give; a single file write is a pre-approved command in `allowed-tools`, never a wrapper script.
+- A helper that two plugin scripts need, with the same behaviour in both, lives once in a shared file under the plugin, never copied into each script.
