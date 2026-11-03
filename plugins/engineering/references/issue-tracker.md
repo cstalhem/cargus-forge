@@ -3,9 +3,9 @@
 The plugin's contract for branches, merging and PRs. It is the same in every repo, and it takes `main` as the default branch.
 
 ## Branches
-- **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own. Create a branch the same way on every surface: run `git push origin <sha>:refs/heads/<n>-<slug>`, with `origin/<base>` as `<sha>`, or `HEAD` when the branch starts from the current branch's head and the current branch is `<base>`. Before the push, run `git fetch origin <base>` only when `<sha>` is `origin/<base>`, so that the push of `HEAD` works when the current branch was never pushed. The branch has no link to its issue.
+- **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own.
   - Skills find a branch by its name, because no branch is linked to its issue. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
-  - Feature branch of an umbrella issue: base `main`. When a single issue with work so far becomes an umbrella and the user keeps those commits, slice reuses the issue's own branch as the feature branch. Only when no such branch exists, as in a cloud session with a designated branch, does slice create the feature branch from the current branch's head, with the current branch as base.
+  - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
   - In a session with a designated branch it must push to, such as a Claude Code cloud session that names one, the issue branch is that designated branch, whatever its name. execute creates no `<n>-<slug>` branch there. The PR's first line ties the branch to its issue, and execute finds earlier work through the open PR whose head is the designated branch. Before it resumes, execute fetches and fast-forwards, and stops if the fetch fails, the fast-forward fails or the branches have diverged.
