@@ -6,9 +6,9 @@ runs over 15 words. The visible layer is the text in <main> outside every
 <details>.
 
 Errors (exit 1): a leftover {{ placeholder, an em dash, a finding section
-without a <details> block, a #src-N reference without a matching source,
-or a notes.html#<x> link whose note <topic-folder>/research/<x>.md does
-not exist.
+without a <details> block, an in-page #<x> link with no element that has
+id="<x>", or a notes.html#<x> link whose note <topic-folder>/research/<x>.md
+does not exist.
 
 Prints one line per problem and nothing when the report passes.
 Standard library only.
@@ -32,7 +32,7 @@ INLINE = {"a", "abbr", "b", "cite", "code", "em", "i", "kbd", "mark", "q", "s", 
 SKIP_TEXT = {"script", "style", "template"}
 
 EM_DASH = re.compile("\u2014|&mdash;|&#8212;|&#x2014;", re.IGNORECASE)
-SRC_REF = re.compile(r"^#(src-\d+)$")
+PAGE_LINK = re.compile(r"^#(.+)$")
 NOTE_LINK = re.compile(r"^notes\.html#(.*)$")
 
 
@@ -138,22 +138,22 @@ def check(html, topic_folder):
             name = section.attrs.get("id") or "(no id)"
             errors.append(f"finding #{name} has no <details> block")
 
-    # Errors: citations and note links that point nowhere.
+    # Errors: in-page and note links that point nowhere.
     ids = {n.attrs["id"] for n in root.walk() if n.attrs.get("id")}
     research = Path(topic_folder) / "research"
-    missing_srcs, missing_notes = [], []
+    missing_ids, missing_notes = [], []
     for a in root.find_all("a"):
         href = (a.attrs.get("href") or "").strip()
-        src = SRC_REF.match(href)
-        if src and src.group(1) not in ids and src.group(1) not in missing_srcs:
-            missing_srcs.append(src.group(1))
+        page = PAGE_LINK.match(href)
+        if page and page.group(1) not in ids and page.group(1) not in missing_ids:
+            missing_ids.append(page.group(1))
         note = NOTE_LINK.match(href)
         if note:
             name = unquote(note.group(1))
             if not (name and (research / f"{name}.md").is_file()) and name not in missing_notes:
                 missing_notes.append(name)
-    for src in missing_srcs:
-        errors.append(f"#{src} is cited but no source has id=\"{src}\"")
+    for name in missing_ids:
+        errors.append(f"#{name} is linked but no element has id=\"{name}\"")
     for name in missing_notes:
         errors.append(f"notes.html#{name} links to a missing note: {research / (name + '.md')}")
 

@@ -104,7 +104,7 @@ class Failures(Base):
             "placeholder": "leftover placeholder: <p class=\"lead\">{{LEAD_PARAGRAPH}}",
             "em dash": "em dash:",
             "finding": "finding #s2 has no <details> block",
-            "source": "#src-9 is cited",
+            "source": "#src-9 is linked",
             "note": "notes.html#missing-note links to a missing note",
         }
         for name, fragment in expected.items():
@@ -136,7 +136,11 @@ class Failures(Base):
 
     def test_source_reference_without_source(self):
         report = self.variant('<li id="src-2">', '<li id="src-3">')
-        self.assertOnlyError(report, "#src-2 is cited")
+        self.assertOnlyError(report, "#src-2 is linked")
+
+    def test_in_page_link_without_target(self):
+        report = self.variant('id="terms"', 'id="gone"')
+        self.assertOnlyError(report, '#terms is linked but no element has id="terms"')
 
     def test_note_link_to_missing_note(self):
         report = self.variant('notes.html#running-costs">Full note', 'notes.html#running-cost">Full note')

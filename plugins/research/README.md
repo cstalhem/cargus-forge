@@ -45,7 +45,7 @@ The report is built to be read in about three minutes, with the detail one click
 - Each finding expands to its evidence, tables, disagreements and caveats (about 300 words), with source markers.
 - "Scope and method" (with the question as you asked it and the notes used), "Key terms" and the source index start collapsed. "Expand all" opens every block and closes them again.
 
-`skills/run/scripts/check_report.py <report.html> [<topic-folder>]` checks a report. It warns when the visible layer runs over 1,000 words or the heading over 15, and fails on a leftover placeholder, an em dash, a finding without detail, a citation without a source, or a link to a missing note.
+`skills/run/scripts/check_report.py <report.html> [<topic-folder>]` checks a report. It warns when the visible layer runs over 1,000 words or the heading over 15, and fails on a leftover placeholder, an em dash, a finding without detail, an in-page link without a target, or a link to a missing note.
 
 ## Agents
 
