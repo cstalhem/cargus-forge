@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Reports each plugin whose description in .claude-plugin/marketplace.json or the
-# README Plugin Index differs from its plugin.json, or is missing from one of them.
+# README Plugin Index differs from its plugin.json, or is missing from one of them,
+# and each marketplace entry whose source is not ./plugins/<dir>.
 # Prints nothing and exits 0 when
 # every listing matches; prints one line per problem and exits 1 otherwise.
 # Usage: check-descriptions.sh [repo-root]   (defaults to the repo holding this script)
@@ -24,6 +25,11 @@ for manifest in "$root"/plugins/*/.claude-plugin/plugin.json; do
     got=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .description' "$marketplace")
     if [[ $got != "$want" ]]; then
       echo "$name: marketplace.json differs from plugin.json"
+      status=1
+    fi
+    source=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .source' "$marketplace")
+    if [[ $source != "./plugins/$dir" ]]; then
+      echo "$name: marketplace.json source is not ./plugins/$dir"
       status=1
     fi
   fi
