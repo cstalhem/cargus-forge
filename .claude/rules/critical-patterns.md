@@ -29,17 +29,17 @@ code or command that avoids the problem
 Why: One-line explanation of the root cause.
 -->
 
-## Shipping a plugin change without bumping plugin.json version
+## Setting a version in a plugin manifest
 
 WRONG:
 ```
-# edit a plugin, commit, push — leave "version" unchanged
+# "version": "1.2.3" in plugins/<name>/.claude-plugin/plugin.json or in a marketplace.json entry,
+# for example to quiet the validator's "No version specified" warning
 ```
 
 CORRECT:
 ```
-# bump plugins/<name>/.claude-plugin/plugin.json "version" (SemVer) in the same commit
-# on a feature branch: version = main's version + the largest bump any of its changes needs
+# no "version" in plugin.json or marketplace.json; scripts/validate-plugins.sh ignores that warning
 ```
 
-Why: With an explicit `version` set, Claude Code caches by version string — users never receive the change and `/plugin update` reports "already at the latest version". A silent no-op that is hard to debug.
+Why: A pinned version keeps users on their cached copy until the string changes, and `/plugin update` reports "already at the latest version" — a silent no-op that is hard to debug.

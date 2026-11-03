@@ -31,11 +31,12 @@ status: active
 - **Close sub-issues only at the final PR:** every downstream sub-issue reads as blocked until ship, the umbrella shows no progress, and agents must reason about whether an open blocker is done.
 - **A label for merged sub-issues:** it fixes neither GitHub's Blocked icon nor the umbrella's progress bar, and it is a second status to repair.
 - **Match the sub-issue from the head branch name:** cloud sessions name branches `claude/…`, so the name is unreliable.
+- **A version-bump check against `main`:** every PR built from the same `main` wrote the same or a clashing version, so the PRs waiting for review conflicted after each merge.
 - **The user merges every sub-issue PR:** a step with no decision in it between verify and ship, which needs an interactive session for each sub-issue.
 
 ## Consequences
 - A feature branch can drift from `main` while a feature is in progress.
-- Sub-issue PRs need CI on the feature branch, or problems first show on the final PR, after every sub-issue has merged. This repo runs its plugin checks on every PR, and `version-bump` compares against `main`, so a feature branch bumps each plugin once, sized to the whole umbrella. Branch protection still requires the checks only on `main`.
+- Sub-issue PRs need CI on the feature branch, or problems first show on the final PR, after every sub-issue has merged. This repo runs its plugin checks on every PR, sub-issue PRs included, and no check compares plugin versions, because plugins carry no version and Claude Code versions them by commit SHA. Branch protection still requires the checks only on `main`.
 - GitHub's Blocked icon, the umbrella's progress bar and the issue list show merged sub-issues as done. The umbrella stays open until the final PR, so it records whether the feature is on `main`.
 - A closed sub-issue on an abandoned feature branch reads as done. The umbrella, closed as not planned, records that.
 - In a repo without the workflow, the final PR's `Closes` lines close the sub-issues. execute and ship look for a sub-issue's merged PR, not only its state, so they work either way.

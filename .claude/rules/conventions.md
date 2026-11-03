@@ -6,9 +6,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 
 ## Plugins & manifests
 
-- Bump the plugin's `plugin.json` `version` (SemVer) in the same commit as any change to that plugin (see skill: plugin-release).
-- On a feature branch, a plugin's version is `main`'s plus the largest bump that any of the branch's changes needs: a sub-issue bumps only when its change needs a larger level than the branch has (see skill: plugin-release).
-- SemVer: bump MAJOR for breaking changes, MINOR for new features, PATCH for fixes.
+- `plugin.json` and `marketplace.json` set no `version`; Claude Code versions each plugin by its commit SHA (see skill: plugin-release).
 - Register every new plugin in both `.claude-plugin/marketplace.json` and the README plugin index.
 - Keep each plugin's description identical across its `plugin.json`, `marketplace.json`, and the README.
 - Update a plugin's README when its commands, setup or requirements change.
@@ -20,7 +18,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 
 - Branch from `main`; never commit plugin changes directly to `main`.
 - Squash-merge every PR, so each PR is one commit and `main` stays linear (see skill: plugin-release).
-- Validate with `claude plugin validate ./plugins/<name>` (add `--strict` in CI) before opening a PR.
+- Validate with `scripts/validate-plugins.sh` before opening a PR.
 
 ## Testing plugins
 
