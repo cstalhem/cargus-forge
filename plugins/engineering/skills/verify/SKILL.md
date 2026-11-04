@@ -5,6 +5,7 @@ argument-hint: "<#PR or #umbrella issue>"
 user-invocable: false
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md")
   - Bash(gh api -X POST repos/{owner}/{repo}/pulls/*/ccr/ready_for_review)
 ---
 
@@ -25,7 +26,8 @@ Target: $ARGUMENTS
    - **Umbrella scope:** it is not a PR (the call returns 404). Run `gh api repos/{owner}/{repo}/issues/<n>`. The issue must have a `## Goal` section. The branch is the one that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists, by the branch pattern in `references/issue-tracker.md`. Stop if it lists none, or more than one.
    - Anything else: stop and say why.
 2. **Code.** Run `git fetch origin <branch>`, and in umbrella scope also `git fetch origin main`. Then run `git rev-parse HEAD` and `git rev-parse origin/<branch>`. If they differ, stop and say so, because the checks must run on the code they grade.
-3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, and this task:
+3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, the Repo rules section of this skill, and this task:
+   - When the diff adds or changes a line under `.claude/rules/`, grade the `Rules` row's rule test first, before you read the issue, the PR body or the rest of the diff, because the test asks whether a line stands alone.
    - Read GitHub only with `gh api` REST and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`. While a page holds 100 items, read the next one with `&page=2`, then `&page=3`, and so on. Do not let `gh api` follow GitHub's next-page link, which the cloud proxy refuses.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.
    - For each scenario, check three things, each with evidence (`file:line`, command output, or run output), and report them as the format below says:
@@ -41,7 +43,10 @@ Target: $ARGUMENTS
      - **Exists:** the ADR's file exists. For `ADR-NNN`, it is a `docs/adr/ADR-NNN-*.md` file. For `new: <title>`, it is a file whose `title:` frontmatter is that title.
      - **Substantive:** its `**Decision:**` line states the decision, and its Rejected alternatives section holds each of the decision's rejected alternatives.
      - **Wired:** `docs/adr/README.md` at `<sha>` has the ADR's row. A missing file fails the row.
-   - Add one `Rules` row to the table when the repo has rules at `<sha>`: when `git ls-tree --name-only <sha> .claude/rules/` lists files. When it lists none, add no `Rules` row. Read each listed file with `git show <sha>:<path>`. A rule is a line of a file that says what code in the repo does or never does. A rule in a file with `paths:` frontmatter applies only to files that match those paths. Check the diff against each rule: the PR's `gh pr diff <pr>` in PR scope, and `git diff origin/main...HEAD` in umbrella scope. The Grade is PASS when no rule is violated, and FAIL otherwise. Its gaps are one for each violation, naming the `file:line` in the diff and the rule it breaks, and the Evidence cell holds the strongest of them, or the count of rules read when the row passes. The row has no Exists, Substantive or Wired checks.
+   - Add one `Rules` row to the table when the repo has rules at `<sha>`: when `git ls-tree --name-only <sha> .claude/rules/` lists files. When it lists none, add no `Rules` row. Read each listed file with `git show <sha>:<path>`. A rule is a line of a file that says what code in the repo does or never does, as the Repo rules section defines it. A rule in a file with `paths:` frontmatter applies only to files that match those paths. The row has two parts, and no Exists, Substantive or Wired checks:
+     - **Rule test:** read the lines that the PR adds or changes under `.claude/rules/` from `git diff origin/<base>...<sha> -- .claude/rules/`, with `<base>` the PR's `base.ref`, or `main` in umbrella scope. Grade each one by the rule test of the Repo rules section, using the repo's glossary at `<sha>` if it has one and the repo's files, before you read the issue, the PR body or the rest of the diff. A line that fails it is a gap. A `(see skill: <name>)` that names no skill at `<sha>` is also a gap: `git show <sha>:.claude/skills/<name>/SKILL.md` must exist.
+     - **Violations:** check the rest of the diff against each rule: the PR's `gh pr diff <pr>` in PR scope, and `git diff origin/main...HEAD` in umbrella scope.
+     The Grade is PASS when no line fails the rule test and no rule is violated, and FAIL otherwise. Its gaps are one for each failed line and each violation, naming the `file:line` and the rule, and the Evidence cell holds the strongest of them, or the count of rules read when the row passes.
    - Run the issue's Verify command (an umbrella issue has none) and each pre-PR check (each row of `docs/agents/commands.md` whose task ends with `(pre-PR check)`, and no other row; none if `commands.md` has no such row or does not exist), and record each result.
    - In a Claude Code cloud session, a body written through REST ends with a `---` line and a `_Generated by …_` footer. That footer is not part of the Verify command or of any other section, so do not run it.
    - A scenario, a `Term` row or an `ADR` row passes only when all three are yes. A row that fails is a gap. The scenarios' result is PASS only when every row's Grade is PASS.
@@ -73,3 +78,6 @@ Target: $ARGUMENTS
    - **PR scope, FAIL:** leave the PR as a draft, and return each gap from `### Gaps`, and each failed check with its `html_url`, to the caller.
    - **PR scope, PENDING:** leave the PR as a draft, and return the PENDING verdict and each pending check to the caller.
    - **Umbrella scope:** return the verdict, the comment's URL (its `html_url`) and each gap to the caller. ship puts that URL in the final PR.
+
+## Repo rules
+!`cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md"`

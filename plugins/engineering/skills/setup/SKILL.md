@@ -4,6 +4,7 @@ description: Write a repo's profile for the plugin, propose rules for `.claude/r
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md")
   - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh")
   - Bash(mkdir -p .github/workflows)
   - Bash(cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml)
@@ -49,11 +50,12 @@ allowed-tools:
          ```
          Component: <the language, or the dependency name>.
          The repo's own convention lines, which are already covered: <each convention line that the rule docs state, or "none">.
+         Repo rules: <the Repo rules section at the end of this skill, pasted in full>.
          Use WebSearch and WebFetch to read the component's official docs and widely used guides. Find conventions for using it that Claude would plausibly get wrong in this repo without a rule. Return a finding only if you can name its source URL. Do not return a well-known language feature, a generic best practice, or a pattern that this repo does not use: check the repo's files for that. Do not return a line that the repo's own convention lines already state.
-         Return at most ten lines, each `- <rule> · <url>`, where the rule is one line that says what code does or never does, with no code and no rationale, and the url is the one page that shows it. Return nothing else. If your fetches fail, return the single line `no network`.
+         Return at most ten lines, each `- <rule> · <url>`, where the rule is a rule as the Repo rules above define it and passes its rule test, and the url is the one page that shows it. Return nothing else. If your fetches fail, return the single line `no network`.
          ```
        - Add what you know of the components that no agent covered, or whose agent returned `no network`, where Claude would plausibly get a convention of this repo wrong without a rule.
-       - Each candidate is one line that says what code in the repo does or never does: no code, no rationale. Its source is `repo: <path>` when a repo file shows it, `docs: <url>` when a research agent's finding gave it, and `proposed` when it comes from what you know of the stack.
+       - Each candidate is a rule as the Repo rules section defines it, and passes its rule test. Its source is `repo: <path>` when a repo file shows it, `docs: <url>` when a research agent's finding gave it, and `proposed` when it comes from what you know of the stack.
        - When every agent returned `no network`, every candidate that is not from the repo has the source `proposed`, and the `### Rules` part says so.
        - Drop a candidate that restates a line of the repo's CLAUDE.md, AGENTS.md or CONTRIBUTING.md, or a convention that a linter or formatter config in the repo enforces.
        - A candidate that one command can check is not a rule: add it to the `commands.md` proposal above as a `(pre-PR check)` row.
@@ -89,7 +91,7 @@ allowed-tools:
 5. **Apply.** Write the accepted files in this order:
    1. If the user accepted close-sub-issue, run `mkdir -p .github/workflows`, then `cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml`, each as its own Bash call, with no pipe, redirect or chain, alone in its message, and wait for its result before the next call. If one fails or is refused, say so, write no other file, create no issue, and stop.
    2. If the user accepted the `commands.md` question, write the file with the Write tool, in the form that step 3 showed, without the template's comments and without the source of each row.
-   3. If the user accepted the rules question, write each `.claude/rules/<area>.md` with the Write tool, in the form that step 3 showed, without the sources. A file with `paths` starts with the frontmatter `---`, `paths:`, one line `  - "<glob>"` for each glob, and `---`. Then comes the heading `# <Area>`, and then one line `- <rule>` for each rule: no code, no rationale and no source tag. A cross-cutting area has no frontmatter.
+   3. If the user accepted the rules question, write each `.claude/rules/<area>.md` with the Write tool, in the form that step 3 showed, without the sources. A file with `paths` starts with the frontmatter `---`, `paths:`, one line `  - "<glob>"` for each glob, and `---`. Then comes the heading `# <Area>`, and then one line `- <rule>` for each rule, as the Repo rules section defines it, and with no source tag. A cross-cutting area has no frontmatter.
    4. For each accepted command that a kept `commands.md` lacks, add its row at the end of the file's table with the Edit tool. If the file has no table, add form 1's table at the end of the file, with the accepted rows.
 6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. The close-sub-issue path that step 5.1 copied must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If step 5 wrote rules files, the `.claude/rules/` line of the output must read `present (<n> files)` with the number of files that step 5 wrote, and each file must hold each accepted rule. If a check fails, stop and name the file and what differs.
 7. **Conversion issue.** Only if the user accepted the conversion question:
@@ -108,5 +110,8 @@ allowed-tools:
 
 ## Contract
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md"`
+
+## Repo rules
+!`cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md"`
 
 !`bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"`
