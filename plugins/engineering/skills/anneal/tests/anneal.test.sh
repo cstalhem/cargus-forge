@@ -119,6 +119,10 @@ expect "the umbrella's Out of scope lists each request" has "$umbrella" '`## Out
 expect "the feature branch is <u>-anneal-<date>, created from origin/main and read back" \
   bash -c 'grep -qF "\`<u>-anneal-<date>\`" <<<"$1" && grep -qF "from \`origin/main\` as the rules say, and read it back" <<<"$1"' _ "$umbrella"
 expect "the rules say how to create a branch with git push" grep -qF 'git push origin <sha>:refs/heads/<n>-<slug>' "$plugin/references/rules.md"
+expect "the rules say to write each issue's and PR's title as plain text in the command that passes its body's path" \
+  grep -qF "Write each issue's and PR's title as plain text in the command that passes its body's path" "$plugin/references/rules.md"
+expect "the rules say never to fill a title or a body path in from a shell array, a counter or a loop" \
+  grep -qF "never fill a title or a body path in from a shell array, a counter or a loop, because the Bash tool's shell can be zsh, whose arrays start at 1" "$plugin/references/rules.md"
 expect "a sub-issue is titled Anneal <date> · <area>: <title>" has "$subissues" 'titled `Anneal <date> · <area>: <title>`'
 expect "the rules say how to set a sub-issue's parent" grep -qF 'sub_issues -F sub_issue_id=<id>' "$plugin/references/rules.md"
 expect "a sub-issue's parent is set and read back as the rules say" \
