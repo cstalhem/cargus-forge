@@ -4,7 +4,7 @@ description: Show where each open issue stands and suggest one next command. Lis
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh" --human)
+  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")
   - Bash(bash "${CLAUDE_SKILL_DIR}/labels.sh")
 ---
 
@@ -33,4 +33,4 @@ allowed-tools:
    When every call has succeeded, your reply is a `## Removed` heading, then the `- ` line of each worktree, as printed, one per line, and nothing else.
 
 ## Facts
-!`bash "${CLAUDE_SKILL_DIR}/status.sh" --human`
+!`bash "${CLAUDE_SKILL_DIR}/status.sh"`
