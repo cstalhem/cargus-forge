@@ -7,18 +7,18 @@
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
 # call sends its stderr to /dev/null, and the output is printed only once it is complete.
 #
-# With no argument it prints the output below, which Autopilot reads as its Facts. With
-# `--human` only the `## Report` part differs: it is the report for people that /engineering:next
-# shows (#283). Each issue is a bold line `**#<n>** <title> · <facts>`. A suggestion that is a
-# slash command gets its own fenced code block, so that it can be copied, and any other
-# suggestion ends the issue's line. A group with no issue has no heading, and no issue is left
-# out. The report ends with `**Next:**` and a code block, or with `**Next:** <suggestion>`.
+# With no argument it prints the one report below, which /engineering:next shows and Autopilot
+# reads as its Facts (#290 D1). Each issue is a bold line `**#<n>** <title> · <facts>`. A
+# suggestion that is a slash command gets its own fenced code block, so that it can be copied,
+# and any other suggestion ends the issue's line. A group with no issue has no heading, and no
+# issue is left out. The report ends with `**Next:**` and a code block, or with
+# `**Next:** <suggestion>`.
 #
 # With `--statuses` it prints one JSON line instead, an array with the number, status and
 # label names of each open issue, which labels.sh reads (#287 D4).
 #
 # Output:
-#   ## Report   one `### <group>` per status group, then a last line `Next: <suggestion>`
+#   ## Report   one `### <group>` per status group that has an issue, then the `**Next:**` line
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
 #               `### Finished worktrees`: a line `- <path> · <branch> · <fact>` per finished
 #               worktree, then its two indented calls, `git worktree remove '<path>'` and
@@ -28,12 +28,10 @@
 
 set -u
 
-human=false
 statuses=false
-[ "${1:-}" = "--human" ] && human=true
 [ "${1:-}" = "--statuses" ] && statuses=true
 
-# `fail`, `read_list` and `read_branches` come from the plugin's shared file. `fail` does not
+# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
 # exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -51,8 +49,7 @@ repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot rea
 # Open issues, without PRs: the issues endpoint lists PRs too. `goal` and `scenarios` say
 # whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
 read_list 'repos/{owner}/{repo}/issues?state=open'
-issues=$(printf '%s' "$items" | jq '
-  def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");
+issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
   map(select(has("pull_request") | not) | {
     number, title,
     labels: ((.labels // []) | map(.name)),
@@ -240,7 +237,6 @@ done < <(git worktree list --porcelain -z 2>/dev/null)
 
 out=$(jq -n -r \
   --arg repo "$repo" \
-  --argjson human "$human" \
   --argjson statuses "$statuses" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
@@ -329,8 +325,6 @@ out=$(jq -n -r \
          elif .status == "needs-review" or .status == "in-progress" then
            (if .pr then ["PR #\(.pr)"] else [] end)
          else [] end);
-    def line:
-      [ "- #\(.number) \(.title)" ] + facts + [ suggestion ] | join(" · ");
     def blocker_lines:
       .blockers[] as $b
       | if ($b.ref | startswith("#")) | not then "  - blocked by \($b.ref)"
@@ -339,9 +333,9 @@ out=$(jq -n -r \
           | "  - blocked by #\($b.number) · \($x.status | label_of) · \($x | suggestion)"
         else "  - blocked by #\($b.number)"
         end;
-    # An issue in the report for people (#283 D3): a suggestion gets a code block only when it
-    # is a slash command. A blocker line keeps its command inline.
-    def human_entry:
+    # An issue in the report (#283 D3): a suggestion gets a code block only when it is a slash
+    # command. A blocker line keeps its command inline.
+    def entry:
       suggestion as $s
       | ($s | startswith("/engineering:")) as $command
       | ([ "**#\(.number)** \(.title)" ] + facts + (if $command then [] else [ $s ] end) | join(" · ")),
@@ -356,13 +350,6 @@ out=$(jq -n -r \
       {name: "Umbrellas", status: "umbrella"},
       {name: "To shape", status: "request"} ]
     | map(. as $g | $g + {items: [$all[] | select(.status == $g.status)]}) as $groups
-
-    # At most 20 issues, in group order. Each group that is cut gets one "and N more" line.
-    | (reduce $groups[] as $g ({left: 20, out: []};
-        ([($g.items | length), .left] | min) as $k
-        | .out += [$g + {shown: $g.items[0:$k], more: (($g.items | length) - $k)}]
-        | .left -= $k)
-      | .out) as $cut
 
     # The `Next:` line, the first step that applies (#69).
     | ( [ $all[] | select(.status == "needs-review") ][0] ) as $review
@@ -384,21 +371,10 @@ out=$(jq -n -r \
     | if $statuses then ($all | map({number, status, labels}) | tojson) else
       "## Report",
       "",
-      ( if $human then
-          ( $groups[] | select(.items | length > 0)
-            | "### \(.name)", "", (.items[] | human_entry) ),
-          ( if ($next | startswith("/engineering:")) then "**Next:**", "```", $next, "```"
-            else "**Next:** \($next)" end )
-        else
-          ( $cut[]
-            | "### \(.name)",
-              ( if (.items | length) == 0 then "- none"
-                else (.shown[] | line, blocker_lines),
-                     (if .more > 0 then "- and \(.more) more" else empty end)
-                end ),
-              "" ),
-          "Next: \($next)"
-        end ),
+      ( $groups[] | select(.items | length > 0)
+        | "### \(.name)", "", (.items[] | entry) ),
+      ( if ($next | startswith("/engineering:")) then "**Next:**", "```", $next, "```"
+        else "**Next:** \($next)" end ),
       "",
       "## Cleanup",
       "",

@@ -137,60 +137,10 @@ for dir in "$full" "$ready" "$none" "$many"; do
 done
 
 # --- The expected output of status.sh with no argument -------------------------------------
-# The same text that status.sh printed before --human existed, which Autopilot reads.
-cat > "$tmp/full.plain" <<'EXPECTED'
-## Report
-
-### Needs review
-- #5 Needs review issue · PR #41 · review and merge PR #41
-
-### In progress
-- #4 In progress issue · PR #40 · /engineering:execute #4
-
-### Ready to build
-- #2 Ready issue · /engineering:execute #2
-- #7 Sub-issue · umbrella #6 · /engineering:execute #7
-
-### Blocked
-- #3 Blocked issue · wait for #2
-  - blocked by #2 · ready · /engineering:execute #2
-
-### Umbrellas
-- #6 Umbrella with sub-issues · 1 of 2 sub-issues done · feature branch 6-feature · build its sub-issues
-- #8 Umbrella not sliced · not sliced · no feature branch · /engineering:discuss #8
-
-### To shape
-- #1 A request · /engineering:discuss #1
-
-Next: review and merge PR #41, for #5
-
-## Cleanup
-
-### Finished worktrees
-- <tmp>/wt · 21-gone · PR #521 merged
-  git worktree remove '<tmp>/wt'
-  git branch -D '21-gone'
-
-### Merged remote branches
-- 20-done · PR #520 merged
-- 21-gone · PR #521 merged
-EXPECTED
-
-cleanup_of() { awk '/^## Cleanup/ { s = 1 } s' "$1"; }
-
-echo "# no argument"
-run_status "$full" > "$tmp/full.plain.out"
-same "WHEN status.sh runs with no argument THEN its output is byte for byte what it printed before" \
-  "$tmp/full.plain" "$tmp/full.plain.out"
-
-run_status "$many" > "$tmp/many.plain.out"
-expect "WHEN status.sh runs with no argument and more than 20 issues are open THEN it lists 20 and prints an 'and N more' line" \
-  grep -qxF -- '- and 5 more' "$tmp/many.plain.out"
-
-echo "# --human"
-# The expected report, written for the fixtures above: each issue is a bold line, a command
-# that is a slash command gets its own code block, and a group with no issue has no heading.
-cat > "$tmp/full.human" <<'EXPECTED'
+# The report, written for the fixtures above: each issue is a bold line, a command that is a
+# slash command gets its own code block, and a group with no issue has no heading. The
+# Cleanup part follows it.
+cat > "$tmp/full.report" <<'EXPECTED'
 ## Report
 
 ### Needs review
@@ -240,35 +190,46 @@ cat > "$tmp/full.human" <<'EXPECTED'
 **Next:** review and merge PR #41, for #5
 
 EXPECTED
-{ cat "$tmp/full.human"; cleanup_of "$tmp/full.plain"; } > "$tmp/full.human.expected"
+cat > "$tmp/full.cleanup" <<'EXPECTED'
+## Cleanup
 
-run_status "$full" --human > "$tmp/full.human.out"
-same "WHEN status.sh --human runs THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, and the report ends with a Next line" \
-  "$tmp/full.human.expected" "$tmp/full.human.out"
-same "WHEN status.sh --human runs THEN its Cleanup part is identical to the one printed with no argument" \
-  <(cleanup_of "$tmp/full.plain.out") <(cleanup_of "$tmp/full.human.out")
+### Finished worktrees
+- <tmp>/wt · 21-gone · PR #521 merged
+  git worktree remove '<tmp>/wt'
+  git branch -D '21-gone'
 
-run_status "$ready" --human > "$tmp/ready.human.out"
-expect "WHEN status.sh --human runs and a status group has no issues THEN the view prints no heading for that group" \
-  bash -c '! grep -qE "^### (Needs review|In progress|Blocked|Umbrellas)" "$1" && grep -qxF "### Ready to build" "$1" && grep -qxF "### To shape" "$1"' _ "$tmp/ready.human.out"
-run_status "$ready" > "$tmp/ready.plain.out"
-expect "WHEN status.sh runs with no argument and a group has no issues THEN it still prints its heading and '- none'" \
-  grep -qxF '### Needs review' "$tmp/ready.plain.out"
+### Merged remote branches
+- 20-done · PR #520 merged
+- 21-gone · PR #521 merged
+EXPECTED
+cat "$tmp/full.report" "$tmp/full.cleanup" > "$tmp/full.expected"
 
-run_status "$many" --human > "$tmp/many.human.out"
-expect "WHEN status.sh --human runs with more than 20 open issues THEN it lists every issue" \
-  test "$(grep -c '^\*\*#1[0-9][0-9]\*\* ' "$tmp/many.human.out")" = 25
-expect "WHEN status.sh --human runs with more than 20 open issues THEN it prints no 'and N more' line" \
-  bash -c '! grep -q "and [0-9]* more" "$1"' _ "$tmp/many.human.out"
+echo "# no argument"
+run_status "$full" > "$tmp/full.out"
+same "WHEN status.sh runs with no argument THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, the report ends with a Next line, and the Cleanup part follows unchanged" \
+  "$tmp/full.expected" "$tmp/full.out"
 
-expect "WHEN status.sh --human runs and the next step is a slash command THEN the report ends with a Next line and a code block that holds only that command" \
-  bash -c 'tail -n 20 "$1" | grep -A3 -x -F "**Next:**" | tr "\n" "|" | grep -qxF "**Next:**|\`\`\`|/engineering:execute #2|\`\`\`|"' _ "$tmp/ready.human.out"
+run_status "$ready" > "$tmp/ready.out"
+expect "WHEN status.sh runs and a status group has no issues THEN it prints no heading for that group" \
+  bash -c '! grep -qE "^### (Needs review|In progress|Blocked|Umbrellas)" "$1" && grep -qxF "### Ready to build" "$1" && grep -qxF "### To shape" "$1"' _ "$tmp/ready.out"
 
-run_status "$none" --human > "$tmp/none.human.out"
-expect "WHEN status.sh --human runs and the next step is not a slash command THEN the Next line holds the suggestion and no code block follows" \
-  grep -qxF '**Next:** nothing: no open issue waits for a step' "$tmp/none.human.out"
-expect "WHEN status.sh --human runs and the next step is not a slash command THEN no code block follows the Next line" \
-  bash -c '! sed -n "/^\*\*Next:\*\*/,/^## Cleanup/p" "$1" | grep -q "^\`\`\`"' _ "$tmp/none.human.out"
+run_status "$many" > "$tmp/many.out"
+expect "WHEN status.sh runs with more than 20 open issues THEN it lists every issue" \
+  test "$(grep -c '^\*\*#1[0-9][0-9]\*\* ' "$tmp/many.out")" = 25
+expect "WHEN status.sh runs with more than 20 open issues THEN it prints no 'and N more' line" \
+  bash -c '! grep -q "and [0-9]* more" "$1"' _ "$tmp/many.out"
+
+expect "WHEN status.sh runs and the next step is a slash command THEN the report ends with a Next line and a code block that holds only that command" \
+  bash -c 'tail -n 20 "$1" | grep -A3 -x -F "**Next:**" | tr "\n" "|" | grep -qxF "**Next:**|\`\`\`|/engineering:execute #2|\`\`\`|"' _ "$tmp/ready.out"
+
+run_status "$none" > "$tmp/none.out"
+expect "WHEN status.sh runs and the next step is not a slash command THEN the Next line holds the suggestion" \
+  grep -qxF '**Next:** nothing: no open issue waits for a step' "$tmp/none.out"
+expect "WHEN status.sh runs and the next step is not a slash command THEN no code block follows the Next line" \
+  bash -c '! sed -n "/^\*\*Next:\*\*/,/^## Cleanup/p" "$1" | grep -q "^\`\`\`"' _ "$tmp/none.out"
+
+expect "WHEN grep searches status.sh for --human, 'def line:' and \$cut THEN they are gone" \
+  bash -c '! grep -qF -e "--human" -e "def line:" -e "\$cut" "$1"' _ "$status"
 
 echo "# --statuses"
 cat > "$tmp/full.statuses" <<'EXPECTED'
@@ -287,28 +248,32 @@ same "WHEN status.sh --statuses runs THEN it prints a JSON array with the number
 expect "WHEN status.sh --statuses runs THEN it makes no write call"   test ! -e "$full/.wrote"
 
 echo "# errors"
-FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.plain.out"
-FAKE_GH_FAIL=1 run_status "$full" --human > "$tmp/err.human.out"
+FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.out"
 expect "WHEN status.sh runs with no argument and fails THEN it prints the one line 'status.sh error: <reason>'" \
-  bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^status.sh error: " "$1"' _ "$tmp/err.plain.out"
-same "WHEN status.sh --human fails THEN it prints the same one line as with no argument" \
-  "$tmp/err.plain.out" "$tmp/err.human.out"
+  bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^status.sh error: " "$1"' _ "$tmp/err.out"
 FAKE_GH_FAIL=1 run_status "$full" --statuses > "$tmp/err.statuses.out"
 same "WHEN status.sh --statuses fails THEN it prints the same one line as with no argument" \
-  "$tmp/err.plain.out" "$tmp/err.statuses.out"
+  "$tmp/err.out" "$tmp/err.statuses.out"
 
 echo "# the skills"
 skill=$skill_dir/SKILL.md
-expect "WHEN next loads THEN its Facts section injects status.sh --human" \
-  grep -qxF '!`bash "${CLAUDE_SKILL_DIR}/status.sh" --human`' "$skill"
-expect "WHEN next loads THEN an allowed-tools line that matches the injection exactly pre-approves it" \
-  grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh" --human)' "$skill"
-expect "WHEN next loads THEN no allowed-tools line pre-approves status.sh with no argument" \
-  bash -c '! grep -qF "status.sh\")" "$1"' _ "$skill"
+expect "WHEN next loads THEN its Facts line is exactly the injection of status.sh with no argument" \
+  grep -qxF '!`bash "${CLAUDE_SKILL_DIR}/status.sh"`' "$skill"
+expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval of that call" \
+  grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")' "$skill"
 for variant in autopilot autopilot-t3; do
-  expect "$variant: the skill still injects status.sh with no argument" \
-    bash -c 'grep -qF "skills/next/status.sh\"" "$1" && ! grep -qF -- "--human" "$1"' _ "$plugin/skills/$variant/SKILL.md"
+  autopilot=$plugin/skills/$variant/SKILL.md
+  expect "$variant: the skill injects status.sh with no argument" \
+    bash -c 'grep -qxF "!\`bash \"\${CLAUDE_PLUGIN_ROOT}/skills/next/status.sh\"\`" "$1" && ! grep -qF -- "--human" "$1"' _ "$autopilot"
+  expect "$variant: its Review and Ship steps name an umbrella issue whose code block is the ship command" \
+    test "$(grep -oF 'whose code block is `/engineering:ship #<u>`' "$autopilot" | wc -l)" = 2
+  expect "$variant: its Execute step goes on when there is no '### Ready to build' group" \
+    bash -c 'grep -qF "If there is no \`### Ready to build\` group" "$1" && ! grep -qF "If the group is \`- none\`" "$1"' _ "$autopilot"
 done
+
+echo "# the rule"
+expect "WHEN .claude/rules/engineering-scripts.md is read THEN it holds the one-report rule" \
+  grep -qxF -- '- A plugin script renders its facts one way for every skill that reads them; a second output exists only for another script, such as status.sh --statuses for labels.sh.' "$plugin/../../.claude/rules/engineering-scripts.md"
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failed"

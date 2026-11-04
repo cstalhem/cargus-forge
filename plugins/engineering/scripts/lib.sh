@@ -35,3 +35,8 @@ read_branches() {
   branches=$(printf '%s\n' "$remote" | sed -n 's|^[0-9a-f]*[[:space:]]*refs/heads/||p' | jq -R . 2>/dev/null | jq -s . 2>/dev/null) \
     || fail "cannot read the remote branches."
 }
+
+# A jq definition, `has_section($name)`, that is true when an issue's `.body` has a `## <name>`
+# section: a heading at the start of a line. Put it before the rest of a jq program, as
+# `jq "$JQ_HAS_SECTION"'<program>'`. status.sh and setup.sh both tell the plugin's issues by it (#289).
+JQ_HAS_SECTION='def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");'
