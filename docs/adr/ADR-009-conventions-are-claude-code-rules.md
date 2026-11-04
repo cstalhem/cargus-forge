@@ -6,7 +6,7 @@ status: active
 
 # ADR-009: Conventions are Claude Code rules in the repo
 
-- **Decision:** A repo's conventions live as one-line rules in `.claude/rules/`, which setup proposes from the repo, research agents and model knowledge, verify grades each PR against, and execute's reflect step extends from evidence in the work; nothing is kept in the memory directory.
+- **Decision:** A repo's conventions live as one-line rules in `.claude/rules/`, which setup proposes from the repo, research agents and model knowledge, verify grades each PR against, and execute's reflect step extends from evidence in the work; nothing is kept in the memory directory. A rule has no code, passes the rule test, may end with a short reason clause, and ends with `(see skill: <name>)` when a skill in `.claude/skills/` holds what its line cannot; the plugin defines this once in `references/repo-rules.md`, which setup, execute, anneal and verify load.
 - **Source:** [#217](https://github.com/cstalhem/cargus-forge/issues/217)
 
 ## Details
