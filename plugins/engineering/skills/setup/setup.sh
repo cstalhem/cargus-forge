@@ -41,8 +41,8 @@
 #                            issue that is the conversion issue, or `- none` (#164). The marker
 #                            `<!-- engineering:setup conversion issue -->` on a line of the body
 #                            wins; only without one, a title with `convert` and `plugin` or
-#                            `engineering`. An issue with a plugin label (`status:*` or
-#                            `umbrella`) and one `<n>-*` branch gets no branch finding.
+#                            `engineering`. An issue whose body has a `## Goal` or
+#                            `## Scenarios` section and one `<n>-*` branch gets no branch finding.
 #   ### Docs                 a line `- <kind> · <path>` for each doc that setup found, or `- none`
 #                            (#151 D2): `adr` for an ADR folder other than `docs/adr/`, and
 #                            `glossary` for a glossary-like file other than `docs/glossary.md`,
@@ -54,7 +54,7 @@
 
 set -u
 
-# `fail`, `read_list` and `read_branches` come from the plugin's shared file. `fail` does not
+# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
 # exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -492,9 +492,9 @@ facts_branches() {
   read_branches
   # The issues endpoint lists PRs too.
   read_list 'repos/{owner}/{repo}/issues?state=open'
-  # An issue with a plugin label (`status:*` or `umbrella`) is one that the plugin works on.
-  issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not)
-      | {number, plugin: ([(.labels // [])[] | (.name // empty)] | any(startswith("status:") or . == "umbrella"))}]
+  # An issue whose body has a `## Goal` or `## Scenarios` section is one that the plugin works on.
+  issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'[.[] | select(has("pull_request") | not)
+      | {number, plugin: (has_section("Goal") or has_section("Scenarios"))}]
       | sort_by(.number)' 2>/dev/null) \
     || fail "cannot read the open issues."
   # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to

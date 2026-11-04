@@ -494,12 +494,13 @@ lacks 'setup.sh error:'
 done_check
 
 setup
-check "an open issue with a plugin label and one <n>-* branch gets no finding, one with more branches or no label does (#164)"
-branches 7-a 8-b 9-c 10-d 10-e 11-f
-page 1 '[{"number":7,"labels":[{"name":"status:ready"}]},{"number":8,"labels":[{"name":"umbrella"}]},{"number":9,"labels":[{"name":"bug"}]},{"number":10,"labels":[{"name":"status:ready"}]},{"number":11}]'
+check "an open issue with a ## Goal or ## Scenarios section and one <n>-* branch gets no finding, one with neither section, a second branch or a labelled body without one does (#289)"
+branches 7-a 8-b 9-c 10-d 10-e 11-f 12-g 13-h
+page 1 '[{"number":7,"body":"## Goal\nx"},{"number":8,"body":"intro\n## Scenarios\n- WHEN a THEN b"},{"number":9,"body":"plain"},{"number":10,"body":"## Scenarios\n- x"},{"number":11},{"number":12,"labels":[{"name":"status:ready"}],"body":"x"},{"number":13,"labels":[{"name":"umbrella"}],"body":"a ## Goal inside a line"}]'
 run
 has '- #7 · `7-a`' '- #8 · `8-b`' '- Open issue #9 has a branch that matches `9-*`' \
-  '- Open issue #10 has 2 branches that match `10-*`' '- Open issue #11 has a branch that matches `11-*`'
+  '- Open issue #10 has 2 branches that match `10-*`' '- Open issue #11 has a branch that matches `11-*`' \
+  '- Open issue #12 has a branch that matches `12-*`' '- Open issue #13 has a branch that matches `13-*`'
 lacks 'Open issue #7 ' 'Open issue #8 '
 done_check
 
