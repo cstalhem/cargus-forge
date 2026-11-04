@@ -128,6 +128,8 @@ expect "the PR body section says each bullet names a decision or a scenario, wit
 expect "the PR body section says when Deviations is there and gives the Autopilot line" \
   bash -c 'grep -qF "only when a deviation rule was used or a question was answered from another session" <<<"$1" && grep -qF "Autopilot: <question> → <answer>, because <why>" <<<"$1"' _ "$pr_body"
 expect "execute's step 1 reads formats.md" grep -qF '${CLAUDE_PLUGIN_ROOT}/references/formats.md' <<<"$step1"
+expect "execute's rules do not restate the Autopilot line that formats.md defines" \
+  bash -c '! grep -qF "Autopilot: <question>" "$1"' _ "$skill"
 expect "step 6 writes the PR body in the format of formats.md" grep -qF 'PR body format of `formats.md`' <<<"$step6"
 expect "step 6 no longer spells out the first line or the sections" \
   bash -c '! grep -qE "Sub-issue #|Closes #|## What it delivers|## Deviations" <<<"$1"' _ "$step6"
