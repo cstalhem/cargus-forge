@@ -22,50 +22,10 @@ Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management
 
 ## Component authoring
 
-For how to write skills, agents, hooks, commands, MCP/LSP config, and plugin directory structure, use the installed **`plugin-dev`** plugin and the official docs. This repo's knowledge system does not restate that general guidance — it captures only this repo's wiring and conventions.
+For how to write skills, agents, hooks, commands, MCP/LSP config, and plugin directory structure, use the installed **`plugin-dev`** plugin and the official docs. This repo's rules and skills do not restate that general guidance — they capture only this repo's wiring and conventions.
 
-# Knowledge System
+# Rules and skills
 
-The purpose of this system is to make each change to the code simpler than the last, by continually capturing gotchas, patterns, and decisions as they're discovered.
+- Conventions are one-line rules in `.claude/rules/`, with steps and examples in a backing skill in `.claude/skills/`; `plugins/engineering/references/repo-rules.md` defines both, and execute's reflect step adds them ([ADR-009](docs/adr/ADR-009-conventions-are-claude-code-rules.md)).
+- A convention or gotcha you find goes in a rule, never in the memory directory.
 
-Project knowledge lives in three tiers. Each has a distinct purpose and update trigger.
-
-| Tier        | Location                | Loads                | Contains                                               |
-| ----------- | ----------------------- | -------------------- | ------------------------------------------------------ |
-| Orientation | `CLAUDE.md` (this file) | Always               | Project structure, commands, design assumptions        |
-| Rules       | `.claude/rules/`        | At launch, or on read if path-scoped | Concise do/don't rules                 |
-| Skills      | `.claude/skills/`       | On demand            | Deep reference: examples, anti-patterns, decision aids |
-
-**Staging area** — unvalidated learnings are stored as individual `staging_*.md` files in the project's memory directory (same directory as `MEMORY.md`), with index lines in `MEMORY.md` prefixed with `- [staging:`. This integrates with the auto-memory system rather than conflicting with it.
-
-**Critical patterns** — `.claude/rules/critical-patterns.md` captures high-impact WRONG/CORRECT patterns for mistakes that break builds, cause data loss, or create security issues.
-
-### Workflow checkpoints
-
-- **Before non-trivial tasks:** Scan `.claude/rules/` (including `critical-patterns.md`) and `.claude/skills/` for knowledge relevant to the task at hand. Skip for trivial changes (typos, copy edits, color tweaks, one-line fixes).
-- **After completing tasks:** Check if anything discovered during the task should be staged in `MEMORY.md`.
-
-### Updating the knowledge system
-
-When you discover something worth capturing during work:
-
-1. **Caused by a mistake or gotcha?** → Add a one-line rule to the relevant file in `.claude/rules/`. Update the matching skill's Anti-Patterns section with the full context (what went wrong, why, the fix).
-2. **High-impact mistake (build-breaking, data loss, security)?** → Add a WRONG/CORRECT entry to `.claude/rules/critical-patterns.md`.
-3. **New pattern, example, or decision aid?** → Update the relevant skill in `.claude/skills/`.
-4. **New topic not covered by any existing skill?** → Create a new skill directory with `SKILL.md`. Put what the skill does in `description` and trigger phrases in `when_to_use` (the two are truncated at 1,536 characters combined in the skill listing).
-5. **Not validated yet?** → Create a `staging_<slug>.md` file in the project's memory directory with frontmatter tags (`[staging] [type:gotcha|pattern|decision] [area:<project-area>]`) and add an index line to `MEMORY.md` prefixed with `- [staging:`. Add `[promotion-candidate]` to the description when the pattern recurs across 2+ sessions.
-
-### Cross-referencing
-
-- Rules reference backing skills: `(see skill: skill-name)` for deeper context.
-- Skills reference the rules they support for quick lookup.
-
-### Proactive maintenance
-
-- After fixing a bug caused by a missing rule, suggest adding the rule.
-- After a session where a skill would have prevented confusion, suggest updating it.
-- When staging entries (files prefixed `staging_*` in the memory directory) have been validated across 2+ sessions, suggest promotion.
-- When a rule or skill leads to incorrect behavior, flag it: critical issues → propose a direct fix (with user approval), minor issues → create a staging entry with `[type:gotcha]` and `[promotion-candidate]` tags.
-- Keep rules to one line each — no code examples, no rationale (that belongs in skills).
-- Write each entry as durable facts plus the reason it exists. Exclude conversational artifacts (prior assumptions, who proposed a change, session narration) and anything already recorded in the repo or another tier. Rules carry the fact in one line and link to a skill for the reason; skills, critical patterns, and staging entries state the reason inline. No phase numbers, plan numbers, or session-specific context.
-- Surface lint/type/test errors immediately rather than deferring them.
