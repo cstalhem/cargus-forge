@@ -54,7 +54,7 @@
 
 set -u
 
-# `fail`, `read_list` and `read_branches` come from the plugin's shared file. `fail` does not
+# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
 # exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -493,9 +493,8 @@ facts_branches() {
   # The issues endpoint lists PRs too.
   read_list 'repos/{owner}/{repo}/issues?state=open'
   # An issue whose body has a `## Goal` or `## Scenarios` section is one that the plugin works on.
-  # The section test is copied from `has_section` in `next/status.sh` (#289 D1).
-  issues=$(printf '%s' "$items" | jq '[.[] | select(has("pull_request") | not)
-      | {number, plugin: ((.body // "") | test("(^|\n)## (Goal|Scenarios)[ \t]*\r?(\n|$)"))}]
+  issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'[.[] | select(has("pull_request") | not)
+      | {number, plugin: (has_section("Goal") or has_section("Scenarios"))}]
       | sort_by(.number)' 2>/dev/null) \
     || fail "cannot read the open issues."
   # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to
