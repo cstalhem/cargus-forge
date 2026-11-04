@@ -17,7 +17,7 @@ _Avoid_: child issue, ticket
 
 ## Gate
 - A term goes in only if it is specific to the project and an agent would get it wrong without the entry. A word in its plain meaning, or a general programming word, stays out.
-- A name that the work makes up for a new thing, such as a new section, file, step or state, is specific to the project, so it passes the gate.
+- A name that the work makes up for a new thing, such as a new section, file, step or state, is specific to the project, but it passes the gate only when more than one skill, script or doc reads or writes it.
 - Edit an entry in place. Do not add a second entry for the same term.
 - A rename moves the old word into the new entry's `_Avoid_` line.
 - A curation pass may not make the file longer.

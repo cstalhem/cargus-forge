@@ -62,6 +62,7 @@ tmux capture-pane -p -t t | grep -v '^\s*$' | tail -40               # read the 
   - a skill called through the Skill tool gets the error as the tool result, and the model reports it.
 - An output that is empty or only whitespace shows as `(Bash completed with no output)`. For a section that should look empty, print a zero-width space instead, for example `cat <file> 2>/dev/null || printf '\342\200\213'`.
 - `claude plugin validate --strict` does not catch a missing injected file. Check it in the verify step, for example with `test -f`.
+- What Claude Code 2.1.316 showed with `claude -p`: an injected output of 29,014 characters came through in full, and one of 30,014 became `<persisted-output>Output too large … Full output saved to: …/tool-results/<id>.txt</persisted-output>` with a 2KB preview and no sign to the model that the rest was missing. The limit applies to each injection separately, so a script whose output grows with the repo needs a budget of its own.
 
 ## Anti-Patterns
 
