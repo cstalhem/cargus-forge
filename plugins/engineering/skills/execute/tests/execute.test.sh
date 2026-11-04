@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Tests for execute's PENDING resume in a T3 Code thread: its skill file, the two Autopilot skills'
-# report instructions, the plugin README, the ADRs and the glossary.
+# Tests for execute's PENDING resume in a T3 Code thread and for where it opens its draft PR: its skill
+# file, the two Autopilot skills' report instructions, the plugin README, the ADRs, the glossary and the
+# engineering-build rule.
 # They read the repo's files only and need no network.
 set -u
 
@@ -78,6 +79,37 @@ expect "ADR-008 states the report exception" grep -qF 'scheduled itself' "$adr00
 
 expect "the glossary defines PENDING resume" grep -qF '**PENDING resume**:' "$glossary"
 expect "the glossary defines T3 Code thread" grep -qF '**T3 Code thread**:' "$glossary"
+
+# The draft PR is opened in step 3 only: its condition, lookup and POST, run after each push.
+rules_md=$root/.claude/rules/engineering-build.md
+step3=$(grep -E '^3\. ' "$skill")
+step6=$(grep -E '^6\. ' "$skill")
+deviation5=$(sed -n '/^  5\. The issue fails the size test/,/^  6\. /p' "$skill" | sed '$d')
+lookup='pulls?head={owner}:<branch>&state=open'
+
+expect "the open-PR condition appears only in step 3" \
+  test "$(grep -cF 'branch has no open PR' "$skill")" -eq 1 -a "$(grep -F 'branch has no open PR' <<<"$step3" | wc -l)" -eq 1
+expect "the POST that opens the PR appears only in step 3" \
+  test "$(grep -cF -e '-X POST repos/{owner}/{repo}/pulls ' "$skill")" -eq 1 -a "$(grep -cF -e '-X POST repos/{owner}/{repo}/pulls ' <<<"$step3")" -eq 1
+expect "the open-PR lookup appears in step 3 and in step 2's resume path only" \
+  test "$(grep -cF "$lookup" "$skill")" -eq 2 -a "$(grep -cF "$lookup" <<<"$step3")" -eq 1 \
+    -a "$(grep -F "$lookup" "$skill" | grep -cF 'List its open PR')" -eq 1
+expect "step 3 runs the lookup after each push, deviation 5's and step 6's included" \
+  grep -qE 'After each push.*deviation 5.*step 6' <<<"$step3"
+expect "deviation 5 pushes as step 3 says and has no PR command or PR body of its own" \
+  bash -c 'grep -qF "push it as step 3 says" <<<"$1" && ! grep -qE "POST|body|open a draft PR" <<<"$1"' _ "$deviation5"
+expect "step 6 rewrites the PR that step 3's lookup found or opened, with PATCH and a read-back" \
+  bash -c 'grep -qF "Step 3'"'"'s lookup after this push" <<<"$1" && grep -qF -e "-X PATCH repos/{owner}/{repo}/pulls/<pr> -f title" <<<"$1" && grep -qF "Read the PR back" <<<"$1"' _ "$step6"
+expect "step 6 has no POST, no lookup and no fork between opening and rewriting" \
+  bash -c '! grep -qE "POST|pulls\?head|no open PR|If it has one" <<<"$1"' _ "$step6"
+expect "ADR-006's size-test-stop bullet says the push opens the draft PR through step 3 with the placeholder body" \
+  grep -qE 'The push opens it through step 3 with the placeholder body' "$adr006"
+expect "ADR-006 rejects the failing criterion in the stop's PR body" \
+  grep -qF "**Keep the failing criterion in the size-test stop's PR body:**" "$adr006"
+expect "ADR-006 rejects stating the open command in the PR step" \
+  grep -qF '**State the condition and the open command in the PR step, and point step 3 and the size-test stop there:**' "$adr006"
+expect "the engineering-build rule says each GitHub write has one step" \
+  grep -qF -x -e '- A skill states each GitHub write and its condition in one step, and other steps point to that step.' "$rules_md"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
