@@ -17,7 +17,7 @@ The reasons behind the rules for shipping a change to a plugin in this marketpla
 
 - **What went wrong:** Added a `version` to a `plugin.json` or a marketplace entry, for example to quiet the validator's "No version specified" warning.
   **Why:** With an explicit `version`, Claude Code caches by version string, so users keep their cached copy until the string changes and `/plugin update` reports "already at the latest version" — a silent no-op. Every PR that bumped the version from the same `main` also conflicted with the others. Without a `version`, Claude Code versions a plugin by its commit SHA, so each change reaches users with no bump.
-  **Fix:** Leave `version` out. `scripts/validate-plugins.sh` ignores the missing-version warning (see `.claude/rules/conventions.md` and `.claude/rules/critical-patterns.md`).
+  **Fix:** Leave `version` out. `scripts/validate-plugins.sh` ignores the missing-version warning (see `.claude/rules/conventions.md`).
 
 - **What went wrong:** `git push` or `gh pr create` hung with an SSH timeout, or failed with `Permission denied (publickey)`.
   **Why:** Those commands need the unsandboxed environment (SSH keys and network egress); the remote configuration itself is fine.
