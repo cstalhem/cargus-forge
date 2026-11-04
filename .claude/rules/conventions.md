@@ -23,3 +23,7 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 - When a skill injects a file with `` !`cat …` ``, check in its verify step that the file exists; `claude plugin validate` does not (see skill: plugin-testing).
 - Load a plugin under test from inside the session's working folder; an injected `cat` from a `--plugin-dir` outside it is refused (see skill: plugin-testing).
 - Test a pop-up or a permission prompt in an interactive session through tmux, because `claude -p` has neither (see skill: plugin-testing).
+
+## Plugin skills
+
+- A script whose output a skill injects with `` !`…` `` keeps that output under about 24,000 characters, because past about 30,000 the model silently gets only a file path and a 2KB preview (see skill: plugin-testing).
