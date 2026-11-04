@@ -2,7 +2,7 @@
 
 A scenario is one acceptance criterion as `WHEN <condition> THEN <result>`. Each scenario becomes a test.
 
-Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
+Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`, without its own `## Request` line and with each of its headings one level deeper.
 
 ## Umbrella issue
 The one record of a feature that needs more than one session.
