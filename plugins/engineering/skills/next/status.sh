@@ -33,7 +33,7 @@ statuses=false
 [ "${1:-}" = "--human" ] && human=true
 [ "${1:-}" = "--statuses" ] && statuses=true
 
-# `fail`, `read_list` and `read_branches` come from the plugin's shared file. `fail` does not
+# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
 # exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -51,8 +51,7 @@ repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot rea
 # Open issues, without PRs: the issues endpoint lists PRs too. `goal` and `scenarios` say
 # whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
 read_list 'repos/{owner}/{repo}/issues?state=open'
-issues=$(printf '%s' "$items" | jq '
-  def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");
+issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
   map(select(has("pull_request") | not) | {
     number, title,
     labels: ((.labels // []) | map(.name)),
