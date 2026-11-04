@@ -2,8 +2,6 @@
 
 A scenario is one acceptance criterion as `WHEN <condition> THEN <result>`. Each scenario becomes a test.
 
-A scenario can be checked before the PR merges. A result that only a merged and synced plugin can show is not a scenario: the draft holds a `D<n> · The next real run is the test: <what it will show>` decision instead (see the unchecked-assumption and next-real-run decisions below).
-
 Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`.
 
 ## Umbrella issue
@@ -78,7 +76,7 @@ Two decisions that record what discuss could not check before the PR merges. Bot
 ```
 
 - The first records a fact that a design rests on and that discuss could not check, which the user accepted as unchecked.
-- The second replaces a scenario for a result that only a merged and synced plugin can show.
+- The second replaces a scenario for a result that only a merged and synced plugin can show; such a result is not a scenario.
 
 ## Final PR body
 The one PR that takes a feature branch into `main`. It closes the umbrella and each sub-issue that is still open. Where the repo runs the close-sub-issue workflow (`templates/close-sub-issue.yml`), each sub-issue closed when its PR merged into the feature branch. A repo without it leaves them open, because GitHub reads closing keywords only on PRs into the default branch. The `Verify` line links the umbrella's verify comment, because ship runs verify on the umbrella before the PR exists. `## Deviations` gathers every line of the merged sub-issue PRs' `## Deviations` sections, grouped by sub-issue, so the user reads all of them in the one PR they review. Leave the section out when no merged sub-issue PR has one.

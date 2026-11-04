@@ -88,16 +88,16 @@ The template is artifact-ready: it has no `<!doctype>`, `<html>`, `<head>` or `<
 - **Keep as is:** the top bar, the drawer markup (`drawer-head`, `scrim`), the inline contents (`toc-inline`), the "Expand all" button, the back-to-top button and the scripts at the end. They provide the mobile menu, contents highlighting, expanding and collapsing, and diagram rendering when the report is opened as a file. Put the report name in the top bar too.
 - **Collapsed blocks:** "Scope and method", "Key terms" and the source index stay `<details>` without `open`, and so does every finding's `<details>` block. Never add `open` to any of them.
 - **Question:** the `<h1>` is the restated research question you were given, at most 15 words.
-- **Scope:** "Question as asked" is the question as the user asked it, word for word. "Covered" and "Not covered" from the notes' Assignment sections, merged. "Decisions" from the notes' Decisions made, merged and shortened to what affects the reader's interpretation. "Research notes" lists every note used, one `<li>` each: `<a href="notes.html#<note-file>">` with the note's title as the text. The hash is the note's file name without `.md`, e.g. `notes.html#2026-10-18-pricing`.
+- **Scope:** "Question as asked" is the question as the user asked it, word for word. "Covered" and "Not covered" from the notes' Assignment sections, merged; "Not covered" says what was left out and why. "Decisions" from the notes' Decisions made, merged and shortened to what affects the reader's interpretation. "Research notes" lists every note used, one `<li>` each: `<a href="notes.html#<note-file>">` with the note's title as the text. The hash is the note's file name without `.md`, e.g. `notes.html#2026-10-18-pricing`.
 - **Findings:** one `<section class="finding" id="sN">` per finding, numbered `s1`, `s2`, ... in order, with a matching `sec-rule` number. In each: the `h2` with the finding, one visible `<p>` of 2 to 3 sentences, then the `<details class="evidence">` block with the evidence and caveats, ending with a "Full note" link to the note the finding draws on most (`notes.html#<note-file>`, as in Scope). Keep the visible paragraph free of tables, lists and callouts.
 - **Takeaways:** after each takeaway's text, set the `.tk-meta` link to the supporting finding (`href="#sN"`, text `&rarr; 0N`) and its confidence (`High`, `Medium` or `Low`, with `data-level` `high`, `medium` or `low`).
 - **Open questions:** one `<li>` per question. Include every open gap the orchestrator passed, keeping its wording, and the notes' recommended follow-up research.
-- **Lists:** use a list only for parallel items or steps. Reasoning, comparisons and explanations go in prose. Keep each item under about 40 words, and do not use a list with a single item.
+- **Lists:** use a list only for parallel items or steps: `ul.plain` for items, `ol.plain` for steps. Reasoning, comparisons and explanations go in prose. Keep each item under about 40 words, and do not use a list with a single item.
 - **Table:** use a table for exact values that readers compare. Give numeric columns `class="num"` on the `th` and every `td`, put the unit in the header, and use the same number of decimals down a column.
 - **Callouts:** `callout disagree` for conflicting sources, `callout caveat` for low confidence, single-source claims and partial notes, plain `callout` for other notes to the reader.
-- **Quote:** only verbatim text that a note records as a direct quote. Never paraphrase inside a quote.
+- **Quote:** only verbatim text that a note records as a direct quote. Never paraphrase inside a quote. The one variant is a key claim in the report's own words: delete the `<cite>` and caption it as the report's own reading.
 - **Stats and chart:** every number needs a source marker. One series per chart; set each bar width as a percentage of the maximum value.
-- **Figure:** use a mermaid diagram only when it explains a structure or flow better than prose.
+- **Figure:** use a mermaid diagram only when it explains a structure or flow better than prose. For pixel control, put an inline `<svg>` in `.frame` instead of the mermaid `<pre>`.
 - **Code:** short illustrative excerpts only. Never paste full code from repositories.
 - **Citations:** every factual claim in a finding's `<details>` block gets `<a class="ref" href="#src-N" aria-label="Source N">N</a>`, and every `src-N` exists in the source index. Place several markers side by side with no space or line break between them; the template adds the commas, a source preview on hover or tap, and back-links from the index.
 - **Source index:** title linked to the URL, then author or publisher and year. Meta line: domain, type (spec, paper, docs, blog, vendor, news, forum, repo) and access date.
@@ -109,7 +109,7 @@ The template is artifact-ready: it has no `<!doctype>`, `<html>`, `<head>` or `<
   - *Read time:* the visible layer's word count (the text in `<main>` outside every `<details>`) divided by 230, rounded up.
   - *Depth:* the depth you were given.
   - *Tags:* 3 to 6 tags merged from the notes' `tags`.
-- **`<title>`:** replace "Research Report Template" with a short name for the report, 2 to 4 words (e.g. "Azure Landing Zone Networking"), and delete the comment under it. Use the same name in the top bar. The restated question goes in the `<h1>`.
+- **`<title>`:** the report name, 2 to 4 words, also in the top bar.
 - **Description:** fill the `description` meta tag with one sentence stating the answer.
 - **Writing:** plain, direct English. No em dashes. No filler or hype words. State the answer before the explanation.
   - One idea per paragraph. Aim for sentences under 25 words.
@@ -132,15 +132,13 @@ When asked to update a report, rebuild it at the same report path: copy the temp
    python3 "<check script>" "<report path>" "<topic folder>"
    ```
 
-   It prints one line per problem and nothing when the report passes. An `ERROR` line is a failure: a leftover `{{` placeholder, an em dash, a finding without a `<details>` block, a citation without a matching source, or a note link to a missing note. Fix every `ERROR` and run the script again, until it exits 0. A `WARNING` line means the visible layer or the `<h1>` is over its target: cut it back, unless that would drop part of the answer. Never edit the script, and never finish with an `ERROR` left. If the script cannot run, report back that the check did not run and why.
+   It prints one line per problem and nothing when the report passes. An `ERROR` line is a failure: a leftover `{{` placeholder, an em dash, a finding without a `<details>` block, an in-page link without a target, or a note link to a missing note. Fix every `ERROR` and run the script again, until it exits 0. A `WARNING` line means the visible layer or the `<h1>` is over its target: cut it back, unless that would drop part of the answer. Never edit the script, and never finish with an `ERROR` left. If the script cannot run, report back that the check did not run and why.
 2. Then check what the script does not:
-   1. The `<title>` is no longer "Research Report Template".
-   2. Every source in the index is cited at least once.
-   3. Every contents link points to an existing ID.
-   4. No unused template blocks or template instruction comments remain in the markup. Comments inside `<style>` and the scripts stay.
-   5. Every takeaway links to an existing finding and has a confidence level.
-   6. The number of findings fits the depth, every `h2` is a sentence that states a finding, and every visible finding paragraph has 2 to 3 sentences.
-   7. Every open gap you were given appears under open questions.
+   1. Every source in the index is cited at least once.
+   2. No unused template blocks or template instruction comments remain in the markup. Comments inside `<style>` and the scripts stay.
+   3. Every takeaway has a confidence level.
+   4. The number of findings fits the depth, every `h2` is a sentence that states a finding, and every visible finding paragraph has 2 to 3 sentences.
+   5. Every open gap you were given appears under open questions.
 
    If you change the report while fixing these, run the check script again.
 

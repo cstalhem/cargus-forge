@@ -124,7 +124,9 @@ expect "the rules say to write each issue's and PR's title as plain text in the 
 expect "the rules say never to fill a title or a body path in from a shell array, a counter or a loop" \
   grep -qF "never fill a title or a body path in from a shell array, a counter or a loop, because the Bash tool's shell can be zsh, whose arrays start at 1" "$plugin/references/rules.md"
 expect "a sub-issue is titled Anneal <date> · <area>: <title>" has "$subissues" 'titled `Anneal <date> · <area>: <title>`'
-expect "a sub-issue's parent is read back" has "$subissues" 'issues/<s>/parent --jq .number'
+expect "the rules say how to set a sub-issue's parent" grep -qF 'sub_issues -F sub_issue_id=<id>' "$plugin/references/rules.md"
+expect "a sub-issue's parent is set and read back as the rules say" \
+  has "$subissues" 'set its parent to the umbrella `<u>` and read the parent back, as the rules say'
 expect "a sub-issue gets no blocked-by link" has "$subissues" 'Set no "blocked by" link'
 expect "a fix with a rule gets the rule scenario" \
   grep -qF 'WHEN .claude/rules/<area>.md is read THEN it holds <rule>' "$skill"
@@ -145,16 +147,13 @@ expect "the Report step names Autopilot or execute on the first sub-issue as the
 # Scenario 9: typed only.
 expect "the frontmatter has disable-model-invocation: true" has "$frontmatter" 'disable-model-invocation: true'
 
-# Scenario 10: the README and the description in four places.
+# Scenario 10: the README and the description in the plugin's own files; scripts/check-descriptions.sh checks the other listings.
 expect "the README's commands table lists /engineering:anneal" grep -qE '^\| `/engineering:anneal` \|' "$readme"
 expect "the README has an Anneal section" grep -qxF '## Anneal' "$readme"
 expect "the README's Anneal section says that you start it by hand" \
   bash -c 'awk "/^## Anneal/ { s = 1; next } /^## / { s = 0 } s" "$1" | grep -qF "You start each one by hand"' _ "$readme"
 desc=$(jq -r .description "$plugin/.claude-plugin/plugin.json")
 expect "plugin.json's description names anneal" has "$desc" 'anneal'
-expect "marketplace.json has the same description" \
-  test "$(jq -r '.plugins[] | select(.name == "engineering") | .description' "$root/.claude-plugin/marketplace.json")" = "$desc"
-expect "the root README has the same description" grep -qF -- "(\`plugins/engineering\`): $desc" "$root/README.md"
 expect "the plugin README has the same description" grep -qxF -- "$desc" "$readme"
 
 # Decisions: the glossary, ADR-010 and ADR-008.

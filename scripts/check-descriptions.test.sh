@@ -60,6 +60,10 @@ edit "$root/.claude-plugin/marketplace.json" 's/The alpha plugin\./Another alpha
 check "marketplace.json differs" "$root" 1 "alpha: marketplace.json differs from plugin.json"
 
 root=$(fixture)
+edit "$root/.claude-plugin/marketplace.json" 's|"./plugins/beta"|"./plugins/gamma"|'
+check "marketplace.json source is not the plugin's directory" "$root" 1 "beta: marketplace.json source is not ./plugins/beta"
+
+root=$(fixture)
 edit "$root/README.md" 's/The beta plugin\./Another beta./'
 check "README differs" "$root" 1 "beta: README.md differs from plugin.json"
 

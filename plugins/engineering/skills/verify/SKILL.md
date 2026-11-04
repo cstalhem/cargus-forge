@@ -32,11 +32,12 @@ Target: $ARGUMENTS
      - **Exists:** the code or text that the scenario needs is there.
      - **Substantive:** it does what the scenario says, and is not a stub or a placeholder.
      - **Wired:** the path from the scenario's WHEN to its THEN is complete: something calls, loads or links it.
-   - Add one row to the table for each `Term` decision, a `## Decisions` line that starts `D<n> · Term:`. In PR scope, take the issue's own, and each `#<umbrella> D<n>` line of the issue whose decision in the umbrella is a `Term` decision. Read that text with `gh api repos/{owner}/{repo}/issues/<umbrella>`. In umbrella scope, take the umbrella's own. Name the row `Term: <Term>`, and grade it by reading `git show <sha>:docs/glossary.md`:
+   - Add one row to the table for each `Term` decision and each `ADR` decision, a `## Decisions` line that starts `D<n> · Term:` or `D<n> · ADR:`. In PR scope, take the issue's own decisions, and each `#<umbrella> D<n>` line of the issue whose decision in the umbrella is a `Term` or an `ADR` decision, read with `gh api repos/{owner}/{repo}/issues/<umbrella>`. In umbrella scope, take the umbrella's own decisions.
+   - A `Term` row is named `Term: <Term>`. Grade it by reading `git show <sha>:docs/glossary.md`:
      - **Exists:** the file has an entry for the term, a line that starts `**<Term>**:`.
      - **Substantive:** the entry holds the decision's definition, and the decision's `_Avoid_` words on an `_Avoid_: <words>` line under it, or no `_Avoid_` line when the decision has none.
      - **Wired:** the entry is in `docs/glossary.md` at `<sha>`, the file that discuss, slice and execute load. A missing file fails the row.
-   - Add one row to the table for each `ADR` decision, a `## Decisions` line that starts `D<n> · ADR:`. In PR scope, take the issue's own, and each `#<umbrella> D<n>` line of the issue whose decision in the umbrella is an `ADR` decision. Read that text with `gh api repos/{owner}/{repo}/issues/<umbrella>`. In umbrella scope, take the umbrella's own. Name the row `ADR: <ADR-NNN or title>`, and grade it by reading the files at `<sha>` with `git show <sha>:<path>`. To find a new ADR by its title, list `docs/adr/` with `git ls-tree --name-only <sha> docs/adr/`:
+   - An `ADR` row is named `ADR: <ADR-NNN or title>`. Grade it by reading the files at `<sha>` with `git show <sha>:<path>`. To find a new ADR by its title, list `docs/adr/` with `git ls-tree --name-only <sha> docs/adr/`:
      - **Exists:** the ADR's file exists. For `ADR-NNN`, it is a `docs/adr/ADR-NNN-*.md` file. For `new: <title>`, it is a file whose `title:` frontmatter is that title.
      - **Substantive:** its `**Decision:**` line states the decision, and its Rejected alternatives section holds each of the decision's rejected alternatives.
      - **Wired:** `docs/adr/README.md` at `<sha>` has the ADR's row. A missing file fails the row.
