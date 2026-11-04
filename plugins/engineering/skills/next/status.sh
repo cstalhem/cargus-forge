@@ -11,14 +11,14 @@
 # reads as its Facts (#290 D1). Each issue is a bold line `**#<n>** <title> · <facts>`. A
 # suggestion that is a slash command gets its own fenced code block, so that it can be copied,
 # and any other suggestion ends the issue's line. A group with no issue has no heading, and no
-# issue is left out. The report ends with `**Next:**` and a code block, or with
-# `**Next:** <suggestion>`.
+# issue is left out. It names no next step: next picks one from the report and the bodies
+# that bodies.sh prints (#344 D1).
 #
 # With `--statuses` it prints one JSON line instead, an array with the number, status and
 # label names of each open issue, which labels.sh reads (#287 D4).
 #
 # Output:
-#   ## Report   one `### <group>` per status group that has an issue, then the `**Next:**` line
+#   ## Report   one `### <group>` per status group that has an issue
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
 #               `### Finished worktrees`: a line `- <path> · <branch> · <fact>` per finished
 #               worktree, then its two indented calls, `git worktree remove '<path>'` and
@@ -258,8 +258,7 @@ out=$(jq -n -r \
   # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
   #   PR. A branch whose PR merged is finished work, so it gives nothing;
   # - merged: a merged PR into the feature branch of its umbrella names it (#212 D1). No
-  #   group lists it, no blocker line names it and no `Next:` step picks it, because the
-  #   final PR of ship closes it;
+  #   group lists it and no blocker line names it, because the final PR of ship closes it;
   # - ready, or blocked with an open "blocked by" link whose blocker is not merged: the body
   #   has a `## Scenarios` section;
   # - request: anything else.
@@ -351,31 +350,11 @@ out=$(jq -n -r \
       {name: "To shape", status: "request"} ]
     | map(. as $g | $g + {items: [$all[] | select(.status == $g.status)]}) as $groups
 
-    # The `Next:` line, the first step that applies (#69).
-    | ( [ $all[] | select(.status == "needs-review") ][0] ) as $review
-    | ( [ $all[] | select(.status == "in-progress") ][0] ) as $doing
-    | ( [ $all[] | select(.status == "umbrella")
-          | select(subs_of(.number) | .total > 0 and .done == .total) ][0] ) as $to_ship
-    | ( [ $all[] | select(.status == "ready") ][0] ) as $ready
-    | ( [ $all[] | select(.status == "request") ][0] ) as $request
-
-    | ( if $review then
-          "review and merge PR #\($review.pr), for #\($review.number)"
-        elif $doing then "/engineering:execute #\($doing.number)"
-        elif $to_ship then "/engineering:ship #\($to_ship.number)"
-        elif $ready then "/engineering:execute #\($ready.number)"
-        elif $request then "/engineering:discuss #\($request.number)"
-        else "nothing: no open issue waits for a step"
-        end ) as $next
-
     | if $statuses then ($all | map({number, status, labels}) | tojson) else
       "## Report",
       "",
       ( $groups[] | select(.items | length > 0)
         | "### \(.name)", "", (.items[] | entry) ),
-      ( if ($next | startswith("/engineering:")) then "**Next:**", "```", $next, "```"
-        else "**Next:** \($next)" end ),
-      "",
       "## Cleanup",
       "",
       "### Finished worktrees",
