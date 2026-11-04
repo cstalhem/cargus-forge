@@ -93,3 +93,20 @@ Verify: **PASS**, <URL of the umbrella's verify comment>
 Closes #<open sub-issue>
 Closes #<umbrella>
 ```
+
+## PR body
+The PR that execute opens for a single issue or a sub-issue.
+
+```markdown
+<first line>
+
+## What it delivers
+- <change> (<D<n> | #<umbrella> D<n> | the scenario it makes pass>)
+
+## Deviations
+- <one line>
+```
+
+- The first line is `Closes #<n>` for a single issue. For a sub-issue it is "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."
+- Each `## What it delivers` bullet is one change, and names the decision it serves (`D<n>` or `#<umbrella> D<n>`) or the scenario it makes pass. The section does not list the changes per file.
+- `## Deviations` is there only when a deviation rule was used or a question was answered from another session. It has one line for each: the deviation, or `Autopilot: <question> → <answer>, because <why>` for an answer from another session.
