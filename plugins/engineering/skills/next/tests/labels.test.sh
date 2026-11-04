@@ -10,7 +10,7 @@ plugin=$(CDPATH= cd -- "$skill_dir/../.." && pwd)
 tmp=$(mktemp -d) && tmp=$(cd "$tmp" && pwd -P) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 failures=0
-label='engineering:needs-discussion'
+label='engineering:shaped'
 
 # expect <description> <command...>: the command must succeed.
 expect() {
@@ -47,7 +47,7 @@ FAKE
 
 # --- The fake gh ---------------------------------------------------------------------------
 # It logs each call as `<METHOD> <path> <fields>` to `$FIX/log`. The labels of issue <n> live in
-# `$FIX/state/<n>`, taken from `statuses.json` or `closed.json` the first time. `$FIX/label_missing`
+# `$FIX/state/<n>`, taken from `statuses.json` the first time. `$FIX/label_missing`
 # makes `GET labels/<label>` answer 404. `FAKE_GH_NOEFFECT=1` makes a label write change nothing.
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -61,13 +61,11 @@ echo "$method $path $*" >> "$FIX/log"
 mkdir -p "$FIX/state"
 state() { # state <n>: the labels file of issue <n>
   local f=$FIX/state/$1
-  [ -f "$f" ] || jq -s -c --argjson n "$1" '
-    add | (first(.[] | select(.number == $n) | .labels | map(if type == "object" then .name else . end)) // [])' \
-    "$FIX/statuses.json" "$FIX/closed.json" > "$f"
+  [ -f "$f" ] || jq -c --argjson n "$1" '
+    (first(.[] | select(.number == $n) | .labels) // [])' "$FIX/statuses.json" > "$f"
   echo "$f"
 }
 case "$method $path" in
-  "GET issues?state=closed&labels=$label&per_page=100&page=1") cat "$FIX/closed.json" ;;
   "GET labels/$label")
     if [ -f "$FIX/label_missing" ]; then echo "gh: Not Found (HTTP 404)" >&2; exit 1; fi
     echo '{}' ;;
@@ -93,11 +91,10 @@ run_labels() {
   FIX=$1 PATH="$tmp/bin:$PATH" bash "$tmp/skill/labels.sh"
 }
 
-# fixture <name> <statuses json> [closed json]: a fresh folder of fixtures, printed by name.
+# fixture <name> <statuses json>: a fresh folder with the statuses fixture.
 fixture() {
   mkdir "$tmp/$1"
   printf '%s\n' "$2" > "$tmp/$1/statuses.json"
-  printf '%s\n' "${3:-[]}" > "$tmp/$1/closed.json"
 }
 
 # writes <fixtures>: the write calls that labels.sh made, one per line.
@@ -105,11 +102,12 @@ writes() { grep -E '^(POST|DELETE|PATCH|PUT) ' "$1/log" 2>/dev/null; }
 
 # --- The scenarios -------------------------------------------------------------------------
 echo "# add"
-# #1 is a request with no label, #2 is ready and has none, #3 is a request and has it.
-fixture add '[{"number":1,"status":"request","labels":["bug"]},{"number":2,"status":"ready","labels":[]},{"number":3,"status":"request","labels":["engineering:needs-discussion"]}]'
+# #1 to #6 are shaped with one status each and lack the label; #7 is a request without it;
+# #8 is ready, has the label and also the old needs-discussion label.
+fixture add '[{"number":1,"status":"umbrella","labels":["bug"]},{"number":2,"status":"ready","labels":[]},{"number":3,"status":"blocked","labels":[]},{"number":4,"status":"in-progress","labels":[]},{"number":5,"status":"needs-review","labels":[]},{"number":6,"status":"merged","labels":[]},{"number":7,"status":"request","labels":[]},{"number":8,"status":"ready","labels":["engineering:shaped","engineering:needs-discussion"]}]'
 run_labels "$tmp/add" > "$tmp/add.out"
-same "WHEN an open issue's status is request and it lacks the label THEN labels.sh adds it and prints its line" \
-  <(printf -- '- #1 · +%s\n' "$label") "$tmp/add.out"
+same "WHEN an open issue's status is umbrella, ready, blocked, in-progress, needs-review or merged and it lacks the label THEN labels.sh adds it and prints each line, lowest number first" \
+  <(for n in 1 2 3 4 5 6; do printf -- '- #%s · +%s\n' "$n" "$label"; done) "$tmp/add.out"
 expect "WHEN labels.sh adds the label THEN it uses POST issues/<n>/labels" \
   grep -qxF "POST issues/1/labels -f labels[]=$label" "$tmp/add/log"
 expect "WHEN labels.sh adds the label and the label exists THEN it makes no POST labels and no PATCH call" \
@@ -117,45 +115,49 @@ expect "WHEN labels.sh adds the label and the label exists THEN it makes no POST
 expect "WHEN an issue carries other labels THEN labels.sh keeps them" \
   test "$(cat "$tmp/add/state/1")" = "[\"bug\",\"$label\"]"
 expect "WHEN an issue already matches its status THEN labels.sh makes no call for it" \
-  bash -c '! grep -qE "issues/(2|3)" "$1/log"' _ "$tmp/add"
+  bash -c '! grep -qE "issues/(7|8)" "$1/log"' _ "$tmp/add"
+expect "WHEN an issue carries engineering:needs-discussion THEN labels.sh leaves that label alone" \
+  bash -c '! grep -q "needs-discussion" "$1/log"' _ "$tmp/add"
 
 echo "# create"
-fixture create '[{"number":1,"status":"request","labels":[]}]'
+fixture create '[{"number":1,"status":"ready","labels":[]}]'
 touch "$tmp/create/label_missing"
 run_labels "$tmp/create" > "$tmp/create.out"
-expect "WHEN the label is missing THEN labels.sh creates it with POST labels, colour fbca04 and the description" \
-  grep -qxF "POST labels -f name=$label -f color=fbca04 -f description=Open issue that /engineering:discuss has not shaped yet. Set by labels.sh." "$tmp/create/log"
+expect "WHEN the label is missing THEN labels.sh creates it with POST labels, colour 0e8a16 and the description" \
+  grep -qxF "POST labels -f name=$label -f color=0e8a16 -f description=Shaped by /engineering:discuss; leave it to Build. Set by labels.sh." "$tmp/create/log"
 expect "WHEN the label is missing THEN labels.sh creates it before it adds it" \
   test "$(writes "$tmp/create" | cut -d' ' -f1-2 | paste -sd,)" = "POST labels,POST issues/1/labels"
 same "WHEN the label is missing THEN labels.sh still prints the add line" \
   <(printf -- '- #1 · +%s\n' "$label") "$tmp/create.out"
 
 echo "# remove"
+# #4 is a request that carries the label and another label.
 fixture remove \
-  '[{"number":4,"status":"ready","labels":["engineering:needs-discussion","bug"]},{"number":5,"status":"in-progress","labels":[]}]' \
-  '[{"number":9,"labels":[{"name":"engineering:needs-discussion"}]},{"number":10,"pull_request":{},"labels":[{"name":"engineering:needs-discussion"}]}]'
+  '[{"number":4,"status":"request","labels":["engineering:shaped","bug"]},{"number":5,"status":"request","labels":[]}]'
 run_labels "$tmp/remove" > "$tmp/remove.out"
-same "WHEN an open issue that carries the label has another status, or a closed issue carries it THEN labels.sh removes it and prints each line, lowest number first" \
-  <(printf -- '- #4 · -%s\n- #9 · -%s\n' "$label" "$label") "$tmp/remove.out"
+same "WHEN an open issue whose status is request carries the label THEN labels.sh removes it and prints its line" \
+  <(printf -- '- #4 · -%s\n' "$label") "$tmp/remove.out"
 expect "WHEN labels.sh removes the label THEN it uses DELETE issues/<n>/labels/<label>" \
   grep -qxF "DELETE issues/4/labels/$label " "$tmp/remove/log"
 expect "WHEN an issue carries other labels THEN labels.sh removes none of them" \
   test "$(cat "$tmp/remove/state/4")" = '["bug"]'
-expect "WHEN a closed pull request carries the label THEN labels.sh leaves it alone" \
-  bash -c '! grep -q "issues/10" "$1/log"' _ "$tmp/remove"
 expect "WHEN labels.sh changes labels THEN it makes no PATCH call and no POST labels call" \
   bash -c '! grep -qE "^(PATCH|POST labels )" "$1/log"' _ "$tmp/remove"
 
 echo "# nothing to do"
-fixture none '[{"number":1,"status":"request","labels":["engineering:needs-discussion"]},{"number":2,"status":"ready","labels":["bug"]}]'
+fixture none '[{"number":1,"status":"request","labels":["engineering:needs-discussion"]},{"number":2,"status":"ready","labels":["bug","engineering:shaped"]}]'
 run_labels "$tmp/none" > "$tmp/none.out"
 same "WHEN every issue's label already matches its status THEN labels.sh prints '- none'" \
   <(echo '- none') "$tmp/none.out"
 expect "WHEN every issue's label already matches its status THEN labels.sh makes no write" \
   test -z "$(writes "$tmp/none")"
 
+echo "# closed issues"
+expect "WHEN labels.sh runs THEN it reads no closed issue" \
+  bash -c '! grep -q "state=closed" "$1/log"' _ "$tmp/add"
+
 echo "# read-back"
-fixture back '[{"number":1,"status":"request","labels":[]}]'
+fixture back '[{"number":1,"status":"ready","labels":[]}]'
 FAKE_GH_NOEFFECT=1 run_labels "$tmp/back" > "$tmp/back.out"
 expect "WHEN labels.sh changes an issue's label THEN it reads the issue back" \
   grep -qxF 'GET issues/1 ' "$tmp/back/log"
@@ -163,7 +165,7 @@ expect "WHEN the read-back lacks the change THEN labels.sh prints the one line '
   bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^labels.sh error: " "$1"' _ "$tmp/back.out"
 
 echo "# errors"
-fixture err '[{"number":1,"status":"request","labels":[]}]'
+fixture err '[{"number":1,"status":"ready","labels":[]}]'
 echo 'status.sh error: boom' > "$tmp/err/status_error"
 run_labels "$tmp/err" > "$tmp/err.status.out"
 expect "WHEN status.sh fails THEN labels.sh prints exactly one line 'labels.sh error: <reason>'" \
@@ -191,7 +193,18 @@ for variant in autopilot autopilot-t3; do
     grep -qxF '  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/next/labels.sh")' "$skill"
   expect "$variant: the Facts step runs labels.sh once, after its status.sh error check" \
     bash -c 'awk "/^[0-9]+\. \*\*/ { s = (\$0 ~ /\\*\\*Facts\\.\\*\\*/) } s" "$1" | grep -q "labels.sh"' _ "$skill"
+  expect "$variant: the Facts step names the shaped label, and no part of the skill names the request label" \
+    bash -c 'grep -qF "shaped label" "$1" && ! grep -qiE "needs-discussion|request label" "$1"' _ "$skill"
 done
+expect "WHEN next describes labels.sh THEN it names the shaped label, and it names no needs-discussion or request label" \
+  bash -c 'grep -qF "shaped label" "$1" && ! grep -qiE "needs-discussion|request label" "$1"' _ "$next"
+
+echo "# the README"
+readme=$plugin/README.md
+expect "WHEN a person reads the engineering README THEN it names engineering:shaped" \
+  grep -qF 'engineering:shaped' "$readme"
+expect "WHEN a person reads the engineering README THEN it tells them to delete engineering:needs-discussion by hand from the Labels page" \
+  bash -c 'grep -F "engineering:needs-discussion" "$1" | grep -qF "delete" && grep -F "engineering:needs-discussion" "$1" | grep -qF "Labels page"' _ "$readme"
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failed"

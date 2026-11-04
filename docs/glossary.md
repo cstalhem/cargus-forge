@@ -82,8 +82,8 @@ _Avoid_: T3 session
 **Anneal**: A typed run of `/engineering:anneal` that has agents study the whole repo by area and check each finding, then turns each confirmed finding into a fix sub-issue under one umbrella issue or into a request, bold rewrites included, with the rule that would have made each fix unneeded; it changes no code itself.
 _Avoid_: sweep, simplifier, audit, job
 
-**Request label**: The GitHub label `engineering:needs-discussion`, which `labels.sh` keeps on each open issue whose status is request, so a person browsing GitHub sees which issues need discuss; no skill reads it.
-_Avoid_: status label
+**Shaped label**: The GitHub label `engineering:shaped`, which `labels.sh` keeps on each open issue whose status is not request, so a person browsing GitHub sees which issues discuss has finished; no skill reads it.
+_Avoid_: request label, status label
 
 **Rule test**: The checks that decide whether a line can be a rule: a session that never saw the PR that added it can say, from the line, the repo's glossary and the repo alone, when it applies and what it requires or forbids; and the line states what the code does not show, is a guideline rather than something that must hold every time, and says what nothing else in the repo already says.
 

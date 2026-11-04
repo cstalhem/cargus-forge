@@ -22,7 +22,7 @@ allowed-tools:
 
 ## Steps
 1. **Check.** If a part of the Facts starts with `status.sh error:` or `bodies.sh error:`, show that line and stop.
-2. **Labels.** Run `bash "${CLAUDE_SKILL_DIR}/labels.sh"` as its own Bash call. It keeps the request label `engineering:needs-discussion` on GitHub, and prints one line for each issue it changed, `- none`, or one `labels.sh error:` line. It exits 0. Change no label yourself, and read none.
+2. **Labels.** Run `bash "${CLAUDE_SKILL_DIR}/labels.sh"` as its own Bash call. It keeps the shaped label `engineering:shaped` on GitHub, and prints one line for each issue it changed, `- none`, or one `labels.sh error:` line. It exits 0. Change no label yourself, and read none.
 3. **Recommend.** Pick the one issue to work next from the first group that has one, and in it the lowest number:
    1. Needs review, then in progress. These always come first.
    2. An umbrella whose sub-issues are all done, which has `/engineering:ship #<u>` in its code block.
