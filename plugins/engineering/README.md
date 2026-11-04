@@ -34,7 +34,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
 | `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules the work proved to `.claude/rules/`, in a draft PR it opens after its first commit. |
-| `/engineering:next` | Shows where each open issue stands, from its body, links, branches and PRs, and suggests one next command. |
+| `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
 | `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: the same run with T3's scheduled task, threads and worktrees. See [Autopilot on T3 Code](#autopilot-on-t3-code). |
@@ -199,6 +199,6 @@ Autopilot builds the umbrella issue like any other, with no discuss. You can als
 
 ## Status
 
-`/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`.
+`/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet. A ready issue with an open blocker shows as blocked in `/engineering:next`. To recommend an order, it also reads a filtered copy of each open issue's body from `bodies.sh`: the `## What it delivers` and `## Files` sections, or the `## Goal` and `## Out of scope` sections, cut to a share of 24,000 characters in all.
 
 To browse on GitHub, `labels.sh` keeps the yellow label `engineering:needs-discussion` on each open request, and removes it from every other issue. `/engineering:next` and both Autopilots run it, and it creates the label when the repo lacks it. No skill reads the label, and `labels.sh` changes no other label. The old labels `status:ready`, `status:in-progress`, `status:needs-review` and `umbrella` do nothing now: delete them by hand from the repo's Labels page.

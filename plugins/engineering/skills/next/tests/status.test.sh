@@ -187,8 +187,6 @@ cat > "$tmp/full.report" <<'EXPECTED'
 /engineering:discuss #1
 ```
 
-**Next:** review and merge PR #41, for #5
-
 EXPECTED
 cat > "$tmp/full.cleanup" <<'EXPECTED'
 ## Cleanup
@@ -206,7 +204,7 @@ cat "$tmp/full.report" "$tmp/full.cleanup" > "$tmp/full.expected"
 
 echo "# no argument"
 run_status "$full" > "$tmp/full.out"
-same "WHEN status.sh runs with no argument THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, the report ends with a Next line, and the Cleanup part follows unchanged" \
+same "WHEN status.sh runs with no argument THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, and the Cleanup part follows unchanged" \
   "$tmp/full.expected" "$tmp/full.out"
 
 run_status "$ready" > "$tmp/ready.out"
@@ -219,17 +217,16 @@ expect "WHEN status.sh runs with more than 20 open issues THEN it lists every is
 expect "WHEN status.sh runs with more than 20 open issues THEN it prints no 'and N more' line" \
   bash -c '! grep -q "and [0-9]* more" "$1"' _ "$tmp/many.out"
 
-expect "WHEN status.sh runs and the next step is a slash command THEN the report ends with a Next line and a code block that holds only that command" \
-  bash -c 'tail -n 20 "$1" | grep -A3 -x -F "**Next:**" | tr "\n" "|" | grep -qxF "**Next:**|\`\`\`|/engineering:execute #2|\`\`\`|"' _ "$tmp/ready.out"
-
 run_status "$none" > "$tmp/none.out"
-expect "WHEN status.sh runs and the next step is not a slash command THEN the Next line holds the suggestion" \
-  grep -qxF '**Next:** nothing: no open issue waits for a step' "$tmp/none.out"
-expect "WHEN status.sh runs and the next step is not a slash command THEN no code block follows the Next line" \
-  bash -c '! sed -n "/^\*\*Next:\*\*/,/^## Cleanup/p" "$1" | grep -q "^\`\`\`"' _ "$tmp/none.out"
+expect "WHEN status.sh runs with no argument THEN its output has no Next line" \
+  bash -c '! grep -q "^\*\*Next:\*\*" "$1" "$2" "$3"' _ "$tmp/full.out" "$tmp/ready.out" "$tmp/none.out"
+expect "WHEN status.sh runs and no issue is open THEN the Report part is empty and the Cleanup part follows" \
+  bash -c 'test "$(sed -n 1p "$1")" = "## Report" && grep -qxF "## Cleanup" "$1"' _ "$tmp/none.out"
 
 expect "WHEN grep searches status.sh for --human, 'def line:' and \$cut THEN they are gone" \
   bash -c '! grep -qF -e "--human" -e "def line:" -e "\$cut" "$1"' _ "$status"
+expect "WHEN grep searches status.sh for the Next line and the jq that chose it THEN they are gone" \
+  bash -c '! grep -qF -e "Next:" -e "\$next" -e "\$to_ship" -e "\$review" -e "\$doing" "$1"' _ "$status"
 
 echo "# --statuses"
 cat > "$tmp/full.statuses" <<'EXPECTED'
