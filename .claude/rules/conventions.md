@@ -15,7 +15,6 @@ description: "Cross-cutting conventions for maintaining the Cargus Forge plugin 
 
 - Branch from `main`; never commit plugin changes directly to `main`.
 - Squash-merge every PR, so each PR is one commit and `main` stays linear (see skill: plugin-release).
-- Validate with `scripts/validate-plugins.sh` before opening a PR.
 
 ## Testing plugins
 

@@ -12,13 +12,9 @@ A marketplace monorepo of Claude Code plugins for knowledge management, note-tak
 - `docs/adr/` — architecture decision records (ADR-NNN, living documents, indexed in `docs/adr/README.md`)
 - `.github/workflows/close-sub-issue.yml` — a byte-identical copy of `plugins/engineering/templates/close-sub-issue.yml`, because this repo holds the plugin. Change the template, then copy it.
 
-Current plugins: `obsidian`, `knowledge-system`, `codex-review`, `adr-management`, `research`, `engineering`.
+## Commands
 
-## Local development loop
-
-- Test a plugin without installing it: `claude --plugin-dir ./plugins/<name>` (takes precedence over an installed copy of the same name)
-- After editing an installed plugin: `/reload-plugins` (reloads skills, agents, hooks, and plugin MCP/LSP servers without a restart)
-- Validate before opening a PR: `scripts/validate-plugins.sh` (runs `claude plugin validate --json` on each plugin and the marketplace root)
+Commands (pre-PR checks, tests, load a plugin without installing it, reload after an edit): `docs/agents/commands.md`
 
 ## Component authoring
 
