@@ -84,3 +84,7 @@ _Avoid_: sweep, simplifier, audit, job
 
 **Request label**: The GitHub label `engineering:needs-discussion`, which `labels.sh` keeps on each open issue whose status is request, so a person browsing GitHub sees which issues need discuss; no skill reads it.
 _Avoid_: status label
+
+**Rule test**: The checks that decide whether a line can be a rule: a session that never saw the PR that added it can say, from the line, the repo's glossary and the repo alone, when it applies and what it requires or forbids; and the line states what the code does not show, is a guideline rather than something that must hold every time, and says what nothing else in the repo already says.
+
+**Backing skill**: A skill in a repo's `.claude/skills/` that holds the steps or examples that one or more rules cannot fit in their line; each of those rules ends with `(see skill: <name>)`.
