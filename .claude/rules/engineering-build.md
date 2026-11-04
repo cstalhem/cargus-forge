@@ -8,4 +8,5 @@ paths:
 - When surfaces differ in one tool call, a skill states the shared condition and payload once and branches only on the call.
 - A definition shared by several decision kinds is written once for all kinds, never once per kind.
 - A skill states each GitHub write and its condition in one step, and other steps point to that step.
+- A skill step that branches on session state has one case per distinct action, never one case per way of reaching the same action.
 - Skills match a PR's first line only against the formats execute writes (`Sub-issue #<n> of`, `Closes #<n>`).
