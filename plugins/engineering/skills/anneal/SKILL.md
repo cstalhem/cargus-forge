@@ -4,6 +4,7 @@ description: Study the whole repo with agents, by area, and turn each confirmed 
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
+  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md")
   - Bash(date +%F)
   - Bash(git fetch -q origin main && git rev-parse HEAD origin/main)
   - Bash(git ls-files)
@@ -27,22 +28,25 @@ allowed-tools:
    Area: <name>. Its files: <the area's files from git ls-files>.
    Read CLAUDE.md, .claude/rules/, docs/adr/ and docs/glossary.md first. Then study the area's files for changes that make the repo simpler: less code, fewer concepts, one way to do each thing.
    Behaviour for users stays the same. Bold rewrites are welcome when the result is simpler. Propose no alternative that an ADR rejects. Change no file and write nothing to GitHub.
+   Repo rules: <the Repo rules section at the end of this skill, pasted in full>.
+   A rule in .claude/rules/ that the Repo rules say goes is a finding: its change deletes or rewrites that line, and its rule is `none`.
    Return at most five findings, strongest first, each as:
    - title: <one line>
    - file:line: <where the code is>
    - change: <what to do>
    - why it is simpler: <one or two sentences>
-   - rule: <one line that says what code in this repo does or never does, which would have made the fix unneeded had the code followed it when it was written, or `none`>
+   - rule: <a rule, as the Repo rules define it, that passes the rule test and would have made the fix unneeded had the code followed it when it was written, or `none`>
    Return nothing else.
    ```
 4. **Check.** Start one checker for each finding the investigators returned, all in one message. Give it only the finding and the files it names, plus `.claude/rules/` and the repo's linter and formatter configs for judging the rule, and none of your own account. Brief each with this text, filled in:
    ```
    Finding: <title, file:line, change, why it is simpler, rule>.
+   Repo rules: <the Repo rules section at the end of this skill, pasted in full>.
    Read the files it names. Return one verdict with evidence (file:line or command output):
    - confirmed: the code is as the finding says, and the change is simpler and keeps behaviour the same for users;
    - corrected: the finding is right in part. Return the corrected finding in the same shape;
    - refuted: the code is not as the finding says, or the change is not simpler or changes behaviour.
-   Return the rule only if the code before the fix breaks it and the code after the fix follows it. Return `none` instead if .claude/rules/ already holds it, a linter or formatter config enforces it, or one command can check it.
+   Return the rule only if the code before the fix breaks it and the code after the fix follows it. The rule must also pass the rule test: reword it if that makes it pass. Return `none` instead if it still fails the rule test, .claude/rules/ already holds it, a linter or formatter config enforces it, or one command can check it.
    Return nothing else.
    ```
 5. **Route.** Merge findings that change the same code or give the same rule into one: its files are the union, and its area is the first one's. Give each confirmed or corrected finding a route:
@@ -65,6 +69,9 @@ SHAs of HEAD and origin/main, after a fetch:
 
 Files:
 !`git ls-files`
+
+## Repo rules
+!`cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md"`
 
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
