@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Tests for execute's PENDING resume in a T3 Code thread and for where it opens its draft PR: its skill
+# Tests for execute's PENDING resume in a T3 Code thread, for where it opens its draft PR and for how its
+# step 2 gets onto the issue branch: its skill
 # file, the two Autopilot skills' report instructions, the plugin README, the ADRs, the glossary and the
 # engineering-build rule.
 # They read the repo's files only and need no network.
@@ -135,6 +136,16 @@ expect "step 6 no longer spells out the first line or the sections" \
   bash -c '! grep -qE "Sub-issue #|Closes #|## What it delivers|## Deviations" <<<"$1"' _ "$step6"
 expect "step 3 takes the draft PR's first line from formats.md, not from step 6" \
   bash -c 'grep -qF "first line of the PR body in \`formats.md\`" <<<"$1" && ! grep -qF "step 6 defines" <<<"$1"' _ "$step3"
+
+# Step 2 has one case per distinct action: the shared case gets onto the issue branch for a cloud session and a local worktree alike.
+expect "step 2 runs git switch <branch> in one place" \
+  test "$(grep -cF 'git switch <branch>' "$skill")" -eq 1
+expect "step 2 has two Anything else stops" \
+  test "$(grep -cF '**Anything else**' "$skill")" -eq 2
+expect "the skill names no worktree-… branch prefix" \
+  bash -c '! grep -qF "worktree-…" "$1"' _ "$skill"
+expect "the engineering-build rule says a step has one case per distinct action" \
+  grep -qF -x -e '- A skill step that branches on session state has one case per distinct action, never one case per way of reaching the same action.' "$rules_md"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
