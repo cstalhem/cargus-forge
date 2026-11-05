@@ -33,7 +33,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 |---|---|
 | `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. |
-| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules the work proved to `.claude/rules/`, in a draft PR it opens after its first commit. |
+| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |

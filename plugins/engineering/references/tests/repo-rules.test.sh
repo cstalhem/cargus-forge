@@ -145,6 +145,23 @@ expect "repo.md holds the line about what a skill holds" \
 expect "repo.md has no line that says a skill holds a rule's reasons" \
   bash -c '! grep -qiE "skill.*(holds|hold).*reasons" "$1"' _ "$repo_rules"
 
+# Scenario 12: execute's reflect step turns a lesson that one command can check into a check.
+expect "reflect: a proposal that one command can check is no longer dropped" \
+  bash -c '! grep -qF "or that one command can check" <<<"$1"' _ "$reflect"
+expect "reflect: a check is a test, a linter or formatter rule, or a (pre-PR check) row, each run by a pre-PR check" \
+  bash -c 'grep -qF "a test in a file that an existing pre-PR check runs" <<<"$1" && grep -qF "a rule in a linter or formatter config that an existing pre-PR check runs" <<<"$1" && grep -qF "a new \`(pre-PR check)\` row" <<<"$1" && grep -qF "whose command already works in the repo" <<<"$1"' _ "$reflect"
+expect "reflect: it puts the defect back, sees the check fail, restores the file, checks the tree is clean and sees it pass" \
+  bash -c 'grep -qF "put the defect back with an edit" <<<"$1" && grep -qF "fail" <<<"$1" && grep -qF "git checkout -- <file>" <<<"$1" && grep -qF "git status --porcelain" <<<"$1" && grep -qF "pass" <<<"$1"' _ "$reflect"
+expect "reflect: a check that fits no form, a repo with no commands.md or no defect to put back becomes a request with no label" \
+  bash -c 'grep -qF "docs/agents/commands.md" <<<"$1" && grep -qF "no edit puts the defect back" <<<"$1" && grep -qF "request" <<<"$1" && grep -qF "no label" <<<"$1" && grep -qF "neither \`## Scenarios\` nor \`## Goal\`" <<<"$1" && grep -qF "Read it back" <<<"$1"' _ "$reflect"
+expect "reflect: it never waits for the user to add a check or file a request" has "$reflect" 'never waits for the user'
+expect "reflect: the PR gets one bullet for each added check, with its file, evidence and fail-then-pass" \
+  bash -c 'grep -qF "each added check" <<<"$1" && grep -qF "failed on the defect and passed after the fix" <<<"$1"' _ "$reflect"
+expect "reflect: the PR gets one bullet \`Request #<m>: <check>, with its evidence\` for each request" \
+  has "$reflect" 'Request #<m>: <check>, with its evidence'
+expect "README: execute's row says the reflect step adds the rules and the checks that the work proved" \
+  grep -qF 'adds the rules and the checks that the work proved' "$plugin/README.md"
+
 # Decisions: the glossary and ADR-009.
 expect "the glossary defines Rule test" grep -qF '**Rule test**: The checks that decide whether a line can be a rule' "$glossary"
 expect "the glossary defines Backing skill" \
@@ -156,6 +173,11 @@ expect "ADR-009 names references/repo-rules.md as the one definition" grep -qF '
 expect "ADR-009 no longer says a rule has no rationale" bash -c '! grep -qF "no rationale" "$1"' _ "$adr009"
 expect "ADR-009 rejects a skill behind every rule" grep -qF '**A skill behind every rule:**' "$adr009"
 expect "ADR-009 rejects the definition in each skill" grep -qF '**Each skill'"'"'s own wording of the definition:**' "$adr009"
+expect "ADR-009 says reflect turns a lesson that one command can check into a check that a pre-PR check runs" \
+  bash -c 'grep -qF "a check that a pre-PR check runs" <<<"$1" && grep -qF "seen failing on the defect and passing after the fix" <<<"$1"' _ "$(section "$adr009" 'Details'; grep -F '**Decision:**' "$adr009")"
+for alt in '**Dropping the proposal:**' '**A hook:**' '**A rule anyway:**' '**Any test or lint rule, wired or not:**' '**A check that was never seen failing:**'; do
+  expect "ADR-009 rejects $alt" grep -qF -- "$alt" "$adr009"
+done
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
