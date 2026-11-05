@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests for the lessons that moved from the staging memory entries into the repo (#352): discuss's design checks and
 # Defaults bullet, formats.md's exception line, domain-model.md's gate, ADR-007, two rules, a plugin-testing
-# measurement and a commands.md row. They read the repo's files only and need no network.
+# measurement and a commands.md row, and for discuss's model line (#357). They read the repo's files only and need no
+# network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -102,6 +103,19 @@ expect "commands.md: the row updates the installed plugin to main after a merge"
   grep -qF '| Update the installed plugin to `main` after a merge | `claude plugin marketplace update && claude plugin update <name>@cargus-forge --scope user` |' "$commands"
 expect "commands.md: a note says that a new folder copies the user-scope install's version" \
   bash -c 'grep -qF "new folder copies the user-scope install" "$1" && grep -qF "\`claude plugin marketplace update\` alone leaves it on the old version" "$1"' _ "$commands"
+
+# #357 scenario 1: discuss's frontmatter sets model: fable.
+frontmatter=$(awk '/^---$/ { n++; next } n == 1' "$skill")
+expect "the discuss frontmatter holds the line model: fable" grep -qx 'model: fable' <<<"$frontmatter"
+
+# #357 scenario 2: the README's discuss row says which turns run on Fable.
+discuss_row=$(grep -F '| `/engineering:discuss ' "$plugin/README.md")
+expect "README discuss row: the turn discuss is typed in runs on Fable" \
+  bash -c 'grep -qF "turn discuss is typed in runs on Fable" <<<"$1"' _ "$discuss_row"
+expect "README discuss row: later rounds run on the session's model" \
+  bash -c 'grep -qF "later rounds run on the session'\''s model" <<<"$1"' _ "$discuss_row"
+expect "README discuss row: /model fable keeps all of discuss on Fable" \
+  bash -c 'grep -qF "\`/model fable\` keeps all of discuss on Fable" <<<"$1"' _ "$discuss_row"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
