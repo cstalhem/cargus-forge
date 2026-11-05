@@ -2,6 +2,7 @@
 name: discuss
 description: Shape a request into one GitHub issue through question rounds. Writes a single issue if the request passes the size test, or an umbrella issue with a Design section if it fails.
 argument-hint: "<request or #issue>"
+model: fable
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
