@@ -43,7 +43,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
-- `verify` grades a PR against its issue's scenarios with a fresh-context agent and marks a passing PR ready. execute and ship call it.
+- `verify` grades a PR against its issue's scenarios with a fresh-context agent, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
 
 discuss and execute read `references/domain-model.md` in their Load step. It holds the rules that keep the repo's domain terms in `docs/glossary.md`. They also read `references/adr.md`, which holds the rules for the repo's ADRs in `docs/adr/`: when a decision earns one, its format, and when to edit an existing ADR instead of writing a new one. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it.
 
@@ -74,7 +74,7 @@ flowchart TD
 
 **Shape** turns a request into issues. discuss asks questions until none is left, with a recommended answer for each. It then runs the size test: an issue fits one session when it delivers one behaviour, one verify command proves it, every file it changes can be named, and no design question is open. Work that passes becomes a single issue. Work that fails becomes an umbrella issue, which slice splits into sub-issues that each pass, on a feature branch.
 
-**Build** takes one issue to a merged PR. execute opens a draft PR after its first commit and builds the issue on it. verify grades the PR against the issue's scenarios and marks it ready on a pass. You review and merge a single issue's PR into `main`. A sub-issue's PR goes into the feature branch: you merge it, or Autopilot does when it is on. Once every sub-issue has merged, ship opens the final PR that takes the feature branch into `main`, and you review and merge that one.
+**Build** takes one issue to a merged PR. execute opens a draft PR after its first commit and builds the issue on it. verify grades the PR against the issue's scenarios and marks it ready on a pass, and its comment opens with a merge risk level of low, medium or high, which changes no verdict and no ready mark. You review and merge a single issue's PR into `main`. A sub-issue's PR goes into the feature branch: you merge it, or Autopilot does when it is on. Once every sub-issue has merged, ship opens the final PR that takes the feature branch into `main`, and you review and merge that one.
 
 **While CI is still running**, verify gives a PENDING verdict and keeps the PR a draft. execute then schedules its own resume, 10 minutes ahead and at most three times in a row, so no one has to run it again and an Autopilot child keeps its claim on the issue: in a cloud session with the `send_later` tool, and in a T3 Code thread with a one-time `schedule_task` bound to the thread, which needs a T3 Code build with one-time scheduled tasks (v0.1.7, or a nightly from 2026-11-01 on). On an older T3 Code build, execute stops and says so. Anywhere else, and after the third resume, it stops and you run `/engineering:execute <#issue>` again once CI has finished.
 
