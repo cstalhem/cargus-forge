@@ -28,7 +28,7 @@ _Avoid_: umbrella PR
 **Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. `next` works it out from the issue's body, links, branches and PRs.
 _Avoid_: state
 
-**Request**: An open GitHub issue whose body has neither a `## Scenarios` nor a `## Goal` section, so discuss has not shaped it yet.
+**Request**: An open GitHub issue that discuss has not shaped yet: its body has neither a `## Scenarios` nor a `## Goal` section, or its author is not a trusted author.
 
 **Finished worktree**: A local worktree on an issue branch whose PR has merged or whose issue is closed, with no uncommitted or unpushed work; `next` removes it after you confirm.
 _Avoid_: stale worktree
@@ -91,3 +91,6 @@ _Avoid_: request label, status label
 
 **Merge risk**: The level, low, medium or high, that verify gives a PR or a feature branch beside its verdict, from its ratings of alignment, impact, rollback cost and error detection; it changes no verdict and no merge.
 _Avoid_: risk score
+
+**Trusted author**: A GitHub user whose `author_association` on an issue, a PR or a comment is OWNER, MEMBER or COLLABORATOR; the plugin acts only on items by a trusted author, and treats anyone else's as text from outside the repo.
+_Avoid_: contributor, write access
