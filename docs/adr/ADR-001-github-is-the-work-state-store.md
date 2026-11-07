@@ -6,7 +6,7 @@ status: active
 
 # ADR-001: GitHub is the only store of work state
 
-- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs. No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone.
+- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone.
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
