@@ -31,8 +31,8 @@ set -u
 statuses=false
 [ "${1:-}" = "--statuses" ] && statuses=true
 
-# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
-# exist until it is loaded, so a missing file prints its own error line.
+# `fail`, `read_list`, `read_branches`, `JQ_HAS_SECTION` and `JQ_TRUSTED` come from the plugin's shared file.
+# `fail` does not exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
   printf '%s error: cannot find %s\n' "$(basename "$0")" "$lib"
@@ -47,11 +47,14 @@ done
 repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot read the current repo with gh api: $repo"
 
 # Open issues, without PRs: the issues endpoint lists PRs too. `goal` and `scenarios` say
-# whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
+# whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11). `trusted` says
+# whether the issue's author is a trusted author, and `author` is the login (#362 D5).
 read_list 'repos/{owner}/{repo}/issues?state=open'
-issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
+issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION$JQ_TRUSTED"'
   map(select(has("pull_request") | not) | {
     number, title,
+    trusted: trusted,
+    author: (.user.login // "unknown"),
     labels: ((.labels // []) | map(.name)),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
@@ -61,15 +64,18 @@ issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
   })' 2>/dev/null) || fail "cannot read the open issues."
 
 # Open PRs, with the issue that the first line of the body names:
-# "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR).
+# "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR). A PR whose author
+# is not a trusted author names none, so it gives no fact (#362 D4).
 read_list 'repos/{owner}/{repo}/pulls?state=open'
-pulls=$(printf '%s' "$items" | jq '
+pulls=$(printf '%s' "$items" | jq "$JQ_TRUSTED"'
   map({
     number,
     draft: (.draft // false),
-    issue: ((.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
-            | (capture("^(Sub-issue #(?<n>[0-9]+) of|Closes #(?<c>[0-9]+)([^0-9]|$))") // null)
-            | if . == null then null else ((.n // .c) | tonumber) end)
+    issue: (if trusted then
+              ((.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
+               | (capture("^(Sub-issue #(?<n>[0-9]+) of|Closes #(?<c>[0-9]+)([^0-9]|$))") // null)
+               | if . == null then null else ((.n // .c) | tonumber) end)
+            else null end)
   })' 2>/dev/null) || fail "cannot read the open PRs."
 
 read_branches
@@ -252,6 +258,7 @@ out=$(jq -n -r \
   def issue_branches($n): [$branches[] | select(startswith("\($n)-"))];
 
   # The status from the facts (#181 D1), the first that applies:
+  # - request: the author of the issue is not a trusted author, whatever its body says (#362 D4);
   # - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so
   #   this comes before the branch fact;
   # - needs review: an open ready PR whose first line names the issue;
@@ -274,7 +281,8 @@ out=$(jq -n -r \
       as $open_blockers
     | $i + {
         status: (
-          if $i.goal then "umbrella"
+          if ($i.trusted | not) then "request"
+          elif $i.goal then "umbrella"
           elif $ready_pr then "needs-review"
           elif $draft_pr or ($own_branches | length) > 0 then "in-progress"
           elif $merged_issues | index($i.number) then "merged"
@@ -314,6 +322,7 @@ out=$(jq -n -r \
     # The facts of an issue, between its title and its suggestion.
     def facts:
       (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
+      + (if .trusted then [] else ["from \(.author), not a trusted author"] end)
       + (if .status == "umbrella" then
            subs_of(.number) as $s
            | issue_branches(.number) as $fb

@@ -40,3 +40,9 @@ read_branches() {
 # section: a heading at the start of a line. Put it before the rest of a jq program, as
 # `jq "$JQ_HAS_SECTION"'<program>'`. status.sh and setup.sh both tell the plugin's issues by it (#289).
 JQ_HAS_SECTION='def has_section($name): (.body // "") | test("(^|\n)## \($name)[ \t]*\r?(\n|$)");'
+
+# A jq definition, `trusted`, that is true when an issue or a PR comes from a trusted author: its
+# `author_association` is OWNER, MEMBER or COLLABORATOR. Put it before the rest of a jq program,
+# like JQ_HAS_SECTION. status.sh and bodies.sh both treat an item from anyone else as text from
+# outside the repo (#362).
+JQ_TRUSTED='def trusted: (.author_association // "") | IN("OWNER", "MEMBER", "COLLABORATOR");'

@@ -49,6 +49,12 @@ chmod +x "$tmp/bin/gh"
 
 run_bodies() { PATH="$tmp/bin:$PATH" FIX="$1" bash "$bodies"; }
 
+# trust <file>: gives each issue in the fixture the author_association OWNER and the login `owner`,
+# unless it holds its own, so a fixture names only the authors that matter (#362).
+trust() {
+  jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
+
 # --- The fixtures --------------------------------------------------------------------------
 # full: an issue with `## What it delivers`, one with `## Goal`, one with neither, and a PR. They
 # are listed out of order, so that the sort shows.
@@ -62,6 +68,7 @@ cat > "$full/issues.json" <<'JSON'
   {"number":7,"title":"A single issue","body":"## What it delivers\nIt delivers x.\n\n## Scenarios\n- WHEN a THEN b\n\n## Decisions\n- D1 · secret decision\n\n## Files\nplugins/x/a.sh\n\n## Verify\nsecret verify\n"}
 ]
 JSON
+trust "$full/issues.json"
 cat > "$tmp/full.expected" <<'EXPECTED'
 ### #7 A single issue
 ## What it delivers
@@ -94,6 +101,7 @@ expect "WHEN bodies.sh runs THEN no other section is printed" \
 few=$tmp/few
 mkdir "$few"
 jq -n '[{number: 1, title: "Long", body: ("x" * 5000)}]' > "$few/issues.json"
+trust "$few/issues.json"
 run_bodies "$few" > "$few.out"
 expect "WHEN an issue's text is longer than its share THEN bodies.sh cuts it to its share and ends it with …" \
   bash -c 'text=$(sed -n 2p "$1"); test "${#text}" = 2000 && test "${text: -1}" = "…"' _ "$few.out"
@@ -101,6 +109,7 @@ expect "WHEN an issue's text is longer than its share THEN bodies.sh cuts it to 
 many=$tmp/many
 mkdir "$many"
 jq -n '[range(1; 61) | {number: ., title: "Issue \(.)", body: ("## What it delivers\n" + ("y" * 5000))}]' > "$many/issues.json"
+trust "$many/issues.json"
 run_bodies "$many" > "$many.out"
 expect "WHEN bodies.sh runs on 60 open issues of 5,000 characters each THEN every issue has its heading" \
   test "$(grep -c '^### #[0-9]* Issue [0-9]*$' "$many.out")" = 60
