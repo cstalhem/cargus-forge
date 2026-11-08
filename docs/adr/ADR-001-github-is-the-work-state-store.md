@@ -6,17 +6,19 @@ status: active
 
 # ADR-001: GitHub is the only store of work state
 
-- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs. No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone.
+- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone.
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
 - A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. Its body lists neither its parent nor its blockers, so no text copies a link ([ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)).
 - **Facts decide the status.** A script (`status.sh`) works out the status of each open issue for `next`, the first of these that applies:
+  - request, first: the issue's author is not a trusted author, whatever its body says. A PR whose author is not a trusted author names no issue, so it gives no fact ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md));
   - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so this comes before the branch fact;
   - needs review: an open ready PR whose first line names the issue;
   - in progress: an open draft PR that names the issue, or a remote `<n>-*` branch with no merged PR. A branch whose PR has merged is finished work, so it gives nothing;
   - ready, or blocked when it has an open "blocked by" link: the body has a `## Scenarios` section;
   - request: anything else, so an issue made by hand is never mistaken for shaped work.
+- **The author is a fact too.** `status.sh` reads `author_association` from the issue and PR lists it already reads, and acts only on a trusted author's item ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)).
 - **No status label.** A label would copy a fact that the body, a link, a branch or a PR already holds. An old status label on an issue changes nothing.
 - **`setup.sh` tells plugin work by the body.** It treats an open issue as one that the plugin works on when its body has a `## Goal` or `## Scenarios` section, so an issue being built, with its one `<n>-*` branch, gets no branch finding. It uses the section test that `status.sh` uses, which both scripts load from `scripts/lib.sh`, and does not call `status.sh`.
 - **One display label.** `labels.sh` is the only writer of `engineering:shaped`: it adds the label to each open issue whose status is not request and removes it from each open request. It reads no closed issue, because the label stays true once an issue closes. It reads the statuses from `status.sh --statuses`, so the status logic stays in one place and `status.sh` stays read-only. `next` and both Autopilots run it, once a run. It creates the label with its colour and description only when it is missing, and it touches no other label. A wrong or missing label gives a wrong view and no wrong action, because no script reads it.
@@ -28,6 +30,7 @@ status: active
 - **State files in the repo** (GSD's `.planning/` and `STATE.md`): GSD writes about 15 files for each phase, and the files drift from what is true.
 - **Issues plus one `STATE.md`:** two sources that can disagree.
 - **Hand-written stop notes or status sections in issues:** people miss them, and they go out of date.
+- **The body alone decides the status:** a stranger's issue with a `## Scenarios` section reads as ready, and Autopilot builds it unattended.
 - **Status labels** (`status:ready`, `status:in-progress`, `status:needs-review`, `umbrella`) **set by each skill:** each one copied a fact that GitHub and git already hold, so the copies drifted. Keeping them true took a label rule in every skill, a repair step in `next` and a hook that guarded its calls.
 - **Labels for blocked and done:** GitHub shows both already.
 - **A label for every status:** only one split matters to a person browsing: shaped or not. GitHub's PR list already shows ready PRs.

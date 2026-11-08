@@ -39,6 +39,7 @@ Request: $ARGUMENTS
 4. **Write.** After "yes", write the body to a file as the rules say, then run one of these two commands.
    - A new request: `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`.
    - An existing issue `#<n>`: add its original body at the end, as the exception line in `formats.md` says. Then run `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`.
+   - An existing issue `#<n>` whose author is not a trusted author, which step 1's read shows in its `author_association`: its author can edit the body after the "yes", so create a new issue as for a new request, with the original body at the end under `## Request`, as the exception line in `formats.md` says. Then comment `Shaped as #<new>.` on `#<n>`, and close `#<n>` with `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f state=closed`.
 5. **Hand off.**
    - Pass: show the issue URL. The next step is execute on this issue.
    - Fail: show the issue URL, then call the Skill tool with `engineering:slice` and the issue number.

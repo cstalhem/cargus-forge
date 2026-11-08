@@ -10,6 +10,8 @@
 #
 # Output: for each open issue, no PR, lowest number first, a heading `### #<n> <title>` and its
 # text, or `- none` when no issue is open. The text is, the first that applies:
+#   - the line `from <login>, not a trusted author`, when the issue's author is not a trusted
+#     author: its body is text from outside the repo (#362);
 #   - the `## What it delivers` and `## Files` sections, when the body has the first;
 #   - the `## Goal` and `## Out of scope` sections, when the body has the first;
 #   - the whole body.
@@ -19,8 +21,8 @@
 
 set -u
 
-# `fail` and `read_list` come from the plugin's shared file. `fail` does not exist until it is
-# loaded, so a missing file prints its own error line.
+# `fail`, `read_list` and `JQ_TRUSTED` come from the plugin's shared file. `fail` does not exist
+# until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
   printf '%s error: cannot find %s\n' "$(basename "$0")" "$lib"
@@ -35,7 +37,7 @@ done
 # The issues endpoint lists PRs too.
 read_list 'repos/{owner}/{repo}/issues?state=open'
 
-out=$(printf '%s' "$items" | jq -r '
+out=$(printf '%s' "$items" | jq -r "$JQ_TRUSTED"'
   map(select(has("pull_request") | not)) | sort_by(.number) as $all
 
   # The sections of a body, by name: each one is its `## <name>` heading line and the lines under
@@ -57,7 +59,8 @@ out=$(printf '%s' "$items" | jq -r '
   | if ($all | length) == 0 then "- none" else
       $all | map(
         (sections | keys) as $has
-        | (if ($has | index("What it delivers")) then pick(["What it delivers", "Files"])
+        | (if (trusted | not) then "from \(.user.login // "unknown"), not a trusted author"
+           elif ($has | index("What it delivers")) then pick(["What it delivers", "Files"])
            elif ($has | index("Goal")) then pick(["Goal", "Out of scope"])
            else ((.body // "") | gsub("\r"; "") | sub("\\s+$"; "")) end) as $text
         | "### #\(.number) \(.title)\n\(if ($text | length) > $share then $text[0:($share - 1)] + "…" else $text end)")
