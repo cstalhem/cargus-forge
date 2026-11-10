@@ -328,7 +328,7 @@ expect "WHEN next loads THEN its Facts line is exactly the injection of status.s
   grep -qxF '!`bash "${CLAUDE_SKILL_DIR}/status.sh"`' "$skill"
 expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval of that call" \
   grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")' "$skill"
-for variant in autopilot autopilot-t3; do
+for variant in autopilot-t3; do
   autopilot=$plugin/skills/$variant/SKILL.md
   expect "$variant: the skill injects status.sh with no argument" \
     bash -c 'grep -qxF "!\`bash \"\${CLAUDE_PLUGIN_ROOT}/skills/next/status.sh\"\`" "$1" && ! grep -qF -- "--human" "$1"' _ "$autopilot"

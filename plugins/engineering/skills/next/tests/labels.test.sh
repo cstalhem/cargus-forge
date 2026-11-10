@@ -187,7 +187,7 @@ expect "WHEN next runs THEN its Labels step comes after its Check step and runs 
   bash -c 'n=$(grep -nE "^[0-9]+\. \*\*Check\.\*\*" "$1" | cut -d: -f1); l=$(grep -nE "^[0-9]+\. \*\*Labels\.\*\*.*labels\.sh" "$1" | cut -d: -f1); [ -n "$n" ] && [ -n "$l" ] && [ "$l" -gt "$n" ]' _ "$next"
 expect "WHEN next runs THEN its reply shows a ## Labels part after the ## Report part" \
   grep -qF '`## Labels`' "$next"
-for variant in autopilot autopilot-t3; do
+for variant in autopilot-t3; do
   skill=$plugin/skills/$variant/SKILL.md
   expect "$variant: an allowed-tools line that matches the labels.sh call exactly pre-approves it" \
     grep -qxF '  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/next/labels.sh")' "$skill"

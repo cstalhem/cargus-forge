@@ -1,6 +1,6 @@
 # Engineering
 
-Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot, autopilot-t3, anneal.
+Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot-t3, anneal.
 
 The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. It works in a local Claude Code session and in a Claude Code cloud session.
 
@@ -36,8 +36,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
-| `/engineering:autopilot` | Runs Autopilot once, in a cloud session: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
-| `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: the same run with T3's scheduled task, threads and worktrees. See [Autopilot on T3 Code](#autopilot-on-t3-code). |
+| `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
 | `/engineering:anneal` | Has agents study the whole repo by area, and turns each confirmed finding into a fix sub-issue under one umbrella issue, or into a request. See [Anneal](#anneal). |
 
 Two more skills run only when another skill calls them:
@@ -82,64 +81,7 @@ Run `/engineering:next` at any point to see where things stand and what to run n
 
 ## Autopilot
 
-Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in cloud sessions until a single issue's PR or the final PR is ready for your review. It runs only in a Claude Code cloud session, because it needs the session and scheduled task tools there, which reach a run through the `Claude_Code_Remote` connector on its scheduled task, and it stops with one line anywhere else. On a T3 Code host, `/engineering:autopilot-t3` runs the same Autopilot with T3's tools; see [Autopilot on T3 Code](#autopilot-on-t3-code).
-
-### Turning it on
-
-Autopilot's children are cloud sessions that inherit the environment, and a child loads the engineering plugin only when the environment provides it: the plugins synced from claude.ai do not reach a session that Autopilot starts, and a cloud session never installs a repo's `enabledPlugins` setting. Give the environment the plugin first, in the environment's settings on claude.ai:
-
-- **This repo**, whose checkout holds the plugin's source: set the environment variable `CLAUDE_CODE_PLUGIN_DIRS` to the absolute path of `plugins/engineering` in the checkout, `/home/user/cargus-forge/plugins/engineering`. Every session in the environment then loads the plugin in place from the checkout, so a child runs the plugin at the commit it checked out, and `claude plugin list` shows it as `engineering@inline`.
-- **Another repo**: add `claude plugin marketplace add cstalhem/cargus-forge` and `claude plugin install engineering@cargus-forge` to the environment's setup script. The script's result is reused for about a week, or until the script or the allowed network hosts change, so edit the script to pick up a new plugin version sooner.
-
-Each run checks this with `claude plugin list` and stops with these instructions when the environment does not provide the plugin.
-
-Then start a cloud session on the repo at claude.ai/code and run `/engineering:autopilot`. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in the scheduled tasks list on claude.ai:
-
-| Setting | Value |
-|---|---|
-| Name | `engineering: autopilot` |
-| Schedule | every hour, `0 * * * *`. The server anchors it to the minute you created it, so the runs do not all start on the hour. |
-| Each run | a fresh Claude Code cloud session in the environment of the session that created it, on this repo, with the prompt `/engineering:autopilot` |
-| Model | execute children run on Sonnet; the hourly run and each ship child run on the scheduled task's model, which the run that creates the scheduled task sets to its own model |
-| Connector | `Claude_Code_Remote`, stored on the scheduled task. It gives each run the session and scheduled-task tools. |
-
-A scheduled task created by hand in the claude.ai dialog stores no connector and no model, because the dialog cannot offer `Claude_Code_Remote` and has no model field, so its runs have no session tools and run on the default model. A run on such a scheduled task says so in one line and sends one push notification, and a manual run that finds an existing scheduled task without the connector or the model says what it lacks. Delete it on claude.ai and run `/engineering:autopilot` by hand, which proposes a new one.
-
-A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the sessions it starts, the comments it posts and `status.sh` are its record.
-
-### Pausing it
-
-Pause or delete the scheduled task in the scheduled tasks list on claude.ai. While it is paused, no hourly run starts, and a manual `/engineering:autopilot` run says so with the scheduled task's name. Enable it again in the same list. A manual run also works with the scheduled task paused, so you can drive Autopilot by hand.
-
-### What a run does
-
-Each run takes these steps in order, and ends its turn when a step says so:
-
-1. **Plugin.** The run checks with `claude plugin list` that the environment provides the engineering plugin to children, as [Turning it on](#turning-it-on) says, and stops with those instructions otherwise.
-2. **Children.** A child is a session tagged `autopilot`, titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. While a child is working, the run starts nothing and ends. A child that stopped on a question gets an answer: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
-3. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
-4. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one, and a push notification. Review runs before Ship and Execute, so a run hands a ready PR off before it starts the next child, and it reads the open final PR of every umbrella issue whose sub-issues are all done, whether or not the umbrella issue has a ship child.
-5. **Ship.** When every sub-issue of an umbrella issue is done and Review found no open final PR for it, Autopilot starts a child `ship #<u>`.
-6. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order. The child runs on Sonnet, because execute is nearly all the tokens and a sized sub-issue does not need the strongest model.
-
-A child is a cloud session on the repo with the typed prompt `/engineering:execute #<n>` or `/engineering:ship #<u>`, and one line in its system prompt that tells it to report to Autopilot's session when its turn ends: finished, stopped on a question, or stopped for another reason. The report starts the next run. A child loads the plugin from the environment it inherits, as [Turning it on](#turning-it-on) says. A child whose typed prompt did not load as a skill reports `<title>: stopped: engineering plugin not loaded in this environment` and does nothing else, and Autopilot hands the issue off.
-
-### The four hand-offs
-
-When Autopilot cannot go on, it hands the work to you with one comment and one push notification, and leaves it. The comment is the record: Autopilot never hands the same thing off twice. `<title>` is the child's title, `execute #<n>` or `ship #<u>`, and `<session>` its session id.
-
-| Hand-off | Comment | Where |
-|---|---|---|
-| A child waits on a permission prompt | `Autopilot: stopped, <title> (<session>) waits on a permission prompt that no one can answer unattended` | the issue |
-| A child asks a fourth question after three answers | `Autopilot: stopped, <title> (<session>) asked a fourth question after three answers: <question>` | the issue |
-| A child stopped for another reason, such as execute sending a single issue back to discuss, or the engineering plugin not loaded in the child | `Autopilot: stopped, <title> (<session>) stopped: <reason>` | the issue |
-| A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
-
-Open the session the comment names to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself. Autopilot leaves a handed-off issue alone: the child session keeps its claim on the issue, so no later run starts another child for it.
-
-## Autopilot on T3 Code
-
-`/engineering:autopilot-t3` is Autopilot on a [T3 Code](https://github.com/pingdotgg/t3code) host: a machine that runs `t3` as a service, with this repo as one of its projects. The run is the same as [Autopilot](#autopilot), from the facts step to the hand-offs, and only the platform layer changes: a T3 scheduled task starts each hourly run as a fresh thread in its own worktree, the `t3-code` MCP tools, which T3 gives every thread, replace the cloud session tools, each child is a thread in its own worktree, and the child's report instruction is a queued message instead of a line in its system prompt. The skill runs only in a T3 Code thread, where the `orchestrator_capabilities` tool is in its tools, and stops with one line anywhere else.
+Autopilot is the unattended Build runner. You shape requests in discuss and review PRs into `main`; Autopilot does everything between: it builds each ready issue and each sliced umbrella issue in child threads until a single issue's PR or the final PR is ready for your review. `/engineering:autopilot-t3` runs it once, on a [T3 Code](https://github.com/pingdotgg/t3code) host: a machine that runs `t3` as a service, with this repo as one of its projects. A T3 scheduled task starts each hourly run as a fresh thread in its own worktree, each child is a thread in its own worktree, and the `t3-code` MCP tools, which T3 gives every thread, start the children and read their reports.
 
 ### Preparing the host
 
@@ -160,20 +102,24 @@ Then open a thread on the project and run `/engineering:autopilot-t3`, on the mo
 
 Pause or delete the scheduled task in that list. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
 
-### What a T3 run does
+### What a run does
 
-Each run renames its thread to `autopilot <ISO timestamp>`, so the hourly runs are told apart in the thread list, and takes the steps of [What a run does](#what-a-run-does) with T3's tools:
+Each run renames its thread to `autopilot <ISO timestamp>`, so the hourly runs are told apart in the thread list. It then takes these steps in order, and ends its turn when a step says so:
 
-- A child is a thread titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. Each child is launched in its own worktree from `main` on the remote, in `full-access` runtime mode, because no one answers an approval prompt unattended. An execute child runs on the current Sonnet model of the run's provider; a ship child inherits the run's model.
-- Right after the launch, the child gets one queued message that tells it to report to the run's thread when its work ends: `<title>: finished`, `<title>: stopped on a question` or `<title>: stopped: <reason>`, with the PR and, for a question, its recommended answer. The report arrives as a message in the run's thread and starts the next run.
-- A child that stopped on a question gets an answer, at most three times, through its pending request and a queued message that starts with `Autopilot: answer <k> of 3`. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
-- Autopilot merges each ready sub-issue PR, comments on a ready single-issue PR or final PR, then starts ship and execute children one at a time, as in a cloud session.
+1. **Plugin.** The run checks with `claude plugin list` that an installed copy of the engineering plugin is on the host, as [Preparing the host](#preparing-the-host) says, and stops with those instructions otherwise.
+2. **Children.** A child is a thread titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. Each child is launched in its own worktree from `main` on the remote, in `full-access` runtime mode, because no one answers an approval prompt unattended. While a child is working, the run starts nothing and ends. Right after the launch, the child gets one queued message that tells it to report to the run's thread when its work ends: `<title>: finished`, `<title>: stopped on a question` or `<title>: stopped: <reason>`, with the PR and, for a question, its recommended answer. The report arrives as a message in the run's thread and starts the next run. A child whose typed prompt did not load as a skill reports `<title>: stopped: engineering plugin not loaded in this environment` and does nothing else, and Autopilot hands the issue off. A child that stopped on a question gets an answer, through its pending request and a queued message that starts with `Autopilot: answer <k> of 3`: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
+3. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
+4. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one. Review runs before Ship and Execute, so a run hands a ready PR off before it starts the next child, and it reads the open final PR of every umbrella issue whose sub-issues are all done, whether or not the umbrella issue has a ship child.
+5. **Ship.** When every sub-issue of an umbrella issue is done and Review found no open final PR for it, Autopilot starts a child `ship #<u>`. A ship child inherits the run's model.
+6. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order. The child runs on the current Sonnet model of the run's provider, because execute is nearly all the tokens and a sized sub-issue does not need the strongest model.
+
+In short, Autopilot merges each ready sub-issue PR, comments on a ready single-issue PR or final PR, then starts ship and execute children one at a time. A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the threads it starts, the comments it posts and `status.sh` are its record.
 
 T3 Connect sends the push notifications: it pushes to your devices when a thread finishes, fails or asks, so the run sends none of its own.
 
 ### The three hand-offs
 
-A hand-off is one comment, and the comment is the record: Autopilot never hands the same thing off twice. `<title>` is the child's title and `<thread>` its thread id. Children run in `full-access` mode, so the permission-prompt hand-off of a cloud session has no T3 case.
+A hand-off is one comment, and the comment is the record: Autopilot never hands the same thing off twice. `<title>` is the child's title and `<thread>` its thread id. Children run in `full-access` mode, so no child waits on a permission prompt.
 
 | Hand-off | Comment | Where |
 |---|---|---|
@@ -203,4 +149,4 @@ Autopilot builds the umbrella issue like any other, with no discuss. You can als
 
 `/engineering:next` works out each open issue's status from its body, links, branches and PRs, and reads no label. An open issue whose body has neither a `## Scenarios` nor a `## Goal` section is a request that discuss has not shaped yet, and so is an open issue whose author is not a trusted author (`author_association` OWNER, MEMBER or COLLABORATOR), whatever its body says: discuss shapes it into a new issue that you write, and a PR or comment by anyone else gives `status.sh` and Autopilot no fact. A ready issue with an open blocker shows as blocked in `/engineering:next`. To recommend an order, it also reads a filtered copy of each open issue's body from `bodies.sh`: the `## What it delivers` and `## Files` sections, or the `## Goal` and `## Out of scope` sections, cut to a share of 24,000 characters in all.
 
-To browse on GitHub, `labels.sh` keeps the green label `engineering:shaped` on each open issue that discuss has finished, so you see which issues to leave to Build. It removes the label from each open request, and leaves closed issues alone. `/engineering:next` and both Autopilots run it, and it creates the label when the repo lacks it. No skill reads the label, and `labels.sh` changes no other label. The old labels `engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review` and `umbrella` do nothing now: delete them by hand from the repo's Labels page, which also removes them from every issue.
+To browse on GitHub, `labels.sh` keeps the green label `engineering:shaped` on each open issue that discuss has finished, so you see which issues to leave to Build. It removes the label from each open request, and leaves closed issues alone. `/engineering:next` and Autopilot run it, and it creates the label when the repo lacks it. No skill reads the label, and `labels.sh` changes no other label. The old labels `engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review` and `umbrella` do nothing now: delete them by hand from the repo's Labels page, which also removes them from every issue.

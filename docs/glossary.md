@@ -54,7 +54,7 @@ _Avoid_: feature flag, option
 
 **ADR decision**: A line in an issue's `## Decisions` that tells execute to write a new ADR or edit an existing one in `docs/adr/`, holding the decision and its rejected alternatives.
 
-**Autopilot**: The unattended Build runner: an hourly scheduled task starts a fresh cloud session that runs `/engineering:autopilot`, which starts a child session for each ready issue's execute, one at a time, answers each child's questions, squash-merges each sub-issue PR that verify marked ready, starts ship once an umbrella's sub-issues are done, and hands an issue or a ready PR to you with one comment and one push notification.
+**Autopilot**: The unattended Build runner: an hourly T3 Code scheduled task starts a fresh T3 Code thread that runs `/engineering:autopilot-t3`, which starts a child thread for each ready issue's execute, one at a time, answers each child's questions, squash-merges each sub-issue PR that verify marked ready, starts ship once an umbrella's sub-issues are done, and hands an issue or a ready PR to you with one comment.
 _Avoid_: job, automation, orchestrator, cron job
 
 **Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.
@@ -70,7 +70,7 @@ _Avoid_: convention, guideline
 **Trace**: A numbered walk through one dated run of a design, one line per step: who acts, what it reads or keeps, and whether it waits for the user; discuss shows one for each design that adds a part that runs.
 _Avoid_: walkthrough, dry run
 
-**Hand-off**: The one comment, plus one push notification in a cloud session, with which Autopilot gives the user an issue it cannot go on with or a PR that is ready for review; the comment is its record, so Autopilot writes it once.
+**Hand-off**: The one comment with which Autopilot gives the user an issue it cannot go on with or a PR that is ready for review; the comment is its record, so Autopilot writes it once.
 _Avoid_: escalation, notification
 
 **PENDING resume**: A later run of execute that a PENDING verdict schedules in the same cloud session or T3 Code thread, 10 minutes ahead and at most three in a row; its arguments end with "PENDING resume <k> of 3", which carries the count.

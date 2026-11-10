@@ -6,7 +6,7 @@ status: active
 
 # ADR-011: Build acts only on items by trusted authors
 
-- **Decision:** `status.sh`, `next` and both Autopilots act on an issue, a PR or a comment only when its author is a trusted author, and discuss shapes an outside issue into a new issue that the user writes.
+- **Decision:** `status.sh`, `next` and Autopilot act on an issue, a PR or a comment only when its author is a trusted author, and discuss shapes an outside issue into a new issue that the user writes.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md)
 - **Source:** [#362](https://github.com/cstalhem/cargus-forge/issues/362)
 

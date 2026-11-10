@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for execute's PENDING resume in a T3 Code thread, for where it opens its draft PR and for how its
 # step 2 gets onto the issue branch: its skill
-# file, the two Autopilot skills' report instructions, the plugin README, the ADRs, the glossary and the
+# file, the Autopilot skill's report instruction, the plugin README, the ADRs, the glossary and the
 # engineering-build rule.
 # They read the repo's files only and need no network.
 set -u
@@ -10,7 +10,6 @@ here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin=$(CDPATH= cd -- "$here/../../.." && pwd)
 root=$(CDPATH= cd -- "$plugin/../.." && pwd)
 skill=$plugin/skills/execute/SKILL.md
-autopilot=$plugin/skills/autopilot/SKILL.md
 autopilot_t3=$plugin/skills/autopilot-t3/SKILL.md
 readme=$plugin/README.md
 adr006=$root/docs/adr/ADR-006-engineering-runs-in-cloud-sessions.md
@@ -63,8 +62,6 @@ expect "the allowed-tools line lets execute run the BSD date command" \
   grep -qF 'Bash(date -u -v+10M +%Y-%m-%dT%H:%M:%SZ)' "$skill"
 
 # A child sends no report on a turn that ends on a resume the skill scheduled itself.
-expect "autopilot's report line makes an exception for a resume the skill scheduled itself" \
-  grep -qF 'scheduled itself' "$autopilot"
 expect "autopilot-t3's report instruction makes an exception for a resume the skill scheduled itself" \
   grep -qF 'scheduled itself' "$autopilot_t3"
 
