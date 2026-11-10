@@ -43,9 +43,10 @@ mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
-# A call with a flag before the path, such as `-X POST`, is a write: leave a mark.
-case $2 in -*) echo write > "$FIX/.wrote" ;; esac
+# A call with `-X`, such as `-X POST`, is a write: leave a mark. A `--paginate` read puts the path last.
+case " $* " in *" -X "*) echo write > "$FIX/.wrote" ;; esac
 path=$2
+case $2 in --paginate) path=${!#} ;; esac
 pre='repos/{owner}/{repo}'
 if [ "$path" = "$pre" ]; then echo o/r; exit 0; fi
 p=${path#"$pre"/}
@@ -55,7 +56,9 @@ case $p in
   pulls\?base=*) name=none ;;
   *) name=${p%%\?*}; name=${name//\//_} ;;
 esac
-if [ -f "$FIX/$name.json" ]; then cat "$FIX/$name.json"; else echo '[]'; fi
+if [ -f "$FIX/$name.json" ]; then body=$(cat "$FIX/$name.json"); else body='[]'; fi
+# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
+case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
 FAKE
 chmod +x "$tmp/bin/gh"
 

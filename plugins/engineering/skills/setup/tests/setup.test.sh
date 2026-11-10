@@ -20,10 +20,10 @@ trap 'rm -rf "$tmp"' EXIT
 export GIT_CEILING_DIRECTORIES=$tmp
 
 # The stub gh: logs each call, then fails with $GH_FAIL if it is set. For the repo it prints
-# $GH_JSON. For page <p> of the open issues it fails with $GH_FAIL_ISSUES if it is set, or
-# prints the file $GH_PAGES/<p>, or `[]`. Any other call fails. The pages are files, not
-# variables, because Linux limits one variable in the environment to 128 KiB, as it does one
-# argument.
+# $GH_JSON. For the open issues, read with `--paginate --slurp`, it fails with $GH_FAIL_ISSUES
+# if it is set, or prints the files $GH_PAGES/1, $GH_PAGES/2 and on as an array of pages, or
+# `[[]]`. Any other call fails. The pages are files, not variables, because Linux limits one
+# variable in the environment to 128 KiB, as it does one argument.
 mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
@@ -31,10 +31,13 @@ printf '%s\n' \
   'if [ -n "${GH_FAIL:-}" ]; then printf "%s\n" "$GH_FAIL" >&2; exit 1; fi' \
   'case $2 in' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
-  '  "repos/{owner}/{repo}/issues?state=open&per_page=100&page="*)' \
+  '  "--paginate")' \
+  '    case ${!#} in "repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
   '    if [ -n "${GH_FAIL_ISSUES:-}" ]; then printf "%s\n" "$GH_FAIL_ISSUES" >&2; exit 1; fi' \
-  '    page=$GH_PAGES/${2##*page=}' \
-  '    if [ -f "$page" ]; then cat "$page"; else printf "[]\n"; fi ;;' \
+  '    printf "["; n=1' \
+  '    while [ -f "$GH_PAGES/$n" ]; do [ "$n" -gt 1 ] && printf ","; cat "$GH_PAGES/$n"; n=$((n + 1)); done' \
+  '    [ "$n" -eq 1 ] && printf "[]"' \
+  '    printf "]\n" ;;' \
   '  *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;;' \
   'esac' > "$tmp/bin/gh"
 chmod +x "$tmp/bin/gh"
@@ -108,7 +111,7 @@ run() {
   [ "$code" -eq 0 ] || miss "exit $code, want 0"
   [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo or its origin"
   calls=$(grep -vxF 'api repos/{owner}/{repo}' "$GH_LOG" \
-    | grep -vx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=[0-9]*')
+    | grep -vx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100')
   [ -z "$calls" ] || miss "unexpected gh calls: $calls"
   # The screen says once that setup changes none of the findings, so no finding says it. The
   # pattern is a regex, so that this file does not hold the sentences themselves.
@@ -151,8 +154,8 @@ has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Docs$nl- none$nl" \
   "## Findings$nl- none"
 lacks 'issue-tracker' '- default branch:' '## Warnings'
-grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=1' "$GH_LOG" \
-  || miss "the open issues were not read with gh api REST"
+grep -qx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100' "$GH_LOG" \
+  || miss "the open issues were not read with gh api --paginate --slurp"
 done_check
 
 setup
@@ -453,15 +456,14 @@ lacks 'another one'
 done_check
 
 setup
-check "the open issues are read page by page, and a PR on a page is not an issue"
+check "the open issues are read with one paginated call, and a PR on a page is not an issue"
 page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, pull_request: {}}]')"
 page 2 '[{"number": 6}]'
 branches 5-pr 6-second-page
 run
 has '- #6 · `6-second-page`'
 lacks '- #5 ·'
-grep -qx 'api repos/{owner}/{repo}/issues?state=open&per_page=100&page=2' "$GH_LOG" || miss "page 2 was not read"
-grep -q 'page=3' "$GH_LOG" && miss "page 3 was read after a short page 2"
+[ "$(grep -c 'issues?state=open' "$GH_LOG")" -eq 1 ] || miss "the open issues were not read with one call"
 done_check
 
 setup

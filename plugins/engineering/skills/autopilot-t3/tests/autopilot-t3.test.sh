@@ -50,7 +50,7 @@ section() {
 # joined: reads lines on stdin and prints them joined with commas.
 joined() { paste -sd, -; }
 
-expect "the cloud Autopilot skill's folder is gone" test ! -e "$plugin/skills/autopilot"
+expect "the skills/autopilot folder is gone" test ! -e "$plugin/skills/autopilot"
 expect "no file under the plugin names /engineering:autopilot other than /engineering:autopilot-t3" \
   test -z "$(grep -rElI --exclude=autopilot-t3.test.sh '/engineering:autopilot($|[^-])' "$plugin")"
 
@@ -78,13 +78,13 @@ done
 
 # The skill checks no surface: it loads each T3 tool where a step first needs it.
 expect "the skill has no step that checks the surface it is on" \
-  test "$(step_names "$skill" | grep -cxE 'T3|Cloud')" = 0
+  test "$(step_names "$skill" | grep -cx 'T3')" = 0
 expect "the skill loads each T3 tool with ToolSearch, query select:mcp__t3-code__" \
   grep -qF 'select:mcp__t3-code__' <<<"$body"
 expect "the skill says nothing of a surface check: no 'runs only in a T3 Code thread'" \
-  test "$(grep -ciE 'runs only in a T3 Code thread|cloud session' "$skill")" = 0
+  test "$(grep -ci 'runs only in a T3 Code thread' "$skill")" = 0
 
-# None of the cloud session's tools is named anywhere in the file.
+# None of the removed Autopilot skill's tools is named anywhere in the file.
 for name in list_triggers create_trigger update_trigger list_sessions get_session list_events \
   create_session send_message PushNotification; do
   expect "the skill does not name $name" test "$(grep -cF "$name" "$skill")" = 0
@@ -132,7 +132,7 @@ expect "the README's Autopilot section says Autopilot merges, comments on a read
 # The plugin's description names autopilot-t3 and opens the plugin README; scripts/check-descriptions.sh checks the other listings.
 description=$(jq -r .description "$manifest")
 expect "plugin.json's description names autopilot-t3" grep -qF 'autopilot-t3' <<<"$description"
-expect "plugin.json's description names no cloud skill autopilot" \
+expect "plugin.json's description names no skill autopilot, only autopilot-t3" \
   test "$(grep -cF 'next, autopilot, ' <<<"$description")" = 0
 expect "the plugin README's first paragraph is plugin.json's description" \
   test "$(sed -n 3p "$readme")" = "$description"
