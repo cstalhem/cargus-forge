@@ -7,7 +7,7 @@ The plugin keeps its record of the work in GitHub: issues, branches and pull req
 ## Requirements
 
 - A git repo with a GitHub remote, and `main` as its default branch.
-- `gh` installed and authenticated with access to that repo. The skills run in T3 Code threads and read and write GitHub mostly through `gh api` REST calls.
+- `gh` installed and authenticated with access to that repo. The skills run in T3 Code threads and reach GitHub through `gh`.
 - Squash merge allowed on the repo. Every PR is squash-merged.
 
 ## Setup
