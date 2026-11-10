@@ -7,7 +7,7 @@ status: active
 # ADR-008: Autopilot builds ready issues unattended
 
 - **Decision:** An hourly T3 Code scheduled task starts a fresh T3 Code thread that runs `/engineering:autopilot-t3`, which builds each ready issue in a child thread, one at a time, answers each child's questions, merges sub-issue PRs that verify marked ready, starts ship, and hands only PRs into `main` and stuck issues to the user with one comment.
-- **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-004](ADR-004-skills-load-on-demand-scripts-fetch-facts.md), [ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md)
+- **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-004](ADR-004-skills-load-on-demand-scripts-fetch-facts.md), [ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)
 - **Source:** [#224](https://github.com/cstalhem/cargus-forge/issues/224), [#262](https://github.com/cstalhem/cargus-forge/issues/262), [#265](https://github.com/cstalhem/cargus-forge/issues/265), [#368](https://github.com/cstalhem/cargus-forge/issues/368)
 
 ## Details

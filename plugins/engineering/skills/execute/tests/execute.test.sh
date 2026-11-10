@@ -12,7 +12,7 @@ root=$(CDPATH= cd -- "$plugin/../.." && pwd)
 skill=$plugin/skills/execute/SKILL.md
 autopilot_t3=$plugin/skills/autopilot-t3/SKILL.md
 readme=$plugin/README.md
-adr006=$root/docs/adr/ADR-006-engineering-runs-in-cloud-sessions.md
+adr006=$root/docs/adr/ADR-006-engineering-runs-in-t3-code-threads.md
 adr008=$root/docs/adr/ADR-008-autopilot-builds-ready-issues-unattended.md
 glossary=$root/docs/glossary.md
 failures=0
@@ -38,8 +38,13 @@ fi
 # The T3 case of step 7: the skill's lines that name schedule_task.
 t3_step=$(grep -F 'schedule_task' "$skill")
 
-expect "step 2 checks for the orchestrator_capabilities tool, deferred counts" \
-  grep -qE 'orchestrator_capabilities.*deferred|deferred.*orchestrator_capabilities' "$skill"
+step2=$(grep -E '^2\. ' "$skill")
+expect "step 2 runs no printenv and no tool check" \
+  bash -c '! grep -qE "printenv|orchestrator_capabilities" <<<"$1"' _ "$step2"
+expect "step 7 loads schedule_task with ToolSearch" \
+  grep -qF 'query `select:mcp__t3-code__schedule_task`' <<<"$t3_step"
+expect "step 7 stops when schedule_task cannot be loaded or fails" \
+  grep -qF '`schedule_task` could not be loaded or failed' "$skill"
 expect "step 7 computes the time with date, GNU first and BSD as the fallback" \
   grep -qF "date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -v+10M +%Y-%m-%dT%H:%M:%SZ" <<<"$t3_step"
 expect "step 7 gives the resume the title execute #<n>: PENDING resume <k+1> of 3" \
@@ -53,7 +58,6 @@ expect "step 7 checks the result for a once schedule and a nextRunAt" \
   grep -qE 'once.*nextRunAt|nextRunAt.*once' "$skill"
 expect "step 7 names the T3 Code build that has one-time scheduled tasks" \
   grep -qF 'v0.1.7, or a nightly from 2026-11-01 on' "$skill"
-expect "the cloud case keeps send_later" grep -qF 'send_later' "$skill"
 expect "the arguments rule names schedule_task as a way a resume is scheduled" \
   grep -qE '^- The arguments are .*schedule_task' "$skill"
 expect "the allowed-tools line lets execute run the GNU date command" \
@@ -89,9 +93,8 @@ expect "the open-PR condition appears only in step 3" \
   test "$(grep -cF 'branch has no open PR' "$skill")" -eq 1 -a "$(grep -F 'branch has no open PR' <<<"$step3" | wc -l)" -eq 1
 expect "the POST that opens the PR appears only in step 3" \
   test "$(grep -cF -e '-X POST repos/{owner}/{repo}/pulls ' "$skill")" -eq 1 -a "$(grep -cF -e '-X POST repos/{owner}/{repo}/pulls ' <<<"$step3")" -eq 1
-expect "the open-PR lookup appears in step 3 and in step 2's resume path only" \
-  test "$(grep -cF "$lookup" "$skill")" -eq 2 -a "$(grep -cF "$lookup" <<<"$step3")" -eq 1 \
-    -a "$(grep -F "$lookup" "$skill" | grep -cF 'List its open PR')" -eq 1
+expect "the open-PR lookup appears in step 3 only" \
+  test "$(grep -cF "$lookup" "$skill")" -eq 1 -a "$(grep -cF "$lookup" <<<"$step3")" -eq 1
 expect "step 3 runs the lookup after each push, deviation 5's and step 6's included" \
   grep -qE 'After each push.*deviation 5.*step 6' <<<"$step3"
 expect "deviation 5 pushes as step 3 says and has no PR command or PR body of its own" \
@@ -134,11 +137,11 @@ expect "step 6 no longer spells out the first line or the sections" \
 expect "step 3 takes the draft PR's first line from formats.md, not from step 6" \
   bash -c 'grep -qF "first line of the PR body in \`formats.md\`" <<<"$1" && ! grep -qF "step 6 defines" <<<"$1"' _ "$step3"
 
-# Step 2 has one case per distinct action: the shared case gets onto the issue branch for a cloud session and a local worktree alike.
+# Step 2 has one case per distinct action.
 expect "step 2 runs git switch <branch> in one place" \
   test "$(grep -cF 'git switch <branch>' "$skill")" -eq 1
-expect "step 2 has two Anything else stops" \
-  test "$(grep -cF '**Anything else**' "$skill")" -eq 2
+expect "step 2 has one Anything else stop" \
+  test "$(grep -cF '**Anything else**' "$skill")" -eq 1
 expect "the skill names no worktree-… branch prefix" \
   bash -c '! grep -qF "worktree-…" "$1"' _ "$skill"
 expect "the engineering-build rule says a step has one case per distinct action" \
