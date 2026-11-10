@@ -6,7 +6,7 @@ status: active
 
 # ADR-001: GitHub is the only store of work state
 
-- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone. Work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
+- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone. Skills reach GitHub through `gh`, by the simplest command for each operation, and work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
@@ -39,6 +39,7 @@ status: active
 - **Removing the label from closed issues:** it stays true once an issue closes, and the sweep cost a write for every finished issue.
 - **Scripts that read labels:** a drifted label would cause a wrong action instead of a wrong view.
 - **Reading the old status labels (`status:*`, `umbrella`) in `setup.sh`:** no issue that the current plugin creates has one, so setup flagged the branch of every issue being built.
+- **Reads and writes through `gh api` REST only:** it served the cloud proxy, which the plugin no longer supports.
 - **Calling `status.sh` from `setup.sh`:** it reads each issue's links, PRs and branches, which is many REST calls for a yes/no question that the body answers.
 - **Dropping the exemption from `setup.sh`:** every issue being built in a repo that uses the plugin would get a finding to rename its branch.
 - **A label name without the `engineering:` prefix, such as `Shaped`:** `labels.sh` removes its label from each open request, so in a repo that already uses that name it would strip it.
@@ -48,7 +49,7 @@ status: active
 - **A GitHub Action that sets labels from events:** it is extra setup in each repo, to keep copies of facts that `status.sh` reads directly. The one workflow the plugin ships closes sub-issues and sets no label.
 
 ## Consequences
-- Each repo must be on GitHub. Skills read and write issues, PRs, parent, sub-issue and dependency data through `gh api` REST, so they need no minimum `gh` version ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
+- Each repo must be on GitHub. Skills reach issues, PRs, parent, sub-issue and dependency data through `gh`, by the simplest command for each operation ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
 - A different tracker needs a new tracker profile and a new status script.
 - A repo that used the old labels (`engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review`, `umbrella`) keeps them until its owner deletes them by hand; no script or skill reads them. An old labelled issue whose body has neither section gets `setup.sh`'s branch finding.
 - Work can resume from any device that reaches the T3 Code host, including a phone.

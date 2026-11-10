@@ -9,23 +9,17 @@ fail() {
   exit 0
 }
 
-# Reads a list page by page, 100 items a page, without following GitHub's next-page link.
-# $1 is the path. Sets `items` to one JSON array with every item. Call it in the main shell,
-# not in a pipe or `$(…)`, so that its `fail` ends the script and its error text is printed.
-# The pages reach `jq` on stdin, not as arguments, because Linux limits one argument to 128 KiB
-# (#179 D1).
+# Reads a list with one `gh api --paginate --slurp` call, 100 items a page, and joins the pages
+# with `jq add`. $1 is the path. Sets `items` to one JSON array with every item. Call it in the
+# main shell, not in a pipe or `$(…)`, so that its `fail` ends the script and its error text is
+# printed. The pages reach `jq` on stdin, not as arguments, because Linux limits one argument to
+# 128 KiB (#179 D1).
 read_list() {
-  local path=$1 sep='?' page=1 out count pages=''
+  local path=$1 sep='?' out
   case $path in *\?*) sep='&' ;; esac
-  while :; do
-    out=$(gh api "$path${sep}per_page=100&page=$page" 2>&1) || fail "gh api $path: $out"
-    count=$(printf '%s' "$out" | jq 'if type == "array" then length else error("not a list") end' 2>/dev/null) \
-      || fail "gh api $path did not return a list: $out"
-    pages+=$out$'\n'
-    [ "$count" -lt 100 ] && break
-    page=$((page + 1))
-  done
-  items=$(printf '%s' "$pages" | jq -s 'add' 2>/dev/null) || fail "could not join the pages of $path."
+  out=$(gh api --paginate --slurp "$path${sep}per_page=100" 2>&1) || fail "gh api $path: $out"
+  items=$(printf '%s' "$out" | jq 'if type == "array" and all(.[]; type == "array") then add // [] else error("not a list") end' 2>/dev/null) \
+    || fail "gh api $path did not return a list: $out"
 }
 
 # Sets `branches` to a JSON array of the names of the remote branches.

@@ -40,10 +40,12 @@ mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
-case $2 in
-  *issues\?state=open*) if [ -f "$FIX/issues.json" ]; then cat "$FIX/issues.json"; else echo '[]'; fi ;;
-  *) echo '[]' ;;
+case ${!#} in
+  *issues\?state=open*) if [ -f "$FIX/issues.json" ]; then body=$(cat "$FIX/issues.json"); else body='[]'; fi ;;
+  *) body='[]' ;;
 esac
+# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
+case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
 FAKE
 chmod +x "$tmp/bin/gh"
 

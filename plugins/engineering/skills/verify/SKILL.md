@@ -6,7 +6,7 @@ user-invocable: false
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md")
-  - Bash(gh api -X POST repos/{owner}/{repo}/pulls/*/ccr/ready_for_review)
+  - Bash(gh pr ready *)
 ---
 
 # verify
@@ -18,7 +18,7 @@ Target: $ARGUMENTS
 - A fresh-context agent does the grading, never you. Give it numbers and branch names only, never your own account of the work: a summary is a claim, not evidence.
 - Post exactly one comment for each run.
 - Change no code, and push nothing. verify reports, and the caller fixes.
-- The REST call that marks a PR ready, `gh api -X POST repos/{owner}/{repo}/pulls/<pr>/ccr/ready_for_review`, is pre-approved in this skill's `allowed-tools`, so no permission prompt and no classifier judges it. Write it exactly in that form, with the bare PR number in place of `<pr>` and nothing else on the line, because the rule matches that text only.
+- The command that marks a PR ready, `gh pr ready <pr>`, is pre-approved in this skill's `allowed-tools`, so no permission prompt and no classifier judges it. Write it exactly in that form, with the bare PR number in place of `<pr>` and nothing else on the line, because the rule matches that text only.
 
 ## Steps
 1. **Scope.** Read `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md`. Use the bare number, without `#`, in every command. Run `gh api repos/{owner}/{repo}/pulls/<n>`.
@@ -28,7 +28,7 @@ Target: $ARGUMENTS
 2. **Code.** Run `git fetch origin <branch>`, and in umbrella scope also `git fetch origin main`. Then run `git rev-parse HEAD` and `git rev-parse origin/<branch>`. If they differ, stop and say so, because the checks must run on the code they grade.
 3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, the Repo rules section of this skill, and this task:
    - When the diff adds or changes a line under `.claude/rules/`, grade the `Rules` row's rule test first, before you read the issue, the PR body or the rest of the diff, because the test asks whether a line stands alone.
-   - Read GitHub only with `gh api` REST and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`. While a page holds 100 items, read the next one with `&page=2`, then `&page=3`, and so on. Do not let `gh api` follow GitHub's next-page link, which the cloud proxy refuses.
+   - Read GitHub with `gh api` and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api --paginate 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.
    - For each scenario, check three things, each with evidence (`file:line`, command output, or run output), and report them as the format below says:
      - **Exists:** the code or text that the scenario needs is there.
@@ -50,7 +50,7 @@ Target: $ARGUMENTS
    - Run the issue's Verify command (an umbrella issue has none) and each pre-PR check (each row of `docs/agents/commands.md` whose task ends with `(pre-PR check)`, and no other row; none if `commands.md` has no such row or does not exist), and record each result.
    - A scenario, a `Term` row or an `ADR` row passes only when all three are yes. A row that fails is a gap. The scenarios' result is PASS only when every row's Grade is PASS.
    - In the same pass, rate the merge risk with these four categories and no others. Each rating is one word. When a rating is not its category's best, add ` · <gap>` after it for each gap behind it, with its `file:line` and why.
-     - **Alignment** (poor / decent / good): whether each change in the diff is named. In PR scope, a change is named by a `## What it delivers` bullet or a `## Deviations` line of the PR. In umbrella scope, it is named by the umbrella's scenarios, its decisions or the `## Deviations` lines of the merged sub-issue PRs, whose bodies `gh api 'repos/{owner}/{repo}/pulls?base=<branch>&state=closed&per_page=100'` lists, page by page. Poor when an unnamed change touches behaviour, decent when an unnamed change touches only text or formatting, good when every change is named.
+     - **Alignment** (poor / decent / good): whether each change in the diff is named. In PR scope, a change is named by a `## What it delivers` bullet or a `## Deviations` line of the PR. In umbrella scope, it is named by the umbrella's scenarios, its decisions or the `## Deviations` lines of the merged sub-issue PRs, whose bodies `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=closed&per_page=100'` lists. Poor when an unnamed change touches behaviour, decent when an unnamed change touches only text or formatting, good when every change is named.
      - **Impact** (large / medium / small): how much breaks if the change is wrong. Large when it touches a sensitive area: authentication and permissions, secrets, data migrations, public interfaces, or code that many callers share; it is also large when it touches a file that every later agent session loads: `.claude/rules/`, CLAUDE.md, a skill's `allowed-tools`, hooks, CI workflows. Small when it touches only docs or tests. Medium otherwise.
      - **Rollback cost** (high / medium / low): what it takes to undo the change after the merge. Low when reverting the merge undoes all of it, medium when the revert needs a follow-up step such as regenerating a file, high when the change leaves effects that a revert does not undo, such as data written or deleted, or messages sent.
      - **Error detection** (poor / decent / good / N/A): whether a break after the merge shows itself, as a failing test, check or error, rather than going quiet. N/A when the change cannot fail at runtime.
@@ -79,7 +79,7 @@ Target: $ARGUMENTS
    - Add `### Gaps` only when a row fails. Write one entry for each gap: the row, the check that failed (exists, substantive or wired) and why, with its evidence. A `Rules` gap names the `file:line` and the rule instead of a check. When every row passes, leave the section out.
    - Under `### Verify commands`, write one line for each command with its result.
 4. **Checks.** Start this step only after the agent has returned, so the checks are read as late as possible.
-   - **PR scope:** read the check runs on the SHA from step 2 once, and do not wait for them: `gh api 'repos/{owner}/{repo}/commits/<sha>/check-runs?per_page=100' --jq '(.check_runs | length), (.check_runs[] | {name, status, conclusion, html_url})'`, page by page as the rules say. A run whose `status` is not `completed` is pending. A completed run passed if its `conclusion` is `success`, `neutral` or `skipped`, and failed otherwise. Only check runs count, not commit statuses.
+   - **PR scope:** read the check runs on the SHA from step 2 once, and do not wait for them: `gh api --paginate 'repos/{owner}/{repo}/commits/<sha>/check-runs?per_page=100' --jq '.check_runs[] | {name, status, conclusion, html_url}'`. A run whose `status` is not `completed` is pending. A completed run passed if its `conclusion` is `success`, `neutral` or `skipped`, and failed otherwise. Only check runs count, not commit statuses.
    - **Umbrella scope:** read no check runs. ship reads the final PR's checks.
    - **Verdict:** FAIL if any row's Grade is FAIL or a check run failed; else PENDING if a check run is pending; else PASS. The merge risk is graded on every run and sets no verdict.
    - In the agent's heading, replace `<VERDICT>` with `PASS`, `FAIL` or `PENDING`. In PR scope, add to the end of the report a `### Checks` section with one line for each run, `- <name>: passed`, `failed (<html_url>)` or `pending`, or `- none` when there are none. Change nothing else in the report.
