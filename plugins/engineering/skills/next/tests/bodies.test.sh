@@ -134,8 +134,8 @@ expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval o
   grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/bodies.sh")' "$skill"
 expect "WHEN next loads THEN its Bodies heading is followed by the injection of bodies.sh" \
   bash -c 'grep -A1 -xF "## Bodies" "$1" | tail -n 1 | grep -qxF "!\`bash \"\${CLAUDE_SKILL_DIR}/bodies.sh\"\`"' _ "$skill"
-expect "WHEN an autopilot loads THEN it does not inject bodies.sh" \
-  bash -c '! grep -q "bodies.sh" "$1/skills/autopilot/SKILL.md" "$1/skills/autopilot-t3/SKILL.md"' _ "$skill_dir/../.."
+expect "WHEN autopilot-t3 loads THEN it does not inject bodies.sh" \
+  bash -c '! grep -q "bodies.sh" "$1/skills/autopilot-t3/SKILL.md"' _ "$skill_dir/../.."
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failed"

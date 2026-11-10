@@ -2,7 +2,7 @@
 # bodies.sh: the issue bodies for /engineering:next (#344).
 # Prints a filtered copy of each open issue's body, so that next can compare the issues for shared
 # files, conflicting goals and dependencies. It reads the open issues through `gh api` REST and
-# changes nothing. Only next loads it: the Autopilots load status.sh every run and do not carry
+# changes nothing. Only next loads it: Autopilot loads status.sh every run and does not carry
 # the bodies (#344 D6).
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `bodies.sh error: <reason>`, and nothing else: each jq call
