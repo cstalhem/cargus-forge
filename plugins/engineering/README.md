@@ -2,12 +2,12 @@
 
 Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot-t3, anneal.
 
-The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. It works in a local Claude Code session and in a Claude Code cloud session.
+The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. The skills run in T3 Code threads.
 
 ## Requirements
 
 - A git repo with a GitHub remote, and `main` as its default branch.
-- `gh` installed and authenticated with access to that repo. The skills read and write GitHub mostly through `gh api` REST calls, so they also work in a cloud session, where GraphQL is blocked.
+- `gh` installed and authenticated with access to that repo. The skills run in T3 Code threads and read and write GitHub mostly through `gh api` REST calls.
 - Squash merge allowed on the repo. Every PR is squash-merged.
 
 ## Setup
@@ -75,7 +75,7 @@ flowchart TD
 
 **Build** takes one issue to a merged PR. execute opens a draft PR after its first commit and builds the issue on it. verify grades the PR against the issue's scenarios and marks it ready on a pass, and its comment opens with a merge risk level of low, medium or high, which changes no verdict and no ready mark. You review and merge a single issue's PR into `main`. A sub-issue's PR goes into the feature branch: you merge it, or Autopilot does when it is on. Once every sub-issue has merged, ship opens the final PR that takes the feature branch into `main`, and you review and merge that one.
 
-**While CI is still running**, verify gives a PENDING verdict and keeps the PR a draft. execute then schedules its own resume, 10 minutes ahead and at most three times in a row, so no one has to run it again and an Autopilot child keeps its claim on the issue: in a cloud session with the `send_later` tool, and in a T3 Code thread with a one-time `schedule_task` bound to the thread, which needs a T3 Code build with one-time scheduled tasks (v0.1.7, or a nightly from 2026-11-01 on). On an older T3 Code build, execute stops and says so. Anywhere else, and after the third resume, it stops and you run `/engineering:execute <#issue>` again once CI has finished.
+**While CI is still running**, verify gives a PENDING verdict and keeps the PR a draft. execute then schedules its own resume, 10 minutes ahead and at most three times in a row, so no one has to run it again and an Autopilot child keeps its claim on the issue. The resume is a one-time `schedule_task` bound to the thread, which needs a T3 Code build with one-time scheduled tasks (v0.1.7, or a nightly from 2026-11-01 on). On an older T3 Code build, execute stops and says so. After the third resume, and in a session with no `schedule_task` tool, it stops and you run `/engineering:execute <#issue>` again once CI has finished.
 
 Run `/engineering:next` at any point to see where things stand and what to run next. The process terms are defined in the [glossary](../../docs/glossary.md).
 

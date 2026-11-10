@@ -84,9 +84,9 @@ expect "the skill loads each T3 tool with ToolSearch, query select:mcp__t3-code_
 expect "the skill says nothing of a surface check: no 'runs only in a T3 Code thread'" \
   test "$(grep -ciE 'runs only in a T3 Code thread|cloud session' "$skill")" = 0
 
-# None of the cloud session's tools, nor its environment variable, is named anywhere in the file.
+# None of the cloud session's tools is named anywhere in the file.
 for name in list_triggers create_trigger update_trigger list_sessions get_session list_events \
-  create_session send_message PushNotification CLAUDE_CODE_REMOTE; do
+  create_session send_message PushNotification; do
   expect "the skill does not name $name" test "$(grep -cF "$name" "$skill")" = 0
 done
 

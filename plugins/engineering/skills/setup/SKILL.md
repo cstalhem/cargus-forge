@@ -103,7 +103,7 @@ allowed-tools:
    1. Only if step 5 wrote or changed a file: `## Files to commit`, then one line `- <path>` for each file that it wrote or changed.
    2. Only if step 7 ran: `## Conversion issue`, then `- #<n> · <its html_url> · no label`, or the line that names what failed.
    3. The line `Setup committed, pushed and labelled nothing.`, and only if step 5 wrote or changed a file, ` Commit these files on a branch and open a PR.` after it on the same line.
-   4. Only if a path is under `.github/workflows/`: the line `Pushing a file under .github/workflows/ needs a token with the workflow scope, which a cloud session often lacks.`
+   4. Only if a path is under `.github/workflows/`: the line `Pushing a file under .github/workflows/ needs a token with the workflow scope.`
 
 ## Commands template
 !`cat "${CLAUDE_PLUGIN_ROOT}/templates/commands.md"`

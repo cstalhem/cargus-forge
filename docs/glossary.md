@@ -48,9 +48,7 @@ _Avoid_: feature flag, option
 
 **Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
 
-**Designated branch**: The branch that a Claude Code cloud session's system prompt names for it to push to; when a session has one, it is the issue branch.
-
-**Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, or the designated branch in a cloud session that names one.
+**Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`.
 
 **ADR decision**: A line in an issue's `## Decisions` that tells execute to write a new ADR or edit an existing one in `docs/adr/`, holding the decision and its rejected alternatives.
 
@@ -73,10 +71,10 @@ _Avoid_: walkthrough, dry run
 **Hand-off**: The one comment with which Autopilot gives the user an issue it cannot go on with or a PR that is ready for review; the comment is its record, so Autopilot writes it once.
 _Avoid_: escalation, notification
 
-**PENDING resume**: A later run of execute that a PENDING verdict schedules in the same cloud session or T3 Code thread, 10 minutes ahead and at most three in a row; its arguments end with "PENDING resume <k> of 3", which carries the count.
+**PENDING resume**: A later run of execute that a PENDING verdict schedules in the same T3 Code thread, 10 minutes ahead and at most three in a row; its arguments end with "PENDING resume <k> of 3", which carries the count.
 _Avoid_: retry, poll
 
-**T3 Code thread**: A Claude session that T3 Code starts on its host, recognised by the orchestrator_capabilities tool in its tools; on a T3 Code host it takes the place of a cloud session.
+**T3 Code thread**: A Claude session that T3 Code starts on its always-on host; the one place the plugin's skills are built to run, whose scheduled tasks give execute its PENDING resume and Autopilot its hourly run.
 _Avoid_: T3 session
 
 **Anneal**: A typed run of `/engineering:anneal` that has agents study the whole repo by area and check each finding, then turns each confirmed finding into a fix sub-issue under one umbrella issue or into a request, bold rewrites included, with the rule that would have made each fix unneeded; it changes no code itself.
