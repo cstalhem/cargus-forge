@@ -166,6 +166,8 @@ expect "ADR-006 creates and finds branches through their link and rejects findin
   bash -c 'grep -qF "gh issue develop <n> --name <n>-<slug> --base <base>" "$1" && grep -qF "**Create a branch with \`git push\` and find it by its \`<n>-*\` name**" "$1"' _ "$adr006"
 expect "ADR-002 finds the feature branch through its link and keeps a sub-issue branch as <n>-<slug>" \
   bash -c 'grep -qF "gh issue develop --list <n>" "$1" && grep -qF "A sub-issue branch is always \`<n>-<slug>\`" "$1"' _ "$adr002"
+expect "ADR-002's Decision line says each branch is created linked to its issue and found through the link" \
+  bash -c 'grep -F "**Decision:**" "$1" | grep -qF "created linked to their issue and found through that link"' _ "$adr002"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"

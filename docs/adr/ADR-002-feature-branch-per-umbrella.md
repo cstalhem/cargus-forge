@@ -6,7 +6,7 @@ status: active
 
 # ADR-002: One feature branch for each umbrella issue
 
-- **Decision:** Each umbrella issue gets a feature branch. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. Autopilot squash-merges a sub-issue PR once verify marks it ready; the user merges single-issue PRs and final PRs. One final PR merges the feature into `main` and closes the umbrella issue.
+- **Decision:** Each umbrella issue gets a feature branch, and the feature branch and each sub-issue branch are created linked to their issue and found through that link. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. Autopilot squash-merges a sub-issue PR once verify marks it ready; the user merges single-issue PRs and final PRs. One final PR merges the feature into `main` and closes the umbrella issue.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md)
 
 ## Details
