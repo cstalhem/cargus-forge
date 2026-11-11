@@ -143,14 +143,13 @@ done_check() {
 nl=$'\n'
 
 setup
-check "a new repo: prints the facts, every file missing, no commands, branches or docs, and no findings"
+check "a new repo: prints the facts, every file missing, no commands or docs, and no findings"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
 has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Files$nl- \`docs/agents/commands.md\` · missing$nl- \`.claude/rules/\` · missing$nl$nl" \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · missing' \
-  "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Branches" \
-  "### Branches$nl- branches: none other than the default branch, \`dependabot/*\` and \`renovate/*\`$nl" \
+  "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Conversion issue" \
   "### Docs$nl- none$nl" \
   "## Findings$nl- none"
 lacks 'issue-tracker' '- default branch:' '## Warnings'
@@ -397,113 +396,33 @@ has '- `docs/agents/commands.md` · present'
 done_check
 
 setup
-check "an open issue with one <n>-* branch gives a finding with a suggested action, and no branch changes"
-branches 7-login 70-other 9-a-pr 12-closed
-issues 7 pr:9
+check "a repo with <n>-* branches and branches with other names: the facts have no ### Branches part and the findings name no branch (#379)"
+branches 7-login 70-other 12-closed feature/a feature/b fix/c dependabot/npm/x
+issues 7 12
 run
-has '- branches: 4 of 4 match `<n>-*`, leaving out the default branch, `dependabot/*` and `renovate/*`' \
-  '- convention: `<n>-<slug>`' \
-  '- #7 · `7-login`' \
-  '- Open issue #7 has a branch that matches `7-*`: `7-login`. The plugin'"'"'s skills take it as the branch of #7 and build on it. If it holds other work, rename it so that its name does not start with `7-`.'
-lacks '`70-other`' '#9' '#12' 'another one'
-[ "$(git ls-remote --heads origin | wc -l | tr -d ' ')" = 5 ] || miss "the remote does not hold its 5 branches"
-done_check
-
-setup
-check "an open issue with more than one <n>-* branch gives a finding with a suggested action"
-branches 12-a 12-b 3-only
-issues 12 3
-run
-has '- #3 · `3-only`' \
-  '- #12 · `12-a`, `12-b`' \
-  '- Open issue #12 has 2 branches that match `12-*`: `12-a`, `12-b`. The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #12, and rename the others.' \
-  '- Open issue #3 has a branch that matches `3-*`'
-[[ "$out" == *'- #3 · '*'- #12 · '* ]] || miss "the issues are not in number order"
-done_check
-
-setup
-check "most branches follow another convention: setup names the most common prefix and states <n>-<slug>"
-branches feature/a feature/b fix/c 12-x dependabot/npm/x renovate/y renovate/z
-run
-has '- branches: 1 of 4 match `<n>-*`' \
-  '- convention: another one, most common prefix `feature/` (2 of 4 branches)' \
-  '- 3 of 4 branches do not match `<n>-*`, and their most common prefix is `feature/` (2 branches). The plugin uses `<n>-<slug>`: its skills find the branch of issue #<n> by that name. Name the branch of each new issue `<n>-<slug>`.'
-lacks 'dependabot/npm/x' 'renovate/y' 'renovate/z'
-done_check
-
-setup
-check "branches without a slash give a prefix up to their first - or _"
-branches jira-1-a jira-2-b dev_x main2 1-a
-run
-has '- convention: another one, most common prefix `jira-` (2 of 5 branches)'
-done_check
-
-setup
-check "exactly half of the branches not matching is not another convention"
-branches 1-a 2-b feature/a feature/b
-run
-has '- branches: 2 of 4 match `<n>-*`' '- convention: `<n>-<slug>`'
-lacks 'another one' 'The plugin uses'
-done_check
-
-setup
-check "the default branch and the bots' branches are left out of the count"
-gh_repo trunk
-branches trunk 1-a dependabot/a dependabot/b renovate/c
-run
-has '- branches: 1 of 2 match `<n>-*`' '- convention: `<n>-<slug>`'
-lacks 'another one'
+lacks '### Branches' '- branches:' '- convention:' '- #7 ·' '`7-login`' 'feature/' 'dependabot/' '-*`'
+has "### Stack$nl- none$nl$nl### Conversion issue$nl- none$nl$nl### Docs" "## Findings$nl- none"
+grep -q 'ls-remote' "$script" && miss "setup.sh still reads the remote branches"
 done_check
 
 setup
 check "the open issues are read with one paginated call, and a PR on a page is not an issue"
-page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, pull_request: {}}]')"
-page 2 '[{"number": 6}]'
-branches 5-pr 6-second-page
+page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, title: "convert plugin", pull_request: {}}]')"
+page 2 '[{"number": 6, "title": "convert plugin"}]'
 run
-has '- #6 · `6-second-page`'
+has '- #6 · convert plugin · by title'
 lacks '- #5 ·'
 [ "$(grep -c 'issues?state=open' "$GH_LOG")" -eq 1 ] || miss "the open issues were not read with one call"
 done_check
 
 setup
-check "open issues over 128 KiB of JSON, the limit of one argument, give the facts and their branches (#179)"
-page 1 "$(jq -nc '[range(1000; 1099) | {number: ., body: ("x" * 2000)}] + [{number: 7, body: ("y" * 2000)}]')"
-page 2 '[{"number": 6}]'
+check "open issues over 128 KiB of JSON, the limit of one argument, give the facts (#179)"
+page 1 "$(jq -nc '[range(1000; 1099) | {number: ., body: ("x" * 2000)}] + [{number: 7, title: "convert plugin", body: ("y" * 2000)}]')"
 [ "$(wc -c < "$GH_PAGES/1")" -gt 131072 ] || miss "the fixture's page 1 is not over 128 KiB"
-branches 7-login 6-second-page
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has '### Branches' '- #6 · `6-second-page`' '- #7 · `7-login`'
+has '- #7 · convert plugin · by title'
 lacks 'setup.sh error:'
-done_check
-
-setup
-check "remote branch names over 128 KiB, the limit of one argument, give the facts and their branches (#179)"
-# 700 branches with 200-byte names, created in one update-ref and packed, so that the snapshot
-# stays quick.
-pad=$(printf '%0195d' 0)
-for i in $(seq 1000 1699); do printf 'create refs/heads/%s-%s %s\n' "$i" "$pad" "$(git rev-parse HEAD)"; done \
-  | git --git-dir="$remote" update-ref --stdin || miss "cannot create the fixture's branches"
-git --git-dir="$remote" pack-refs --all
-[ "$(git ls-remote --heads origin | sed 's|.*refs/heads/||' | wc -c)" -gt 131072 ] \
-  || miss "the fixture's branch names are not over 128 KiB"
-issues 1000
-run
-[ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has '### Branches' '- branches: 700 of 700 match `<n>-*`' "- #1000 · \`1000-$pad\`"
-lacks 'setup.sh error:'
-done_check
-
-setup
-check "an open issue with a ## Goal or ## Scenarios section and one <n>-* branch gets no finding, one with neither section, a second branch or a labelled body without one does (#289)"
-branches 7-a 8-b 9-c 10-d 10-e 11-f 12-g 13-h
-page 1 '[{"number":7,"body":"## Goal\nx"},{"number":8,"body":"intro\n## Scenarios\n- WHEN a THEN b"},{"number":9,"body":"plain"},{"number":10,"body":"## Scenarios\n- x"},{"number":11},{"number":12,"labels":[{"name":"status:ready"}],"body":"x"},{"number":13,"labels":[{"name":"umbrella"}],"body":"a ## Goal inside a line"}]'
-run
-has '- #7 · `7-a`' '- #8 · `8-b`' '- Open issue #9 has a branch that matches `9-*`' \
-  '- Open issue #10 has 2 branches that match `10-*`' '- Open issue #11 has a branch that matches `11-*`' \
-  '- Open issue #12 has a branch that matches `12-*`' '- Open issue #13 has a branch that matches `13-*`'
-lacks 'Open issue #7 ' 'Open issue #8 '
 done_check
 
 setup
@@ -579,13 +498,6 @@ check "open issues that are not a list print one setup.sh error line and exits 0
 page 1 '{"message": "Not Found"}'
 run
 error 'did not return a list'
-done_check
-
-setup
-check "a failing git ls-remote, with no origin, prints one setup.sh error line and exits 0"
-git remote remove origin
-run
-error 'git ls-remote --heads origin:'
 done_check
 
 setup

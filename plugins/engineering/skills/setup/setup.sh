@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 # setup.sh: the facts for /engineering:setup.
-# Reads the repo's settings and open issues through `gh api` REST, its remote branches through
-# `git ls-remote`, and the repo's files from the top of the git worktree that holds the current
-# directory. It changes nothing: it writes no file, runs no git command that writes, and makes
+# Reads the repo's settings and open issues through `gh api` REST, and the repo's files from the
+# top of the git worktree that holds the current directory. It changes nothing: it writes no file, runs no git command that writes, and makes
 # no GitHub write.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `setup.sh error: <reason>`, and nothing else: the output
@@ -31,18 +30,11 @@
 #                            `go.mod`, `Cargo.toml` and `Gemfile` at the top of the repo, with its
 #                            dependency names and no versions (#217 D2); a line `- config: <path>`
 #                            for each linter or formatter config; or `- none`.
-#   ### Branches             the remote branches, leaving out the default branch, `dependabot/*`
-#                            and `renovate/*` (#151 D1): how many match `<n>-*`; the convention,
-#                            `<n>-<slug>`, or another one with its most common prefix when more
-#                            than half do not match; and a line `- #<n> · <branches>` for each
-#                            open issue with one or more `<n>-*` branches. Another convention and
-#                            each such issue also give a finding.
 #   ### Conversion issue     a line `- #<n> · <title> · by marker` (or `by title`) for each open
 #                            issue that is the conversion issue, or `- none` (#164). The marker
 #                            `<!-- engineering:setup conversion issue -->` on a line of the body
 #                            wins; only without one, a title with `convert` and `plugin` or
-#                            `engineering`. An issue whose body has a `## Goal` or
-#                            `## Scenarios` section and one `<n>-*` branch gets no branch finding.
+#                            `engineering`.
 #   ### Docs                 a line `- <kind> · <path>` for each doc that setup found, or `- none`
 #                            (#151 D2): `adr` for an ADR folder other than `docs/adr/`, and
 #                            `glossary` for a glossary-like file other than `docs/glossary.md`,
@@ -54,7 +46,7 @@
 
 set -u
 
-# `fail`, `read_list`, `read_branches` and `JQ_HAS_SECTION` come from the plugin's shared file. `fail` does not
+# `fail` and `read_list` come from the plugin's shared file. `fail` does not
 # exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -483,69 +475,14 @@ add_lines() {
   done <<<"$1"
 }
 
-# The remote branches and the open issues (#151 D1). A branch matches `<n>-*` when its name
-# is digits and a `-`, then anything: the pattern that the skills find an issue's branch by.
-# The default branch, `dependabot/*` and `renovate/*` are left out. A prefix is a name up to
-# its first `/`, else up to its first `-` or `_`, else the whole name.
-facts_branches() {
-  local branches issues out
-  read_branches
-  # The issues endpoint lists PRs too.
-  read_list 'repos/{owner}/{repo}/issues?state=open'
-  # An issue whose body has a `## Goal` or `## Scenarios` section is one that the plugin works on.
-  issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'[.[] | select(has("pull_request") | not)
-      | {number, plugin: (has_section("Goal") or has_section("Scenarios"))}]
-      | sort_by(.number)' 2>/dev/null) \
-    || fail "cannot read the open issues."
-  # The two lists reach `jq` on stdin, not as arguments, because Linux limits one argument to
-  # 128 KiB (#179 D1).
-  out=$(printf '%s\n%s\n' "$branches" "$issues" | jq -nr --arg default "$default_branch" '
-    def prefix:
-      if test("/") then capture("^(?<p>[^/]*/)").p
-      elif test("[-_]") then capture("^(?<p>[^-_]*[-_])").p
-      else . end;
-    def names: map("`\(.)`") | join(", ");
-    input as $branches
-    | input as $issues
-    | [$branches[] | select(. != $default and (startswith("dependabot/") | not) and (startswith("renovate/") | not))] as $b
-    | [$b[] | select(test("^[0-9]+-") | not)] as $other
-    | ($b | length) as $total
-    | if $total == 0 then
-        "F - branches: none other than the default branch, `dependabot/*` and `renovate/*`"
-      else
-        "F - branches: \($total - ($other | length)) of \($total) match `<n>-*`, leaving out the default branch, `dependabot/*` and `renovate/*`",
-        if ($other | length) * 2 > $total then
-          ($other | map(prefix) | group_by(.) | map({p: .[0], c: length}) | sort_by(-.c, .p) | .[0]) as $top
-          | "F - convention: another one, most common prefix `\($top.p)` (\($top.c) of \($total) branches)",
-            "W \($other | length) of \($total) branches do not match `<n>-*`, and their most common prefix is `\($top.p)` (\($top.c) branches). The plugin uses `<n>-<slug>`: its skills find the branch of issue #<n> by that name. Name the branch of each new issue `<n>-<slug>`."
-        else
-          "F - convention: `<n>-<slug>`"
-        end
-      end,
-      ($issues[] as $i
-       | $i.number as $n
-       | [$b[] | select(startswith("\($n)-"))] as $mine
-       | select($mine | length > 0)
-       | "F - #\($n) · \($mine | names)",
-         if ($mine | length) == 1 and $i.plugin then
-           empty
-         elif ($mine | length) == 1 then
-           "W Open issue #\($n) has a branch that matches `\($n)-*`: \($mine | names). The plugin'"'"'s skills take it as the branch of #\($n) and build on it. If it holds other work, rename it so that its name does not start with `\($n)-`."
-         else
-           "W Open issue #\($n) has \($mine | length) branches that match `\($n)-*`: \($mine | names). The plugin'"'"'s skills stop when more than one branch matches. Keep the one that holds the work for #\($n), and rename the others."
-         end)' 2>/dev/null) || fail "cannot read the remote branches."
-  line '### Branches'
-  add_lines "$out"
-  line
-}
-
-# The open conversion issue (#164). It reads the open issues that facts_branches left in
-# `items`. An issue holds the marker when a line of its body is the marker, which setup puts at
-# the start of the issue it creates. Only when none does, the title is the fallback: lowercased,
-# it contains `convert` and either `plugin` or `engineering`. A closed issue does not count, so
-# the list holds open issues only (D2).
+# The open conversion issue (#164). An issue holds the marker when a line of its body is the
+# marker, which setup puts at the start of the issue it creates. Only when none does, the title
+# is the fallback: lowercased, it contains `convert` and either `plugin` or `engineering`. A
+# closed issue does not count, so the list holds open issues only (D2).
 facts_conversion() {
   local marker='<!-- engineering:setup conversion issue -->' out
+  # The issues endpoint lists PRs too.
+  read_list 'repos/{owner}/{repo}/issues?state=open'
   out=$(printf '%s' "$items" | jq -r --arg marker "$marker" '
     [.[] | select(has("pull_request") | not)] as $open
     | [$open[] | select((.body // "") | split("\n") | any(rtrimstr("\r") == $marker))] as $marked
@@ -622,7 +559,6 @@ facts_files
 facts_behaviours
 facts_commands
 facts_stack
-facts_branches
 facts_conversion
 facts_docs
 

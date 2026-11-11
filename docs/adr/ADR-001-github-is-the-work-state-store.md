@@ -20,7 +20,6 @@ status: active
   - request: anything else, so an issue made by hand is never mistaken for shaped work.
 - **The author is a fact too.** `status.sh` reads `author_association` from the issue and PR lists it already reads, and acts only on a trusted author's item ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)).
 - **No status label.** A label would copy a fact that the body, a link, a branch or a PR already holds. An old status label on an issue changes nothing.
-- **`setup.sh` tells plugin work by the body.** It treats an open issue as one that the plugin works on when its body has a `## Goal` or `## Scenarios` section, so an issue being built, with its one `<n>-*` branch, gets no branch finding. It uses the section test that `status.sh` uses, which both scripts load from `scripts/lib.sh`, and does not call `status.sh`.
 - **One display label.** `labels.sh` is the only writer of `engineering:shaped`: it adds the label to each open issue whose status is not request and removes it from each open request. It reads no closed issue, because the label stays true once an issue closes. It reads the statuses from `status.sh --statuses`, so the status logic stays in one place and `status.sh` stays read-only. `next` and Autopilot run it, once a run. It creates the label with its colour and description only when it is missing, and it touches no other label. A wrong or missing label gives a wrong view and no wrong action, because no script reads it.
 - **A merged sub-issue is closed.** A workflow closes it when its PR merges into the feature branch ([ADR-002](ADR-002-feature-branch-per-umbrella.md)), so "merged" needs no other record.
 - GitHub already shows blocked issues (a Blocked icon and the `is:blocked` filter) and closed issues. slice sets every blocker as a link, so the Blocked icon shows for each one ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
@@ -38,11 +37,8 @@ status: active
 - **A label only on ready issues:** blocked, in-progress and umbrella issues would look like requests.
 - **Removing the label from closed issues:** it stays true once an issue closes, and the sweep cost a write for every finished issue.
 - **Scripts that read labels:** a drifted label would cause a wrong action instead of a wrong view.
-- **Reading the old status labels (`status:*`, `umbrella`) in `setup.sh`:** no issue that the current plugin creates has one, so setup flagged the branch of every issue being built.
 - **Reads and writes through `gh api` REST only:** it served the cloud proxy, which the plugin no longer supports.
 - **One REST call for each issue's blockers and sub-issues in `status.sh`:** it made about 20 calls and took 12.6 s; one GraphQL query returns every open issue with its parent, sub-issues and blockers in 0.46 s.
-- **Calling `status.sh` from `setup.sh`:** it reads each issue's links, PRs and branches, which is several GraphQL queries for a yes/no question that the body answers.
-- **Dropping the exemption from `setup.sh`:** every issue being built in a repo that uses the plugin would get a finding to rename its branch.
 - **A label name without the `engineering:` prefix, such as `Shaped`:** `labels.sh` removes its label from each open request, so in a repo that already uses that name it would strip it.
 - **A label write mode in `status.sh`:** Autopilot loads `status.sh` at the start of each run, so loading the Facts would write to GitHub.
 - **Running `labels.sh` at the end of each skill that changes a status:** five more call sites for a freshness that a display label does not need.
@@ -52,7 +48,7 @@ status: active
 ## Consequences
 - Each repo must be on GitHub. Skills reach issues, PRs, parent, sub-issue and dependency data through `gh`, by the simplest command for each operation ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
 - A different tracker needs a new tracker profile and a new status script.
-- A repo that used the old labels (`engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review`, `umbrella`) keeps them until its owner deletes them by hand; no script or skill reads them. An old labelled issue whose body has neither section gets `setup.sh`'s branch finding.
+- A repo that used the old labels (`engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review`, `umbrella`) keeps them until its owner deletes them by hand; no script or skill reads them.
 - Work can resume from any device that reaches the T3 Code host, including a phone.
 - The Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app.
 - `status.sh` reads blockers from each issue's `blockedBy` connection and its branches from the `linkedBranches` connection, in the one query that reads the open issues. GitHub's search API did not return `is:blocked` results. Its list of merged remote branches, which the user reads to clean up, is still read by the `<n>-` name.
