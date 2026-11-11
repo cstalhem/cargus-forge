@@ -17,7 +17,7 @@ Umbrella issue: $ARGUMENTS
 - Do not merge the final PR. The user merges it.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/formats.md`, `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md` and `docs/agents/commands.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>` and `gh api --paginate 'repos/{owner}/{repo}/issues/<n>/sub_issues?per_page=100'`. Stop if the issue has no `## Goal` section. The feature branch is the one that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists, by the branch pattern in `references/issue-tracker.md`. Stop if it lists none, or more than one.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/formats.md`, `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md` and `docs/agents/commands.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>` and `gh api --paginate 'repos/{owner}/{repo}/issues/<n>/sub_issues?per_page=100'`. Stop if the issue has no `## Goal` section. The feature branch is the one that `gh issue develop --list <n>` prints, as the rules say. Stop if it prints none, or more than one.
 2. **Sub-issues.** Run `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=open&per_page=100'` and `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=closed&per_page=100' --jq '.[] | select(.merged_at) | {number, title, body}'`.
    - If a PR into the feature branch is still open, stop and name it.
    - Keep each merged PR's `## Deviations` section, with the sub-issue number from its first line, for the final PR body in step 6.
@@ -26,7 +26,7 @@ Umbrella issue: $ARGUMENTS
 4. **Merge main.** Run `git fetch origin main <branch>` and `git merge --ff-only origin/<branch>`. If that fails, or `git rev-list origin/<branch>..HEAD` prints anything, stop and ask, because the local branch holds work that no PR reviewed. Then run `git merge --no-edit origin/main`.
    - On a conflict, stop, list the files, and ask.
    - Run each pre-PR check (each row of `docs/agents/commands.md` whose task ends with `(pre-PR check)`, and no other row; none if `commands.md` has no such row or does not exist). If one fails, stop and report it.
-   - Run `git push origin <branch>`. verify grades only a pushed head.
+   - Run `git push -u origin <branch>`. verify grades only a pushed head.
 5. **Verify.** Call the Skill tool with `engineering:verify` and the umbrella number. It returns the verdict, the URL of the comment it posted and each gap. Keep the URL for step 6. Go on only on PASS. If it reports a gap, stop and report each gap, and the user decides whether slice opens a sub-issue for it. If it stops for any other reason, stop and say why.
 6. **Final PR.** If `gh api 'repos/{owner}/{repo}/pulls?head={owner}:<branch>&base=main&state=open&per_page=100'` shows no PR, run `gh api -X POST repos/{owner}/{repo}/pulls -f title="<umbrella title>" -f head=<branch> -f base=main -F body=@<path>`, with the final PR body from `formats.md` written to a file as the rules say. Read the PR back with `gh api repos/{owner}/{repo}/pulls/<pr>`, and stop if its base is not `main` or it is a draft. The body has:
    - one paragraph on what the feature does;
