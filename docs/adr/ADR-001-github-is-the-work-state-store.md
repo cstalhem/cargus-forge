@@ -6,7 +6,7 @@ status: active
 
 # ADR-001: GitHub is the only store of work state
 
-- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone. Skills reach GitHub through `gh`, by the simplest command for each operation, and work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
+- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. It derives each status from facts that GitHub and git record: an issue's body, links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). No script or skill reads a label to decide anything, and no skill sets a status label. The one label it keeps is a display label, `engineering:shaped`, which one script, `labels.sh`, sets on each open issue whose status is not request, so that a person browsing GitHub sees which issues discuss has finished and are left to Build. It leaves closed issues alone. Skills reach GitHub through `gh`, by the simplest command for each operation, and work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)). `status.sh` reads each open issue's parent, sub-issues and blockers, and the PRs, through GraphQL queries that page with the query's cursor, so it makes no REST call for each issue.
 
 ## Details
 - The **umbrella issue** is the one record of a feature: goal, scenarios, decisions, out of scope. Shape writes it once. It has no progress section.
@@ -40,7 +40,8 @@ status: active
 - **Scripts that read labels:** a drifted label would cause a wrong action instead of a wrong view.
 - **Reading the old status labels (`status:*`, `umbrella`) in `setup.sh`:** no issue that the current plugin creates has one, so setup flagged the branch of every issue being built.
 - **Reads and writes through `gh api` REST only:** it served the cloud proxy, which the plugin no longer supports.
-- **Calling `status.sh` from `setup.sh`:** it reads each issue's links, PRs and branches, which is many REST calls for a yes/no question that the body answers.
+- **One REST call for each issue's blockers and sub-issues in `status.sh`:** it made about 20 calls and took 12.6 s; one GraphQL query returns every open issue with its parent, sub-issues and blockers in 0.46 s.
+- **Calling `status.sh` from `setup.sh`:** it reads each issue's links, PRs and branches, which is several GraphQL queries for a yes/no question that the body answers.
 - **Dropping the exemption from `setup.sh`:** every issue being built in a repo that uses the plugin would get a finding to rename its branch.
 - **A label name without the `engineering:` prefix, such as `Shaped`:** `labels.sh` removes its label from each open request, so in a repo that already uses that name it would strip it.
 - **A label write mode in `status.sh`:** Autopilot loads `status.sh` at the start of each run, so loading the Facts would write to GitHub.
@@ -54,4 +55,4 @@ status: active
 - A repo that used the old labels (`engineering:needs-discussion`, `status:ready`, `status:in-progress`, `status:needs-review`, `umbrella`) keeps them until its owner deletes them by hand; no script or skill reads them. An old labelled issue whose body has neither section gets `setup.sh`'s branch finding.
 - Work can resume from any device that reaches the T3 Code host, including a phone.
 - The Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app.
-- `status.sh` reads each issue's blocked-by links through REST (`issues/<n>/dependencies/blocked_by`). GitHub's search API did not return `is:blocked` results.
+- `status.sh` reads blockers from each issue's `blockedBy` connection in the one query that reads the open issues. GitHub's search API did not return `is:blocked` results.
