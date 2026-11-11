@@ -8,7 +8,7 @@ Each ADR states one current decision. ADRs are living documents, and git holds t
 | [ADR-002](ADR-002-feature-branch-per-umbrella.md) | One feature branch for each umbrella issue | active | builds on ADR-001 |
 | [ADR-004](ADR-004-skills-load-on-demand-scripts-fetch-facts.md) | Skills load on demand, and scripts fetch the facts | active | |
 | [ADR-005](ADR-005-engineering-replaces-older-plugins.md) | Engineering replaces knowledge-system and adr-management | active | |
-| [ADR-006](ADR-006-engineering-runs-in-cloud-sessions.md) | Engineering runs in cloud sessions | active | builds on ADR-001, ADR-002 |
+| [ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md) | Engineering runs in T3 Code threads on one host | active | builds on ADR-001, ADR-002 |
 | [ADR-007](ADR-007-question-delete-simplify-first.md) | Question, delete and simplify before speeding up or automating | active | |
 | [ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md) | Autopilot builds ready issues unattended | active | builds on ADR-001, ADR-004, ADR-006 |
 | [ADR-009](ADR-009-conventions-are-claude-code-rules.md) | Conventions are Claude Code rules in the repo | active | |

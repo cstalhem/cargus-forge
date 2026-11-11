@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Tests for status.sh and the next skill's use of it. status.sh runs in a temporary git repo whose
-# origin is a local bare repo, with a fake `gh` first on PATH that answers each REST path from
+# origin is a local bare repo, with a fake `gh` first on PATH that answers each GraphQL query from
 # fixtures. The tests need no network.
 set -u
 
@@ -36,77 +36,140 @@ same() {
 }
 
 # --- The fake gh ---------------------------------------------------------------------------
-# It reads `$FIX`, a folder of fixtures, and answers `gh api <path>` from the file that names
-# the path: `issues`, `issues_3_dependencies_blocked_by`, `issues_6_sub_issues`, `pulls_open`
-# and, for a branch's PRs, `head_<branch>`. A path with no file is an empty list.
+# It reads `$FIX`, a folder of fixtures, and logs each call in `$FIX/.calls`: `graphql` for a
+# GraphQL call and the path for a REST one. It answers `gh api graphql` from the file that names
+# the query: `issues` (the open issues), `pulls_open`, `base_<branch>` (the PRs into a branch),
+# `head_<branch>` (the PRs of a branch, which one query reads for each branch it is given as
+# `-f b<i>=<branch>`) and, for the state of one issue, `issue_<n>`. A query with no file is an
+# empty connection, and an issue with no file is not found. Like `gh api graphql --paginate`,
+# it pages a connection 100 nodes at a time, and fails unless the query holds `$endCursor` and
+# `pageInfo`. A REST path answers `issues` for bodies.sh, and the repo's name for status.sh.
 mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
-# A call with a flag before the path, such as `-X POST`, is a write: leave a mark.
-case $2 in -*) echo write > "$FIX/.wrote" ;; esac
+# A call with `-X`, such as `-X POST`, is a write: leave a mark.
+case " $* " in *" -X "*) echo write > "$FIX/.wrote" ;; esac
+if [ "$2" = graphql ]; then
+  shift 2
+  paginate=false slurp=false query='' branch='' number='' heads=()
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --paginate) paginate=true ;;
+      --slurp) slurp=true ;;
+      -f) case $2 in query=*) query=${2#query=} ;; branch=*) branch=${2#branch=} ;; b[0-9]*=*) heads+=("${2#*=}") ;; esac; shift ;;
+      -F) case $2 in number=*) number=${2#number=} ;; esac; shift ;;
+    esac
+    shift
+  done
+  if [ "$paginate" = true ]; then
+    case $query in
+      *'$endCursor'*pageInfo*) ;;
+      *) echo 'fake gh: a paginated query needs $endCursor and pageInfo' >&2; exit 1 ;;
+    esac
+  fi
+  case $query in
+    *'issues(states: OPEN'*) conn=issues name=issues ;;
+    *'pullRequests(states: OPEN'*) conn=pullRequests name=pulls_open ;;
+    *'headRefName: $b'*)
+      echo "graphql head" >> "$FIX/.calls"
+      out='{}' i=0
+      for b in "${heads[@]}"; do
+        if [ -f "$FIX/head_$b.json" ]; then nodes=$(cat "$FIX/head_$b.json"); else nodes='[]'; fi
+        out=$(jq -c --arg k "b$i" --argjson n "$nodes" '. + {($k): {nodes: $n}}' <<<"$out")
+        i=$((i + 1))
+      done
+      jq -c '{data: {repository: .}}' <<<"$out"
+      exit 0 ;;
+    *'baseRefName:'*) conn=pullRequests name=base_$branch ;;
+    *'issue(number:'*)
+      echo "graphql issue" >> "$FIX/.calls"
+      if [ -f "$FIX/issue_$number.json" ]; then
+        printf '{"data":{"repository":{"issue":%s}}}\n' "$(cat "$FIX/issue_$number.json")"
+      else
+        echo "gh: Could not resolve to an Issue with the number of $number." >&2
+        exit 1
+      fi
+      exit 0 ;;
+    *) echo "fake gh: unknown query" >&2; exit 1 ;;
+  esac
+  echo "graphql $name" >> "$FIX/.calls"
+  if [ -f "$FIX/$name.json" ]; then nodes=$(cat "$FIX/$name.json"); else nodes='[]'; fi
+  pages=$(jq -c --arg c "$conn" '. as $n | [range(0; ([length, 1] | max); 100) | . as $i
+    | {data: {repository: {($c): {nodes: $n[$i:$i + 100],
+        pageInfo: {hasNextPage: ($i + 100 < ($n | length)), endCursor: "c\($i)"}}}}}]' <<<"$nodes")
+  # `--slurp` wraps the pages in one array; without it each page is a line.
+  if [ "$slurp" = true ]; then printf '%s\n' "$pages"; else jq -c '.[]' <<<"$pages"; fi
+  exit 0
+fi
+# A `--paginate` read puts the path last.
 path=$2
+case $2 in --paginate) path=${!#} ;; esac
+echo "$path" >> "$FIX/.calls"
 pre='repos/{owner}/{repo}'
 if [ "$path" = "$pre" ]; then echo o/r; exit 0; fi
 p=${path#"$pre"/}
-case $p in
-  pulls\?state=open*) name=pulls_open ;;
-  pulls\?state=all\&head=*) b=${p#*head='{owner}':}; name=head_${b%%&*} ;;
-  pulls\?base=*) name=none ;;
-  *) name=${p%%\?*}; name=${name//\//_} ;;
-esac
-if [ -f "$FIX/$name.json" ]; then cat "$FIX/$name.json"; else echo '[]'; fi
+name=${p%%\?*}; name=${name//\//_}
+if [ -f "$FIX/$name.json" ]; then body=$(cat "$FIX/$name.json"); else body='[]'; fi
+# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
+case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
 FAKE
 chmod +x "$tmp/bin/gh"
 
 # --- The repo ------------------------------------------------------------------------------
 # `origin` holds main, an umbrella's feature branch, a branch with a draft PR, and two issue
-# branches whose PR has merged. One of them has a clean local worktree, so it is finished.
+# branches whose PR has merged. One of them has a clean local worktree, so it is finished. A
+# local branch that was never pushed has a clean worktree too, and is finished when its issue is closed.
+# Four more `<n>-*` branches have no link to their issue, or are linked to one whose PR has merged:
+# `8-unlinked-feature`, `12-feature`, `23-unlinked` and `24-merged-linked`.
 git init -q --bare "$tmp/origin.git"
 git init -q -b main "$tmp/work"
 git -C "$tmp/work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m init
 git -C "$tmp/work" remote add origin "$tmp/origin.git"
-for b in 4-in-progress 6-feature 20-done 21-gone; do git -C "$tmp/work" branch -q "$b"; done
-git -C "$tmp/work" push -q origin main 4-in-progress 6-feature 20-done 21-gone
+for b in 4-in-progress 6-feature 20-done 21-gone 8-unlinked-feature 12-feature 23-unlinked 24-merged-linked; do
+  git -C "$tmp/work" branch -q "$b"
+done
+git -C "$tmp/work" push -q origin main 4-in-progress 6-feature 20-done 21-gone 8-unlinked-feature 12-feature 23-unlinked 24-merged-linked
 git -C "$tmp/work" worktree add -q "$tmp/wt" 21-gone
+git -C "$tmp/work" branch -q 22-shut
+git -C "$tmp/work" worktree add -q "$tmp/wt2" 22-shut
 
 # run_status <fixtures> [args...]: status.sh in the repo, with the fake gh and those fixtures.
 run_status() {
   local fix=$1
   shift
+  rm -f "$fix/.calls"
   (cd "$tmp/work" && PATH="$tmp/bin:$PATH" FIX="$fix" bash "$status" "$@" | sed "s|$tmp|<tmp>|g")
 }
 
 # --- The fixtures --------------------------------------------------------------------------
-# full: one issue in each status group, an umbrella with sub-issues, a PR in the issues list,
-# a merged remote branch and a finished worktree.
+# Each is a folder of GraphQL nodes, one file for each query (see the fake gh above). An issue
+# names its branches in `linkedBranches`, as the query reads them. full: one issue in each status
+# group, an umbrella with sub-issues, a merged remote branch and two finished worktrees, an issue
+# whose `<n>-*` branch has no link, and an issue linked to a branch whose PR has merged.
 full=$tmp/full
 mkdir "$full"
 cat > "$full/issues.json" <<'JSON'
 [
-  {"number":1,"title":"A request","body":"just an idea","labels":[{"name":"engineering:needs-discussion"},{"name":"bug"}]},
-  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n","labels":[{"name":"status:ready"}]},
-  {"number":3,"title":"Blocked issue","body":"## Scenarios\n- WHEN a THEN b\n","issue_dependencies_summary":{"total_blocked_by":1}},
-  {"number":4,"title":"In progress issue","body":"## Scenarios\n- WHEN a THEN b\n"},
+  {"number":1,"title":"A request","body":"just an idea","labels":{"nodes":[{"name":"engineering:needs-discussion"},{"name":"bug"}]}},
+  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"status:ready"}]}},
+  {"number":3,"title":"Blocked issue","body":"## Scenarios\n- WHEN a THEN b\n","blockedBy":{"nodes":[{"number":2,"state":"OPEN","repository":{"nameWithOwner":"o/r"}}]}},
+  {"number":4,"title":"In progress issue","body":"## Scenarios\n- WHEN a THEN b\n","linkedBranches":{"nodes":[{"ref":{"name":"4-in-progress"}}]}},
   {"number":5,"title":"Needs review issue","body":"## Scenarios\n- WHEN a THEN b\n"},
-  {"number":6,"title":"Umbrella with sub-issues","body":"## Goal\nx\n","sub_issues_summary":{"total":2,"completed":1}},
-  {"number":7,"title":"Sub-issue","body":"## Scenarios\n- WHEN a THEN b\n","parent_issue_url":"https://api.github.com/repos/o/r/issues/6"},
+  {"number":6,"title":"Umbrella with sub-issues","body":"## Goal\nx\n","subIssues":{"nodes":[{"number":7,"state":"OPEN"},{"number":9,"state":"CLOSED"}]},"linkedBranches":{"nodes":[{"ref":{"name":"6-feature"}}]}},
+  {"number":7,"title":"Sub-issue","body":"## Scenarios\n- WHEN a THEN b\n","parent":{"number":6,"repository":{"nameWithOwner":"o/r"}}},
   {"number":8,"title":"Umbrella not sliced","body":"## Goal\nx\n"},
-  {"number":41,"title":"A pull request","body":"Closes #5","pull_request":{}}
+  {"number":23,"title":"Branch with no link","body":"## Scenarios\n- WHEN a THEN b\n"},
+  {"number":24,"title":"Linked branch whose PR merged","body":"## Scenarios\n- WHEN a THEN b\n","linkedBranches":{"nodes":[{"ref":{"name":"24-merged-linked"}}]}}
 ]
-JSON
-cat > "$full/issues_3_dependencies_blocked_by.json" <<'JSON'
-[{"number":2,"state":"open","repository_url":"https://api.github.com/repos/o/r"}]
-JSON
-cat > "$full/issues_6_sub_issues.json" <<'JSON'
-[{"number":7,"state":"open"},{"number":9,"state":"closed"}]
 JSON
 cat > "$full/pulls_open.json" <<'JSON'
 [
-  {"number":40,"draft":true,"body":"Closes #4\n\nrewritten later"},
-  {"number":41,"draft":false,"body":"Closes #5\n\n## What it delivers"}
+  {"number":40,"isDraft":true,"body":"Closes #4\n\nrewritten later"},
+  {"number":41,"isDraft":false,"body":"Closes #5\n\n## What it delivers"}
 ]
 JSON
+echo '{"state":"CLOSED"}' > "$full/issue_22.json"
 
 # ready: one request and one ready issue, so that most groups are empty and the next step is a
 # slash command.
@@ -128,12 +191,45 @@ many=$tmp/many
 mkdir "$many"
 jq -n '[range(100; 125) | {number: ., title: "Issue \(.)", body: "## Scenarios\n- WHEN a THEN b\n"}]' > "$many/issues.json"
 
-# trust <file>: gives each issue or PR in the fixture the author_association OWNER and the login
-# `owner`, unless it holds its own, so a fixture names only the authors that matter (#362).
+# over: 150 ready issues and 120 open PRs, which take two pages of each query.
+over=$tmp/over
+mkdir "$over"
+jq -n '[range(1000; 1150) | {number: ., title: "Issue \(.)", body: "## Scenarios\n- WHEN a THEN b\n"}]' > "$over/issues.json"
+jq -n '[range(1000; 1120) | {number: (. + 1000), isDraft: false, body: "Closes #\(.)"}]' > "$over/pulls_open.json"
+
+# merged: an umbrella whose open sub-issue has a merged PR into the feature branch, and an issue
+# whose only "blocked by" link is to a closed issue.
+merged=$tmp/merged
+mkdir "$merged"
+cat > "$merged/issues.json" <<'JSON'
+[
+  {"number":6,"title":"Umbrella with sub-issues","body":"## Goal\nx\n","subIssues":{"nodes":[{"number":7,"state":"OPEN"},{"number":9,"state":"CLOSED"}]},"linkedBranches":{"nodes":[{"ref":{"name":"6-feature"}}]}},
+  {"number":7,"title":"Sub-issue","body":"## Scenarios\n- WHEN a THEN b\n","parent":{"number":6,"repository":{"nameWithOwner":"o/r"}}},
+  {"number":12,"title":"Umbrella whose branch has no link","body":"## Goal\nx\n","subIssues":{"nodes":[{"number":13,"state":"OPEN"}]}},
+  {"number":13,"title":"Sub-issue of that umbrella","body":"## Scenarios\n- WHEN a THEN b\n","parent":{"number":12,"repository":{"nameWithOwner":"o/r"}}},
+  {"number":10,"title":"Blocked by a closed issue","body":"## Scenarios\n- WHEN a THEN b\n","blockedBy":{"nodes":[{"number":12,"state":"CLOSED","repository":{"nameWithOwner":"o/r"}}]}}
+]
+JSON
+cat > "$merged/base_6-feature.json" <<'JSON'
+[{"number":60,"body":"Sub-issue #7 of #6. This PR goes into `6-feature`, so it has no `Closes` line."}]
+JSON
+cat > "$merged/base_12-feature.json" <<'JSON'
+[{"number":61,"body":"Sub-issue #13 of #12. This PR goes into `12-feature`, so it has no `Closes` line."}]
+JSON
+
+# gtrust <file>: gives each issue or PR in a GraphQL fixture the authorAssociation OWNER and the
+# login `owner`, and each issue empty labels, blockers, sub-issues and linked branches, unless it
+# holds its own, so a fixture names only what matters (#362).
+gtrust() {
+  jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: []},
+    blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+}
+# trust <file>: the same for a REST fixture, which bodies.sh reads.
 trust() {
   jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
-for f in "$full/issues.json" "$full/pulls_open.json" "$ready/issues.json" "$many/issues.json"; do trust "$f"; done
+for f in "$full/issues.json" "$full/pulls_open.json" "$ready/issues.json" "$many/issues.json" \
+  "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json"; do gtrust "$f"; done
 
 # outside: issues and PRs whose authors are and are not trusted authors. Its issue numbers avoid
 # the branch names above.
@@ -141,23 +237,23 @@ outside=$tmp/outside
 mkdir "$outside"
 cat > "$outside/issues.json" <<'JSON'
 [
-  {"number":1,"title":"Outside issue","body":"## Scenarios\n- WHEN a THEN b\n","author_association":"NONE","user":{"login":"stranger"}},
+  {"number":1,"title":"Outside issue","body":"## Scenarios\n- WHEN a THEN b\n","authorAssociation":"NONE","author":{"login":"stranger"}},
   {"number":2,"title":"Owner issue with an outside PR","body":"## Scenarios\n- WHEN a THEN b\n"},
-  {"number":3,"title":"Member issue","body":"## Scenarios\n- WHEN a THEN b\n","author_association":"MEMBER","user":{"login":"member"}},
-  {"number":7,"title":"Collaborator issue","body":"## Scenarios\n- WHEN a THEN b\n","author_association":"COLLABORATOR","user":{"login":"collab"}},
-  {"number":8,"title":"Outside umbrella","body":"## Goal\nx\n","author_association":"CONTRIBUTOR","user":{"login":"visitor"}}
+  {"number":3,"title":"Member issue","body":"## Scenarios\n- WHEN a THEN b\n","authorAssociation":"MEMBER","author":{"login":"member"}},
+  {"number":7,"title":"Collaborator issue","body":"## Scenarios\n- WHEN a THEN b\n","authorAssociation":"COLLABORATOR","author":{"login":"collab"}},
+  {"number":8,"title":"Outside umbrella","body":"## Goal\nx\n","authorAssociation":"CONTRIBUTOR","author":{"login":"visitor"}}
 ]
 JSON
 cat > "$outside/pulls_open.json" <<'JSON'
-[{"number":50,"draft":false,"body":"Closes #2\n\n## What it delivers","author_association":"NONE","user":{"login":"stranger"}}]
+[{"number":50,"isDraft":false,"body":"Closes #2\n\n## What it delivers","authorAssociation":"NONE","author":{"login":"stranger"}}]
 JSON
-for f in "$outside/issues.json" "$outside/pulls_open.json"; do trust "$f"; done
+for f in "$outside/issues.json" "$outside/pulls_open.json"; do gtrust "$f"; done
 
-# Every set has the merged PRs of the two finished issue branches, for the Cleanup part.
-for dir in "$full" "$ready" "$none" "$many" "$outside"; do
-  for b in 20-done 21-gone; do
+# Every set has the merged PRs of the finished issue branches, for the Cleanup part.
+for dir in "$full" "$ready" "$none" "$many" "$outside" "$merged"; do
+  for b in 20-done 21-gone 24-merged-linked; do
     n=${b%%-*}
-    echo "[{\"number\":5$n,\"state\":\"closed\",\"merged_at\":\"2026-01-01T00:00:00Z\",\"head\":{\"sha\":\"abc\"}}]" > "$dir/head_$b.json"
+    echo "[{\"number\":5$n,\"state\":\"MERGED\",\"mergedAt\":\"2026-01-01T00:00:00Z\",\"headRefOid\":\"abc\"}]" > "$dir/head_$b.json"
   done
 done
 
@@ -191,6 +287,16 @@ cat > "$tmp/full.report" <<'EXPECTED'
 /engineering:execute #7
 ```
 
+**#23** Branch with no link
+```
+/engineering:execute #23
+```
+
+**#24** Linked branch whose PR merged
+```
+/engineering:execute #24
+```
+
 ### Blocked
 
 **#3** Blocked issue · wait for #2
@@ -220,10 +326,14 @@ cat > "$tmp/full.cleanup" <<'EXPECTED'
 - <tmp>/wt · 21-gone · PR #521 merged
   git worktree remove '<tmp>/wt'
   git branch -D '21-gone'
+- <tmp>/wt2 · 22-shut · issue #22 closed
+  git worktree remove '<tmp>/wt2'
+  git branch -D '22-shut'
 
 ### Merged remote branches
 - 20-done · PR #520 merged
 - 21-gone · PR #521 merged
+- 24-merged-linked · PR #524 merged
 EXPECTED
 cat "$tmp/full.report" "$tmp/full.cleanup" > "$tmp/full.expected"
 
@@ -231,6 +341,16 @@ echo "# no argument"
 run_status "$full" > "$tmp/full.out"
 same "WHEN status.sh runs with no argument THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, and the Cleanup part follows unchanged" \
   "$tmp/full.expected" "$tmp/full.out"
+expect "WHEN status.sh runs THEN it reads every fact through GraphQL and makes no REST call but the one that names the repo" \
+  bash -c 'test -s "$1" && ! grep -vxE "graphql .*|repos/\{owner\}/\{repo\}" "$1"' _ "$full/.calls"
+expect "WHEN status.sh reads the PRs of its issue branches and worktrees THEN it makes one GraphQL call for all of them" \
+  test "$(grep -c '^graphql head$' "$full/.calls")" = 1
+expect "WHEN an open issue has a linked branch and no PR THEN it is in progress, and a <n>-* branch with no link gives no fact, so its issue is ready" \
+  bash -c 'grep -qxF "**#4** In progress issue · PR #40" "$1" && grep -qxF "**#23** Branch with no link" "$1" && ! grep -qF "**#23** Branch with no link · " "$1"' _ "$tmp/full.out"
+expect "WHEN an open issue is linked to a branch whose PR has merged THEN the branch gives it no in-progress fact" \
+  bash -c '! sed -n "/^### In progress/,/^###/p" "$1" | grep -qF "#24"' _ "$tmp/full.out"
+expect "WHEN an umbrella has a <n>-* branch with no link THEN the report says it has no feature branch" \
+  grep -qxF "**#8** Umbrella not sliced · not sliced · no feature branch" "$tmp/full.out"
 
 run_status "$ready" > "$tmp/ready.out"
 expect "WHEN status.sh runs and a status group has no issues THEN it prints no heading for that group" \
@@ -241,6 +361,41 @@ expect "WHEN status.sh runs with more than 20 open issues THEN it lists every is
   test "$(grep -c '^\*\*#1[0-9][0-9]\*\* ' "$tmp/many.out")" = 25
 expect "WHEN status.sh runs with more than 20 open issues THEN it prints no 'and N more' line" \
   bash -c '! grep -q "and [0-9]* more" "$1"' _ "$tmp/many.out"
+
+run_status "$over" > "$tmp/over.out"
+expect "WHEN there are more than 100 open issues THEN status.sh reads every page and lists all 150" \
+  test "$(grep -c '^\*\*#1[0-9][0-9][0-9]\*\* ' "$tmp/over.out")" = 150
+expect "WHEN there are more than 100 open PRs THEN status.sh reads every page, so 120 issues need review and 30 are ready" \
+  bash -c 'test "$(grep -c "review and merge PR #" "$1")" = 120 && test "$(grep -c "^/engineering:execute #" "$1")" = 30' _ "$tmp/over.out"
+
+cat > "$tmp/merged.expected" <<'EXPECTED'
+## Report
+
+### Ready to build
+
+**#10** Blocked by a closed issue
+```
+/engineering:execute #10
+```
+
+**#13** Sub-issue of that umbrella · umbrella #12
+```
+/engineering:execute #13
+```
+
+### Umbrellas
+
+**#6** Umbrella with sub-issues · 2 of 2 sub-issues done · feature branch 6-feature
+```
+/engineering:ship #6
+```
+
+**#12** Umbrella whose branch has no link · 0 of 1 sub-issues done · no feature branch · build its sub-issues
+
+EXPECTED
+run_status "$merged" | sed '/^## Cleanup$/,$d' > "$tmp/merged.out"
+same "WHEN a merged PR into an umbrella's linked feature branch names an open sub-issue THEN the sub-issue counts as done, a merged PR into a <n>-* branch with no link marks nothing, and an issue whose only blocker is closed is ready" \
+  "$tmp/merged.expected" "$tmp/merged.out"
 
 run_status "$none" > "$tmp/none.out"
 expect "WHEN status.sh runs with no argument THEN its output has no Next line" \
@@ -262,7 +417,9 @@ cat > "$tmp/full.statuses" <<'EXPECTED'
  {"number":5,"status":"needs-review","labels":[]},
  {"number":6,"status":"umbrella","labels":[]},
  {"number":7,"status":"ready","labels":[]},
- {"number":8,"status":"umbrella","labels":[]}]
+ {"number":8,"status":"umbrella","labels":[]},
+ {"number":23,"status":"ready","labels":[]},
+ {"number":24,"status":"ready","labels":[]}]
 EXPECTED
 jq -c . "$tmp/full.statuses" > "$tmp/full.statuses.expected"
 run_status "$full" --statuses > "$tmp/full.statuses.out"
@@ -328,7 +485,7 @@ expect "WHEN next loads THEN its Facts line is exactly the injection of status.s
   grep -qxF '!`bash "${CLAUDE_SKILL_DIR}/status.sh"`' "$skill"
 expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval of that call" \
   grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/status.sh")' "$skill"
-for variant in autopilot autopilot-t3; do
+for variant in autopilot-t3; do
   autopilot=$plugin/skills/$variant/SKILL.md
   expect "$variant: the skill injects status.sh with no argument" \
     bash -c 'grep -qxF "!\`bash \"\${CLAUDE_PLUGIN_ROOT}/skills/next/status.sh\"\`" "$1" && ! grep -qF -- "--human" "$1"' _ "$autopilot"

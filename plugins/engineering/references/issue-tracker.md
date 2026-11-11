@@ -4,12 +4,10 @@ The plugin's contract for branches, merging and PRs. It is the same in every rep
 
 ## Branches
 - **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own.
-  - Skills find a branch by its name, because no branch is linked to its issue. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
+  - Each branch is linked to its issue when it is created, and skills find the branch of issue `#<n>` through that link. The `<n>-<slug>` name is for people.
   - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
-  - In a session with a designated branch it must push to, such as a Claude Code cloud session that names one, the issue branch is that designated branch, whatever its name. execute creates no `<n>-<slug>` branch there. The PR's first line ties the branch to its issue, and execute finds earlier work through the open PR whose head is the designated branch. Before it resumes, execute fetches and fast-forwards, and stops if the fetch fails, the fast-forward fails or the branches have diverged.
-  - In a Claude Code cloud session with no designated branch, the issue branch is the issue's `<n>-<slug>` branch. execute creates or resumes it in the current directory, with no worktree.
 
 ## Merging
 Squash-merge every PR: sub-issue PRs into the feature branch, and single-issue and final PRs into `main`. Each PR becomes one commit, and `main` stays linear. The squash message is the PR title and description. A feature branch takes `main` in by merge, never by rebase; a squash applies only the end result, so those merge commits cause no conflicts.

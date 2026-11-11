@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # status.sh: the facts for /engineering:next.
-# Reads open issues, open PRs, blockers and sub-issues through `gh api` REST, and remote
-# branches through git, for the repo in the current directory. It changes nothing.
-# Each status comes from facts only: the issue's body, its links, its branches and its PRs.
+# Reads open issues, with their parent, blockers, sub-issues and linked branches, and the PRs
+# through `gh api graphql`, and remote branches through git, for the repo in the current
+# directory. It changes nothing.
+# Each status comes from facts only: the issue's body, its links, its linked branches and its PRs.
+# An issue's branch is a branch linked to it; a `<n>-*` branch with no link gives no fact.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
 # call sends its stderr to /dev/null, and the output is printed only once it is complete.
@@ -24,14 +26,16 @@
 #               worktree, then its two indented calls, `git worktree remove '<path>'` and
 #               `git branch -D '<branch>'`, which next runs only after the user's yes;
 #               `### Merged remote branches`: a line `- <branch> · PR #<n> merged` per remote
-#               issue branch whose PR has merged. These are listed, never deleted.
+#               issue branch whose PR has merged. These are listed, never deleted. They are read
+#               by their `<n>-` name, because the list is for the user to clean up and is no
+#               issue's branch (#378 D1).
 
 set -u
 
 statuses=false
 [ "${1:-}" = "--statuses" ] && statuses=true
 
-# `fail`, `read_list`, `read_branches`, `JQ_HAS_SECTION` and `JQ_TRUSTED` come from the plugin's shared file.
+# `fail`, `read_branches`, `JQ_HAS_SECTION` and `JQ_TRUSTED` come from the plugin's shared file.
 # `fail` does not exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
@@ -46,32 +50,92 @@ done
 
 repo=$(gh api 'repos/{owner}/{repo}' --jq '.full_name' 2>&1) || fail "cannot read the current repo with gh api: $repo"
 
-# Open issues, without PRs: the issues endpoint lists PRs too. `goal` and `scenarios` say
-# whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11). `trusted` says
-# whether the issue's author is a trusted author, and `author` is the login (#362 D5).
-read_list 'repos/{owner}/{repo}/issues?state=open'
-issues=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION$JQ_TRUSTED"'
-  map(select(has("pull_request") | not) | {
+# Reads the nodes of one connection with `gh api graphql --paginate --slurp`. $1 is the
+# connection's name, $2 the query, and the rest are more `gh api` fields for its variables. The
+# query holds `$endCursor` and, after its nodes, the connection's `pageInfo`, which `gh` pages with.
+# Sets `items` to one JSON array with the nodes of every page. Call it in the main shell, so that its
+# `fail` ends the script. A nested connection, such as `blockedBy`, reads its first 100 nodes.
+read_gql() {
+  local conn=$1 query=$2 out
+  shift 2
+  out=$(gh api graphql --paginate --slurp -F owner='{owner}' -F name='{repo}' -f query="$query" "$@" 2>&1) \
+    || fail "gh api graphql: $out"
+  items=$(printf '%s' "$out" | jq --arg c "$conn" '[.[].data.repository[$c].nodes[]]' 2>/dev/null) \
+    || fail "gh api graphql did not return a list: $out"
+}
+
+# A jq definition, `ref($r; $n)`: how a report names issue $n of repo $r, `#<n>` in this repo.
+JQ_REF='def ref($r; $n): if $r == $repo then "#\($n)" else "\($r)#\($n)" end;'
+
+# Open issues, whose `parent`, `blockedBy`, `subIssues` and `linkedBranches` come with them. `goal`
+# and `scenarios` say whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
+# `trusted` says whether the issue's author is a trusted author, and `author` is the login (#362
+# D5). `parent` is the umbrella's name in the report. `branches` are the names of the branches
+# linked to the issue, which are its branches (#368 D9).
+read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    issues(states: OPEN, first: 100, after: $endCursor) {
+      nodes {
+        number title body authorAssociation
+        author { login }
+        labels(first: 100) { nodes { name } }
+        parent { number repository { nameWithOwner } }
+        blockedBy(first: 100) { nodes { number state repository { nameWithOwner } } }
+        subIssues(first: 100) { nodes { number state } }
+        linkedBranches(first: 100) { nodes { ref { name } } }
+      }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}'
+issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTED$JQ_REF"'
+  map({
     number, title,
-    trusted: trusted,
-    author: (.user.login // "unknown"),
-    labels: ((.labels // []) | map(.name)),
+    trusted: ({author_association: .authorAssociation} | trusted),
+    author: (.author.login // "unknown"),
+    labels: (.labels.nodes | map(.name)),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
-    parent: (.parent_issue_url // null),
-    blocked_total: (.issue_dependencies_summary.total_blocked_by // 0),
-    sub_total: (.sub_issues_summary.total // 0)
+    branches: ([.linkedBranches.nodes[].ref.name // empty] | unique),
+    parent: (.parent | if . then ref(.repository.nameWithOwner; .number) else null end)
   })' 2>/dev/null) || fail "cannot read the open issues."
+
+# Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
+# "blocked by" link. A blocker counts while its issue is open and, in this repo, not merged:
+# the report leaves out each one in `merged_issues` below (#214 D1).
+blockers=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_REF"'
+  map(select(has_section("Scenarios") and (has_section("Goal") | not) and (.blockedBy.nodes | length) > 0)
+    | {key: "\(.number)", value: [.blockedBy.nodes[] | select(.state == "OPEN") | {
+        number,
+        repo: .repository.nameWithOwner,
+        ref: ref(.repository.nameWithOwner; .number)}] | sort_by(.number)})
+  | from_entries' 2>/dev/null) || fail "cannot read the blockers."
+
+# Closed and total sub-issues of each umbrella that has any, and the numbers of its open ones.
+subs=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
+  map(select(has_section("Goal") and (.subIssues.nodes | length) > 0)
+    | {key: "\(.number)", value: {
+        total: (.subIssues.nodes | length),
+        closed: ([.subIssues.nodes[] | select(.state == "CLOSED")] | length),
+        open: [.subIssues.nodes[] | select(.state != "CLOSED") | .number]}})
+  | from_entries' 2>/dev/null) || fail "cannot read the sub-issues."
 
 # Open PRs, with the issue that the first line of the body names:
 # "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR). A PR whose author
 # is not a trusted author names none, so it gives no fact (#362 D4).
-read_list 'repos/{owner}/{repo}/pulls?state=open'
+read_gql pullRequests 'query($owner: String!, $name: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(states: OPEN, first: 100, after: $endCursor) {
+      nodes { number isDraft body authorAssociation }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}'
 pulls=$(printf '%s' "$items" | jq "$JQ_TRUSTED"'
   map({
     number,
-    draft: (.draft // false),
-    issue: (if trusted then
+    draft: (.isDraft // false),
+    issue: (if ({author_association: .authorAssociation} | trusted) then
               ((.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
                | (capture("^(Sub-issue #(?<n>[0-9]+) of|Closes #(?<c>[0-9]+)([^0-9]|$))") // null)
                | if . == null then null else ((.n // .c) | tonumber) end)
@@ -80,48 +144,24 @@ pulls=$(printf '%s' "$items" | jq "$JQ_TRUSTED"'
 
 read_branches
 
-# Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
-# "blocked by" link. A blocker counts while its issue is open and, in this repo, not merged:
-# the report leaves out each one in `merged_issues` below (#214 D1).
-blockers='{}'
-for n in $(printf '%s' "$issues" | jq -r '
-    .[] | select(.blocked_total > 0 and .scenarios and (.goal | not)) | .number' 2>/dev/null); do
-  read_list "repos/{owner}/{repo}/issues/$n/dependencies/blocked_by"
-  list=$(printf '%s' "$items" | jq --arg repo "$repo" '
-    map(select(.state == "open") | {
-      number,
-      repo: (.repository_url | sub("^.*/repos/"; ""))
-    } | .ref = (if .repo == $repo then "#\(.number)" else "\(.repo)#\(.number)" end))' 2>/dev/null) \
-    || fail "cannot read the blockers of #$n."
-  blockers=$(jq -n --argjson all "$blockers" --argjson l "$list" --arg n "$n" '$all + {($n): $l}' 2>/dev/null) \
-    || fail "cannot read the blockers of #$n."
-done
-
-# Closed and total sub-issues of each umbrella that has any, and the numbers of its open ones.
-subs='{}'
-for n in $(printf '%s' "$issues" | jq -r '.[] | select(.goal and .sub_total > 0) | .number' 2>/dev/null); do
-  read_list "repos/{owner}/{repo}/issues/$n/sub_issues"
-  count=$(printf '%s' "$items" | jq '
-    {total: length, closed: (map(select(.state == "closed")) | length),
-     open: [.[] | select(.state != "closed") | .number]}' 2>/dev/null) \
-    || fail "cannot read the sub-issues of #$n."
-  subs=$(jq -n --argjson all "$subs" --argjson c "$count" --arg n "$n" '$all + {($n): $c}' 2>/dev/null) \
-    || fail "cannot read the sub-issues of #$n."
-done
-
-# Merged sub-issues (#212 D1): for each umbrella with open sub-issues, the closed PRs into
-# each of its `<u>-*` remote branches, its feature branch. A merged PR whose first line is
+# Merged sub-issues (#212 D1): for each umbrella with open sub-issues, the merged PRs into
+# each branch linked to it, its feature branch. A merged PR whose first line is
 # "Sub-issue #<n> of" marks open issue #<n> as merged. The repo may leave a merged sub-issue
 # open until ship's final PR closes it, and GitHub may delete its branch, so this fact rests
 # on the PR alone.
 merged_issues='[]'
 for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | length > 0) | .key' 2>/dev/null); do
-  for b in $(printf '%s' "$branches" | jq -r --arg p "$u-" '.[] | select(startswith($p))' 2>/dev/null); do
-    enc=$(jq -rn --arg b "$b" '$b | @uri' 2>/dev/null) || fail "cannot read the PRs into branch $b."
-    read_list "repos/{owner}/{repo}/pulls?base=$enc&state=closed"
+  for b in $(printf '%s' "$issues" | jq -r --argjson u "$u" '.[] | select(.number == $u) | .branches[]' 2>/dev/null); do
+    read_gql pullRequests 'query($owner: String!, $name: String!, $branch: String!, $endCursor: String) {
+  repository(owner: $owner, name: $name) {
+    pullRequests(baseRefName: $branch, states: MERGED, first: 100, after: $endCursor) {
+      nodes { body }
+      pageInfo { hasNextPage endCursor }
+    }
+  }
+}' -f branch="$b"
     list=$(printf '%s' "$items" | jq '
-      [.[] | select(.merged_at)
-       | (.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
+      [.[] | (.body // "") | (split("\n")[0] // "") | rtrimstr("\r")
        | capture("^Sub-issue #(?<n>[0-9]+) of") | .n | tonumber]' 2>/dev/null) \
       || fail "cannot read the PRs into branch $b."
     merged_issues=$(jq -n --argjson all "$merged_issues" --argjson l "$list" '$all + $l | unique' 2>/dev/null) \
@@ -129,42 +169,61 @@ for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | leng
   done
 done
 
-# Cleanup (#69 D8, D12). An issue branch is a branch whose name starts with `<n>-`, as above,
-# so a `worktree-*` branch is never one.
+# Cleanup (#69 D8, D12). In a worktree or on the remote, an issue branch is a branch whose name
+# starts with `<n>-`, so a `worktree-*` branch is never one. A branch linked to an issue is one too.
 #
-# The PRs of branch $1, open and closed. Sets `open_pr` to true or false, and `merged` to
-# null, or to {number, sha} of the branch's last merged PR, with the PR's head SHA. Caches
-# each branch's result in `prs_of`, because a worktree's branch can also be a remote one.
+# The PRs of every issue branch, remote or in a worktree, from one query: each branch is an alias
+# `b<i>` of `pullRequests(headRefName: …)`, so a worktree adds no call. Sets `prs_of` to an object
+# from each branch to {open, merged}: `open` is true or false for the branch's open PRs, and `merged`
+# is null, or {number, sha} of its last merged PR, with the PR's head SHA. A PR from a fork is no PR of
+# the branch. A branch reads its first 100 PRs.
+linked_branches=$(printf '%s' "$issues" | jq -r '.[].branches[]' 2>/dev/null) || fail "cannot list the linked branches."
+branch_list=$({ { printf '%s\n' "$branches" | jq -r '.[]'; git worktree list --porcelain | sed -n 's|^branch refs/heads/||p'; } 2>/dev/null \
+    | grep -E '^[0-9]+-'; printf '%s\n' "$linked_branches" | grep .; } | sort -u | jq -R . 2>/dev/null | jq -sc . 2>/dev/null) \
+  || fail "cannot list the issue branches."
 prs_of='{}'
+if [ "$branch_list" != '[]' ]; then
+  head_query=$(printf '%s' "$branch_list" | jq -r '
+    "query($owner: String!, $name: String!" + (to_entries | map(", $b\(.key): String!") | join(""))
+    + ") { repository(owner: $owner, name: $name) {"
+    + (to_entries | map(" b\(.key): pullRequests(headRefName: $b\(.key), states: [OPEN, MERGED], first: 100) { nodes { number state mergedAt headRefOid isCrossRepository } }") | join(""))
+    + " } }"' 2>/dev/null) || fail "cannot build the query for the issue branches."
+  head_args=()
+  i=0
+  for b in $(printf '%s' "$branch_list" | jq -r '.[]' 2>/dev/null); do
+    head_args+=(-f "b$i=$b")
+    i=$((i + 1))
+  done
+  out=$(gh api graphql -F owner='{owner}' -F name='{repo}' -f query="$head_query" "${head_args[@]}" 2>&1) \
+    || fail "gh api graphql: $out"
+  prs_of=$(printf '%s' "$out" | jq -c --argjson list "$branch_list" '
+    .data.repository as $r
+    | $list | to_entries
+    | map({key: .value, value: ($r["b\(.key)"].nodes | map(select(.isCrossRepository | not)) | {
+        open: any(.[]; .state == "OPEN"),
+        merged: ([.[] | select(.state == "MERGED")] | sort_by(.mergedAt) | last
+                 | if . then {number, sha: .headRefOid} else null end)})})
+    | from_entries' 2>/dev/null) || fail "cannot read the PRs of the issue branches: $out"
+fi
+# Sets `open_pr` and `merged` for branch $1, an issue branch.
 branch_prs() {
-  local enc prs
-  prs=$(printf '%s' "$prs_of" | jq -c --arg b "$1" '.[$b]' 2>/dev/null) || fail "cannot read the PRs of branch $1."
-  if [ "$prs" = null ]; then
-    enc=$(jq -rn --arg b "$1" '$b | @uri' 2>/dev/null) || fail "cannot read the PRs of branch $1."
-    read_list "repos/{owner}/{repo}/pulls?state=all&head={owner}:$enc"
-    prs=$(printf '%s' "$items" | jq -c '{
-      open: any(.[]; .state == "open"),
-      merged: ([.[] | select(.merged_at)] | sort_by(.merged_at) | last
-               | if . then {number, sha: .head.sha} else null end)
-    }' 2>/dev/null) || fail "cannot read the PRs of branch $1."
-    prs_of=$(jq -n --argjson all "$prs_of" --argjson p "$prs" --arg b "$1" '$all + {($b): $p}' 2>/dev/null) \
-      || fail "cannot read the PRs of branch $1."
-  fi
-  open_pr=$(printf '%s' "$prs" | jq -r '.open' 2>/dev/null) || fail "cannot read the PRs of branch $1."
-  merged=$(printf '%s' "$prs" | jq -c '.merged' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+  open_pr=$(printf '%s' "$prs_of" | jq -r --arg b "$1" '.[$b].open' 2>/dev/null) || fail "cannot read the PRs of branch $1."
+  merged=$(printf '%s' "$prs_of" | jq -c --arg b "$1" '.[$b].merged' 2>/dev/null) || fail "cannot read the PRs of branch $1."
 }
 
-# Merged remote branches: each remote issue branch with a merged PR and no open one. A remote
-# issue branch with any merged PR is finished work, so it gives no in-progress fact (#69 D5):
-# `finished_branches` lists each one, open PR or not.
+# Merged remote branches: each remote issue branch with a merged PR and no open one, read by its
+# `<n>-` name (#378 D1). An issue branch with any merged PR, remote by its name or linked, is
+# finished work, so it gives no in-progress fact (#69 D5): `finished_branches` lists each one, open
+# PR or not.
 merged_branches='[]'
 finished_branches='[]'
-for b in $(printf '%s' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))' 2>/dev/null); do
+for b in $({ printf '%s\n' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))'; printf '%s\n' "$linked_branches"; } 2>/dev/null | grep . | sort -u); do
   branch_prs "$b"
   [ "$merged" != null ] || continue
   finished_branches=$(jq -n --argjson all "$finished_branches" --arg b "$b" '$all + [$b]' 2>/dev/null) \
     || fail "cannot read the PRs of branch $b."
   [ "$open_pr" = false ] || continue
+  [[ $b =~ ^[0-9]+- ]] || continue
   merged_branches=$(jq -n --argjson all "$merged_branches" --argjson m "$merged" --arg b "$b" \
     '$all + [{branch: $b, pr: $m.number}]' 2>/dev/null) || fail "cannot read the PRs of branch $b."
 done
@@ -201,13 +260,16 @@ check_worktree() {
     fact="PR #$(printf '%s' "$merged" | jq -r '.number' 2>/dev/null) merged"
   elif printf '%s' "$open_numbers" | jq -e --argjson n "$n" 'index($n) == null' >/dev/null 2>&1; then
     # Not among the open issues: read the issue, which may be closed or may not exist.
-    out=$(gh api "repos/{owner}/{repo}/issues/$n" 2>&1) || {
-      case $out in *"HTTP 404"*|*"HTTP 410"*) return ;; esac
-      fail "gh api repos/{owner}/{repo}/issues/$n: $out"
+    out=$(gh api graphql -F owner='{owner}' -F name='{repo}' -F number="$n" -f query='query($owner: String!, $name: String!, $number: Int!) {
+  repository(owner: $owner, name: $name) { issue(number: $number) { state } }
+}' 2>&1) || {
+      # A number that is no issue, such as a PR's, is not found.
+      case $out in *"Could not resolve to an Issue"*) return ;; esac
+      fail "gh api graphql issue #$n: $out"
     }
-    closed=$(printf '%s' "$out" | jq -r 'if has("pull_request") then "no" elif .state == "closed" then "yes" else "no" end' 2>/dev/null) \
-      || fail "gh api repos/{owner}/{repo}/issues/$n did not return an issue: $out"
-    [ "$closed" = yes ] || return
+    closed=$(printf '%s' "$out" | jq -r '.data.repository.issue.state' 2>/dev/null) \
+      || fail "gh api graphql issue #$n did not return an issue: $out"
+    [ "$closed" = CLOSED ] || return
     fact="issue #$n closed"
   fi
   [ -n "$fact" ] || return
@@ -246,24 +308,20 @@ out=$(jq -n -r \
   --argjson statuses "$statuses" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
-  --argjson branches "$branches" \
   --argjson blockers "$blockers" \
   --argjson subs "$subs" \
   --argjson merged_issues "$merged_issues" \
   --argjson finished "$finished" \
   --argjson merged_branches "$merged_branches" \
   --argjson finished_branches "$finished_branches" '
-  def ref_of($url): ($url | sub("^.*/repos/"; "") | capture("^(?<r>.*)/issues/(?<n>[0-9]+)$")
-                     | if .r == $repo then "#\(.n)" else "\(.r)#\(.n)" end);
-  def issue_branches($n): [$branches[] | select(startswith("\($n)-"))];
-
   # The status from the facts (#181 D1), the first that applies:
   # - request: the author of the issue is not a trusted author, whatever its body says (#362 D4);
-  # - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so
-  #   this comes before the branch fact;
+  # - umbrella: the body has a `## Goal` section. Its feature branch is a branch linked to it,
+  #   so this comes before the branch fact;
   # - needs review: an open ready PR whose first line names the issue;
-  # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
-  #   PR. A branch whose PR merged is finished work, so it gives nothing;
+  # - in progress: an open draft PR that names it, or a branch linked to it with no merged
+  #   PR. A branch whose PR merged is finished work, so it gives nothing, and a `<n>-*` branch
+  #   with no link gives nothing either;
   # - merged: a merged PR into the feature branch of its umbrella names it (#212 D1). No
   #   group lists it and no blocker line names it, because the final PR of ship closes it;
   # - ready, or blocked with an open "blocked by" link whose blocker is not merged: the body
@@ -273,7 +331,7 @@ out=$(jq -n -r \
     . as $i
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
-    | [issue_branches($i.number)[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
+    | [$i.branches[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
     # A merged blocker does not block (#214 D1): leave out each blocker in this repo whose
     # number is in $merged_issues. A blocker in another repo stays.
     | ($blockers["\($i.number)"] // []
@@ -291,7 +349,7 @@ out=$(jq -n -r \
           end),
         pr: ($ready_pr // $draft_pr // null | if . then .number else null end),
         blockers: $open_blockers,
-        umbrella_of: (if $i.parent then ref_of($i.parent) else null end)
+        umbrella_of: $i.parent
       }
   ) | sort_by(.number)) as $all
 
@@ -325,7 +383,7 @@ out=$(jq -n -r \
       + (if .trusted then [] else ["from \(.author), not a trusted author"] end)
       + (if .status == "umbrella" then
            subs_of(.number) as $s
-           | issue_branches(.number) as $fb
+           | .branches as $fb
            | [ (if $s.total == 0 then "not sliced" else "\($s.done) of \($s.total) sub-issues done" end),
                (if ($fb | length) == 0 then "no feature branch"
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"

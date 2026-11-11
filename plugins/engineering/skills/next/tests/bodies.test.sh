@@ -40,10 +40,12 @@ mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
-case $2 in
-  *issues\?state=open*) if [ -f "$FIX/issues.json" ]; then cat "$FIX/issues.json"; else echo '[]'; fi ;;
-  *) echo '[]' ;;
+case ${!#} in
+  *issues\?state=open*) if [ -f "$FIX/issues.json" ]; then body=$(cat "$FIX/issues.json"); else body='[]'; fi ;;
+  *) body='[]' ;;
 esac
+# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
+case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
 FAKE
 chmod +x "$tmp/bin/gh"
 
@@ -134,8 +136,8 @@ expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval o
   grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/bodies.sh")' "$skill"
 expect "WHEN next loads THEN its Bodies heading is followed by the injection of bodies.sh" \
   bash -c 'grep -A1 -xF "## Bodies" "$1" | tail -n 1 | grep -qxF "!\`bash \"\${CLAUDE_SKILL_DIR}/bodies.sh\"\`"' _ "$skill"
-expect "WHEN an autopilot loads THEN it does not inject bodies.sh" \
-  bash -c '! grep -q "bodies.sh" "$1/skills/autopilot/SKILL.md" "$1/skills/autopilot-t3/SKILL.md"' _ "$skill_dir/../.."
+expect "WHEN autopilot-t3 loads THEN it does not inject bodies.sh" \
+  bash -c '! grep -q "bodies.sh" "$1/skills/autopilot-t3/SKILL.md"' _ "$skill_dir/../.."
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failed"
