@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # status.sh: the facts for /engineering:next.
-# Reads open issues, with their parent, blockers and sub-issues, and the PRs through
-# `gh api graphql`, and remote branches through git, for the repo in the current directory. It
-# changes nothing.
-# Each status comes from facts only: the issue's body, its links, its branches and its PRs.
+# Reads open issues, with their parent, blockers, sub-issues and linked branches, and the PRs
+# through `gh api graphql`, and remote branches through git, for the repo in the current
+# directory. It changes nothing.
+# Each status comes from facts only: the issue's body, its links, its linked branches and its PRs.
+# An issue's branch is a branch linked to it; a `<n>-*` branch with no link gives no fact.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
 # call sends its stderr to /dev/null, and the output is printed only once it is complete.
@@ -25,7 +26,9 @@
 #               worktree, then its two indented calls, `git worktree remove '<path>'` and
 #               `git branch -D '<branch>'`, which next runs only after the user's yes;
 #               `### Merged remote branches`: a line `- <branch> · PR #<n> merged` per remote
-#               issue branch whose PR has merged. These are listed, never deleted.
+#               issue branch whose PR has merged. These are listed, never deleted. They are read
+#               by their `<n>-` name, because the list is for the user to clean up and is no
+#               issue's branch (#378 D1).
 
 set -u
 
@@ -64,10 +67,11 @@ read_gql() {
 # A jq definition, `ref($r; $n)`: how a report names issue $n of repo $r, `#<n>` in this repo.
 JQ_REF='def ref($r; $n): if $r == $repo then "#\($n)" else "\($r)#\($n)" end;'
 
-# Open issues, whose `parent`, `blockedBy` and `subIssues` come with them. `goal` and `scenarios`
-# say whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11). `trusted` says
-# whether the issue's author is a trusted author, and `author` is the login (#362 D5). `parent` is
-# the umbrella's name in the report.
+# Open issues, whose `parent`, `blockedBy`, `subIssues` and `linkedBranches` come with them. `goal`
+# and `scenarios` say whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
+# `trusted` says whether the issue's author is a trusted author, and `author` is the login (#362
+# D5). `parent` is the umbrella's name in the report. `branches` are the names of the branches
+# linked to the issue, which are its branches (#368 D9).
 read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     issues(states: OPEN, first: 100, after: $endCursor) {
@@ -78,6 +82,7 @@ read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
         parent { number repository { nameWithOwner } }
         blockedBy(first: 100) { nodes { number state repository { nameWithOwner } } }
         subIssues(first: 100) { nodes { number state } }
+        linkedBranches(first: 100) { nodes { ref { name } } }
       }
       pageInfo { hasNextPage endCursor }
     }
@@ -91,6 +96,7 @@ issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTE
     labels: (.labels.nodes | map(.name)),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
+    branches: ([.linkedBranches.nodes[].ref.name // empty] | unique),
     parent: (.parent | if . then ref(.repository.nameWithOwner; .number) else null end)
   })' 2>/dev/null) || fail "cannot read the open issues."
 
@@ -139,13 +145,13 @@ pulls=$(printf '%s' "$items" | jq "$JQ_TRUSTED"'
 read_branches
 
 # Merged sub-issues (#212 D1): for each umbrella with open sub-issues, the merged PRs into
-# each of its `<u>-*` remote branches, its feature branch. A merged PR whose first line is
+# each branch linked to it, its feature branch. A merged PR whose first line is
 # "Sub-issue #<n> of" marks open issue #<n> as merged. The repo may leave a merged sub-issue
 # open until ship's final PR closes it, and GitHub may delete its branch, so this fact rests
 # on the PR alone.
 merged_issues='[]'
 for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | length > 0) | .key' 2>/dev/null); do
-  for b in $(printf '%s' "$branches" | jq -r --arg p "$u-" '.[] | select(startswith($p))' 2>/dev/null); do
+  for b in $(printf '%s' "$issues" | jq -r --argjson u "$u" '.[] | select(.number == $u) | .branches[]' 2>/dev/null); do
     read_gql pullRequests 'query($owner: String!, $name: String!, $branch: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     pullRequests(baseRefName: $branch, states: MERGED, first: 100, after: $endCursor) {
@@ -163,16 +169,18 @@ for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | leng
   done
 done
 
-# Cleanup (#69 D8, D12). An issue branch is a branch whose name starts with `<n>-`, as above,
-# so a `worktree-*` branch is never one.
+# Cleanup (#69 D8, D12). In a worktree or on the remote, an issue branch is a branch whose name
+# starts with `<n>-`, so a `worktree-*` branch is never one. A branch linked to an issue is one too.
 #
 # The PRs of every issue branch, remote or in a worktree, from one query: each branch is an alias
 # `b<i>` of `pullRequests(headRefName: …)`, so a worktree adds no call. Sets `prs_of` to an object
 # from each branch to {open, merged}: `open` is true or false for the branch's open PRs, and `merged`
 # is null, or {number, sha} of its last merged PR, with the PR's head SHA. A PR from a fork is no PR of
 # the branch. A branch reads its first 100 PRs.
-branch_list=$({ printf '%s' "$branches" | jq -r '.[]'; git worktree list --porcelain | sed -n 's|^branch refs/heads/||p'; } 2>/dev/null \
-  | grep -E '^[0-9]+-' | sort -u | jq -R . 2>/dev/null | jq -sc . 2>/dev/null) || fail "cannot list the issue branches."
+linked_branches=$(printf '%s' "$issues" | jq -r '.[].branches[]' 2>/dev/null) || fail "cannot list the linked branches."
+branch_list=$({ { printf '%s\n' "$branches" | jq -r '.[]'; git worktree list --porcelain | sed -n 's|^branch refs/heads/||p'; } 2>/dev/null \
+    | grep -E '^[0-9]+-'; printf '%s\n' "$linked_branches" | grep .; } | sort -u | jq -R . 2>/dev/null | jq -sc . 2>/dev/null) \
+  || fail "cannot list the issue branches."
 prs_of='{}'
 if [ "$branch_list" != '[]' ]; then
   head_query=$(printf '%s' "$branch_list" | jq -r '
@@ -203,17 +211,19 @@ branch_prs() {
   merged=$(printf '%s' "$prs_of" | jq -c --arg b "$1" '.[$b].merged' 2>/dev/null) || fail "cannot read the PRs of branch $1."
 }
 
-# Merged remote branches: each remote issue branch with a merged PR and no open one. A remote
-# issue branch with any merged PR is finished work, so it gives no in-progress fact (#69 D5):
-# `finished_branches` lists each one, open PR or not.
+# Merged remote branches: each remote issue branch with a merged PR and no open one, read by its
+# `<n>-` name (#378 D1). An issue branch with any merged PR, remote by its name or linked, is
+# finished work, so it gives no in-progress fact (#69 D5): `finished_branches` lists each one, open
+# PR or not.
 merged_branches='[]'
 finished_branches='[]'
-for b in $(printf '%s' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))' 2>/dev/null); do
+for b in $({ printf '%s\n' "$branches" | jq -r '.[] | select(test("^[0-9]+-"))'; printf '%s\n' "$linked_branches"; } 2>/dev/null | grep . | sort -u); do
   branch_prs "$b"
   [ "$merged" != null ] || continue
   finished_branches=$(jq -n --argjson all "$finished_branches" --arg b "$b" '$all + [$b]' 2>/dev/null) \
     || fail "cannot read the PRs of branch $b."
   [ "$open_pr" = false ] || continue
+  [[ $b =~ ^[0-9]+- ]] || continue
   merged_branches=$(jq -n --argjson all "$merged_branches" --argjson m "$merged" --arg b "$b" \
     '$all + [{branch: $b, pr: $m.number}]' 2>/dev/null) || fail "cannot read the PRs of branch $b."
 done
@@ -298,22 +308,20 @@ out=$(jq -n -r \
   --argjson statuses "$statuses" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
-  --argjson branches "$branches" \
   --argjson blockers "$blockers" \
   --argjson subs "$subs" \
   --argjson merged_issues "$merged_issues" \
   --argjson finished "$finished" \
   --argjson merged_branches "$merged_branches" \
   --argjson finished_branches "$finished_branches" '
-  def issue_branches($n): [$branches[] | select(startswith("\($n)-"))];
-
   # The status from the facts (#181 D1), the first that applies:
   # - request: the author of the issue is not a trusted author, whatever its body says (#362 D4);
-  # - umbrella: the body has a `## Goal` section. Its feature branch is a `<n>-*` branch, so
-  #   this comes before the branch fact;
+  # - umbrella: the body has a `## Goal` section. Its feature branch is a branch linked to it,
+  #   so this comes before the branch fact;
   # - needs review: an open ready PR whose first line names the issue;
-  # - in progress: an open draft PR that names it, or a remote `<n>-*` branch with no merged
-  #   PR. A branch whose PR merged is finished work, so it gives nothing;
+  # - in progress: an open draft PR that names it, or a branch linked to it with no merged
+  #   PR. A branch whose PR merged is finished work, so it gives nothing, and a `<n>-*` branch
+  #   with no link gives nothing either;
   # - merged: a merged PR into the feature branch of its umbrella names it (#212 D1). No
   #   group lists it and no blocker line names it, because the final PR of ship closes it;
   # - ready, or blocked with an open "blocked by" link whose blocker is not merged: the body
@@ -323,7 +331,7 @@ out=$(jq -n -r \
     . as $i
     | ([$pulls[] | select(.issue == $i.number and (.draft | not))] | first) as $ready_pr
     | ([$pulls[] | select(.issue == $i.number and .draft)] | first) as $draft_pr
-    | [issue_branches($i.number)[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
+    | [$i.branches[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
     # A merged blocker does not block (#214 D1): leave out each blocker in this repo whose
     # number is in $merged_issues. A blocker in another repo stays.
     | ($blockers["\($i.number)"] // []
@@ -375,7 +383,7 @@ out=$(jq -n -r \
       + (if .trusted then [] else ["from \(.author), not a trusted author"] end)
       + (if .status == "umbrella" then
            subs_of(.number) as $s
-           | issue_branches(.number) as $fb
+           | .branches as $fb
            | [ (if $s.total == 0 then "not sliced" else "\($s.done) of \($s.total) sub-issues done" end),
                (if ($fb | length) == 0 then "no feature branch"
                 elif ($fb | length) == 1 then "feature branch \($fb[0])"
