@@ -4,7 +4,7 @@ The plugin's contract for branches, merging and PRs. It is the same in every rep
 
 ## Branches
 - **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own.
-  - Skills find a branch by its name, because no branch is linked to its issue. The branch of issue `#<n>` is the one remote branch that `git ls-remote --heads origin 'refs/heads/<n>-*'` lists. None, or more than one, is an error.
+  - Each branch is linked to its issue when it is created, and skills find the branch of issue `#<n>` through that link. The `<n>-<slug>` name is for people.
   - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.

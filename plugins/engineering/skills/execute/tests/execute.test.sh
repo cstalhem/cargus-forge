@@ -147,6 +147,28 @@ expect "the skill names no worktree-… branch prefix" \
 expect "the engineering-build rule says a step has one case per distinct action" \
   grep -qF -x -e '- A skill step that branches on session state has one case per distinct action, never one case per way of reaching the same action.' "$rules_md"
 
+# Each branch is linked to its issue when it is created, and skills find it through the link (#377).
+adr002=$root/docs/adr/ADR-002-feature-branch-per-umbrella.md
+expect "the rules create a branch with gh issue develop, so it is linked to its issue" \
+  grep -qF 'gh issue develop <n> --name <n>-<slug> --base <base>' "$plugin/references/rules.md"
+expect "the rules find an issue's branch with gh issue develop --list and take no unlinked <n>-* branch" \
+  bash -c 'grep -qF "gh issue develop --list <n>" "$1" && grep -qF "a \`<n>-*\` branch with no link is not the issue'"'"'s branch" "$1"' _ "$plugin/references/rules.md"
+for s in execute slice verify ship; do
+  expect "$s finds a branch with gh issue develop --list" grep -qF 'gh issue develop --list' "$plugin/skills/$s/SKILL.md"
+  expect "$s runs no git ls-remote and no git push origin" \
+    bash -c '! grep -qE "ls-remote|git push origin" "$1"' _ "$plugin/skills/$s/SKILL.md"
+done
+expect "the rules and issue-tracker.md name no git ls-remote and no git push origin" \
+  bash -c '! grep -qE "ls-remote|git push origin" "$1" "$2"' _ "$plugin/references/rules.md" "$plugin/references/issue-tracker.md"
+expect "the glossary's Issue branch entry says the branch is created linked to its issue" \
+  grep -qF 'created linked to its issue, which is how skills find it' "$glossary"
+expect "ADR-006 creates and finds branches through their link and rejects finding them by name" \
+  bash -c 'grep -qF "gh issue develop <n> --name <n>-<slug> --base <base>" "$1" && grep -qF "**Create a branch with \`git push\` and find it by its \`<n>-*\` name**" "$1"' _ "$adr006"
+expect "ADR-002 finds the feature branch through its link and keeps a sub-issue branch as <n>-<slug>" \
+  bash -c 'grep -qF "gh issue develop --list <n>" "$1" && grep -qF "A sub-issue branch is always \`<n>-<slug>\`" "$1"' _ "$adr002"
+expect "ADR-002's Decision line says each branch is created linked to its issue and found through the link" \
+  bash -c 'grep -F "**Decision:**" "$1" | grep -qF "created linked to their issue and found through that link"' _ "$adr002"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
   exit 1

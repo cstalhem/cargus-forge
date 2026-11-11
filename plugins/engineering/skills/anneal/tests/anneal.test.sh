@@ -116,9 +116,10 @@ expect "the Umbrella step runs only when a finding is a fix" has "$umbrella" 'On
 expect "the umbrella is titled Anneal <date> and its Scenarios hold every fix's scenarios" \
   bash -c 'grep -qF "titled \`Anneal <date>\`" <<<"$1" && grep -qF "holding every fix'"'"'s scenarios" <<<"$1"' _ "$umbrella"
 expect "the umbrella's Out of scope lists each request" has "$umbrella" '`## Out of scope` with a line `- #<n> <title>` for each request'
-expect "the feature branch is <u>-anneal-<date>, created from origin/main and read back" \
-  bash -c 'grep -qF "\`<u>-anneal-<date>\`" <<<"$1" && grep -qF "from \`origin/main\` as the rules say, and read it back" <<<"$1"' _ "$umbrella"
-expect "the rules say how to create a branch with git push" grep -qF 'git push origin <sha>:refs/heads/<n>-<slug>' "$plugin/references/rules.md"
+expect "the feature branch is <u>-anneal-<date>, created from main and read back" \
+  bash -c 'grep -qF "\`<u>-anneal-<date>\`" <<<"$1" && grep -qF "from \`main\` as the rules say, and read it back" <<<"$1"' _ "$umbrella"
+expect "the rules say how to create a branch linked to its issue" \
+  grep -qF 'gh issue develop <n> --name <n>-<slug> --base <base>' "$plugin/references/rules.md"
 expect "the rules say to write each issue's and PR's title as plain text in the command that passes its body's path" \
   grep -qF "Write each issue's and PR's title as plain text in the command that passes its body's path" "$plugin/references/rules.md"
 expect "the rules say never to fill a title or a body path in from a shell array, a counter or a loop" \
