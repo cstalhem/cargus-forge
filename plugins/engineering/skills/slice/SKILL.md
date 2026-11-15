@@ -6,6 +6,8 @@ user-invocable: false
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:shaped')
+  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')
 ---
 
 # slice
@@ -38,7 +40,7 @@ Issue: $ARGUMENTS
 
    Wait for "yes". If the user changes something, update the plan and show it again.
 3. **Branch.** Umbrella mode only. Run `gh issue develop --list <n>`. If it prints a branch, that is the feature branch. If it prints none, create `<n>-<slug>` as the rules say, with `main` as `<base>`. If step 1 found commits and the user kept them, start it from the current branch's head instead, with the current branch as `<base>`, so the branch holds the commits the plan listed.
-4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then create each with `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`. Set its parent to the umbrella and each blocker `#<a>` as its "blocked by" link, as the rules say, with the new issue's number as `<s>`. Read the parent back with `--jq .number`, and stop if it is not the umbrella. Read the links back with `--jq 'length, (.[] | .number)'`, and stop if `#<a>` is not among them. The body does not list the parent or the blockers, as in `formats.md`.
+4. **Write.** Create the sub-issues in dependency order, so that each "blocked by" number exists. Write each body to a file as the rules say, then create each with `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`. Set its parent to the umbrella and each blocker `#<a>` as its "blocked by" link, as the rules say, with the new issue's number as `<s>`. Read the parent back with `--jq .number`, and stop if it is not the umbrella. Read the links back with `--jq 'length, (.[] | .number)'`, and stop if `#<a>` is not among them. The body does not list the parent or the blockers, as in `formats.md`. Then add `engineering:shaped` to it, as the rules say.
    - **Re-split mode:** first rewrite the narrowed sub-issue with `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`. Its "blocked by" links stay as they are. Then create the new parts as above. Each new part gets the narrowed sub-issue's parent as its parent, with the same `sub_issues` call and read-back, and a "blocked by" link for each of its blockers, with the same read-back. Then, for each issue `<x>` that the old sub-issue blocked, as step 1 found them, set a "blocked by" link from `<x>` to each new part the same way, with the same read-back.
 5. **Hand off.** Show the branch (umbrella mode), then each sub-issue URL with the issues that block it. The next step is execute on a sub-issue that nothing blocks. After a re-split, that is `/engineering:execute #<n>` on the narrowed sub-issue.
 

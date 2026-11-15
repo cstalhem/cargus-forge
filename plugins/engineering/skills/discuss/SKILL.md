@@ -7,6 +7,10 @@ disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
   - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:shaped')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:umbrella')
+  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/engineering:needs-discussion)
+  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')
 ---
 
 # discuss
@@ -40,6 +44,8 @@ Request: $ARGUMENTS
    - A new request: `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`.
    - An existing issue `#<n>`: add its original body at the end, as the exception line in `formats.md` says. Then run `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`.
    - An existing issue `#<n>` whose author is not a trusted author, which step 1's read shows in its `author_association`: its author can edit the body after the "yes", so create a new issue as for a new request, with the original body at the end under `## Request`, as the exception line in `formats.md` says. Then comment `Shaped as #<new>.` on `#<n>`, and close `#<n>` with `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f state=closed`.
+
+   After that write, add `engineering:shaped` to the issue that this step wrote, as the rules say, so that no other issue's labels change; an umbrella issue also gets `engineering:umbrella`. If step 1's read shows that the rewritten issue carries `engineering:needs-discussion`, remove it first, then add `engineering:shaped`.
 5. **Hand off.**
    - Pass: show the issue URL. The next step is execute on this issue.
    - Fail: show the issue URL, then call the Skill tool with `engineering:slice` and the issue number.
