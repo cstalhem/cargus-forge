@@ -460,6 +460,16 @@ ok=1; why=''; out=''
 grep -qF 'Its first line is `<!-- engineering:setup conversion issue -->`' "$here/../SKILL.md" || miss "SKILL.md does not put the marker first"
 done_check
 
+check "SKILL.md runs on Fable and launches each research agent on Sonnet (#367)"
+ok=1; why=''; out=''
+skill=$here/../SKILL.md
+awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$skill" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
+grep -F -- '- **Research.**' "$skill" | grep -qF 'with the Agent tool, `subagent_type: general-purpose` and `model` `sonnet`, never a fork' \
+  || miss "the Research step does not launch each research agent with model sonnet"
+grep -F '| `/engineering:setup` |' "$here/../../../README.md" | grep -qF 'Runs on Fable' \
+  || miss "the README's setup row does not say that setup runs on Fable"
+done_check
+
 setup
 check "docs: ADR folders and glossaries the plugin cannot see give findings with the action to move them, rule docs are listed, and none is changed"
 mkdir -p docs/adr doc/decisions architecture/records wiki .github/PULL_REQUEST_TEMPLATE src/decisions notes vendor

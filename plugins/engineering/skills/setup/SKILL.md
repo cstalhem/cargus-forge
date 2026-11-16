@@ -1,6 +1,7 @@
 ---
 name: setup
 description: Write a repo's profile for the plugin, propose rules for `.claude/rules/`, and turn on its optional behaviours. Shows the facts from setup.sh on one screen, asks numbered questions, then writes the accepted files to the working tree and lists them to commit. It commits, pushes and labels nothing, and opens no PR. Its one GitHub write, after a yes, is one issue that lists what to convert.
+model: fable
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
@@ -45,7 +46,7 @@ allowed-tools:
    - **Rules**, the `.claude/rules/` line under `### Files`:
      - `present (<n> files)`: the repo owns it. Show reports `### .claude/rules/ · kept`, and proposes no rule. No question, and launch no research agent.
      - `missing`: build the candidate rules. Read the files that the `rules` lines under `### Docs` name, with the Read tool, one call per file, to learn which conventions the repo already states. Read the tool configs listed as `config:` under `### Stack`, and the repo's other docs and layout, for conventions that no rule doc states.
-       - **Research.** Launch one research agent for each stack component, in parallel, in one message, with the Agent tool, `subagent_type: general-purpose`, never a fork. A component is a `language:` line under `### Stack`, or one dependency name on a `- <manifest>: <name>, <name>, …` line there: each name is its own component. `config:` lines are not components. Launch at most four: when there are more, take the first four components in the order of `### Stack`, which lists languages first, by file count, then the dependency names in the order that the manifest lines print them. Brief each agent with this text, filled in:
+       - **Research.** Launch one research agent for each stack component, in parallel, in one message, with the Agent tool, `subagent_type: general-purpose` and `model` `sonnet`, never a fork. A component is a `language:` line under `### Stack`, or one dependency name on a `- <manifest>: <name>, <name>, …` line there: each name is its own component. `config:` lines are not components. Launch at most four: when there are more, take the first four components in the order of `### Stack`, which lists languages first, by file count, then the dependency names in the order that the manifest lines print them. Brief each agent with this text, filled in:
          ```
          Component: <the language, or the dependency name>.
          The repo's own convention lines, which are already covered: <each convention line that the rule docs state, or "none">.
