@@ -9,13 +9,16 @@ allowed-tools:
   - Bash(git fetch -q origin main && git rev-parse HEAD origin/main)
   - Bash(git ls-files)
   - Bash(cat docs/glossary.md 2>/dev/null || printf '\342\200\213')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:shaped')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:umbrella')
+  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')
 ---
 
 # anneal
 
 ## Rules
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
-- An anneal changes no file in the repo, and asks no question before it writes to GitHub. Its writes are issues, sub-issue links and one feature branch.
+- An anneal changes no file in the repo, and asks no question before it writes to GitHub. Its writes are issues, labels, sub-issue links and one feature branch.
 - Behaviour for users stays the same after every fix. A bold rewrite is welcome when its result is simpler, and it is a request, never a fix.
 - Every agent is a general-purpose agent started with the Agent tool, never a fork: an investigator with `model` `opus`, a checker with `model` `sonnet`. An agent reads the repo, and writes nothing to the repo or to GitHub.
 - Findings live in your context, in no file. Write the issues with the terms of the Glossary section at the end of this skill, and not with a word that it lists under `_Avoid_`.
@@ -53,12 +56,12 @@ allowed-tools:
    - **fix:** it keeps behaviour the same for users, passes the size test, and has a verify command that fails before the work. If you cannot name that command, the finding is not a fix.
    - **request:** any other confirmed finding, every bold rewrite included.
    - **drop:** a refuted finding.
-6. **Requests.** For each finding with the route request, write a body with a `## Finding` section (the `file:line`, the change and why it is simpler) and a `## Candidate rule` section (the rule, or `none`). It has no `## Scenarios` and no `## Goal` section, so it is a request. Create it with `gh api -X POST repos/{owner}/{repo}/issues -f title="Anneal <date> · <area>: <title>" -F body=@<path>`, and read it back as the rules say. `<date>` is the Facts' date.
+6. **Requests.** For each finding with the route request, write a body with a `## Finding` section (the `file:line`, the change and why it is simpler) and a `## Candidate rule` section (the rule, or `none`). It has no `## Scenarios` and no `## Goal` section, so it is a request. Create it with `gh api -X POST repos/{owner}/{repo}/issues -f title="Anneal <date> · <area>: <title>" -F body=@<path>`, and read it back as the rules say. `<date>` is the Facts' date. Add no label to a request.
 7. **Umbrella.** Only if at least one finding has the route fix; otherwise write no umbrella issue and create no branch, and go to step 9.
    1. Write each fix's sub-issue body in the issue format of `formats.md`, with no `## Decisions` section: `## What it delivers` is the change with the same behaviour for users; `## Scenarios` holds the scenarios that the verify command proves, and, when the fix has a rule, `WHEN .claude/rules/<area>.md is read THEN it holds <rule>`; `## Files` holds the files the finding names, and `.claude/rules/<area>.md` when it has a rule; `## Verify` is one command that fails before the work, and for a fix with a rule, also checks that `.claude/rules/<area>.md` holds it.
-   2. Write the umbrella body in the umbrella format: a `## Goal` sentence, `## Scenarios` holding every fix's scenarios, `## Design` saying that each sub-issue is one fix, built one at a time with no discuss, and the final PR into `main` is the review, and `## Out of scope` with a line `- #<n> <title>` for each request step 6 wrote, or `- none`. Create it titled `Anneal <date>` as step 6 creates a request, and read it back.
+   2. Write the umbrella body in the umbrella format: a `## Goal` sentence, `## Scenarios` holding every fix's scenarios, `## Design` saying that each sub-issue is one fix, built one at a time with no discuss, and the final PR into `main` is the review, and `## Out of scope` with a line `- #<n> <title>` for each request step 6 wrote, or `- none`. Create it titled `Anneal <date>` as step 6 creates a request, read it back, and add `engineering:shaped` and `engineering:umbrella` to it, as the rules say.
    3. Create the feature branch `<u>-anneal-<date>`, with `<u>` the umbrella's number, from `main` as the rules say, and read it back.
-8. **Sub-issues.** For each fix, create its sub-issue titled `Anneal <date> · <area>: <title>`, set its parent to the umbrella `<u>` and read the parent back, as the rules say, and stop if it is not `<u>`. Set no "blocked by" link, because each fix stands alone.
+8. **Sub-issues.** For each fix, create its sub-issue titled `Anneal <date> · <area>: <title>`, set its parent to the umbrella `<u>` and read the parent back, as the rules say, and stop if it is not `<u>`. Then add `engineering:shaped` to it, as the rules say. Set no "blocked by" link, because each fix stands alone.
 9. **Report.** Show each URL that the run wrote: each request, the umbrella issue, the feature branch and each sub-issue. Show a table with one row for each area and a column for each route, fix, request and drop, counting a merged finding once, under its area. Then the next step: Autopilot builds the umbrella issue, or `/engineering:execute #<first sub-issue>` by hand. When no finding is a fix, the next step is `/engineering:discuss #<request>` for a request, or nothing when there is none.
 
 ## Facts
