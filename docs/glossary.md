@@ -25,10 +25,10 @@ _Avoid_: test case, user story
 **Final PR**: The one PR that takes a feature branch into `main`; ship opens it.
 _Avoid_: umbrella PR
 
-**Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. `next` works it out from the issue's body, links, branches and PRs.
+**Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. `next` works it out from the issue's labels, body, links, branches and PRs.
 _Avoid_: state
 
-**Request**: An open GitHub issue that discuss has not shaped yet: its body has neither a `## Scenarios` nor a `## Goal` section, or its author is not a trusted author.
+**Request**: An open GitHub issue that does not carry the shaped label `engineering:shaped`, or whose author is not a trusted author.
 
 **Finished worktree**: A local worktree on an issue branch whose PR has merged or whose issue is closed, with no uncommitted or unpushed work; `next` removes it after you confirm.
 _Avoid_: stale worktree
