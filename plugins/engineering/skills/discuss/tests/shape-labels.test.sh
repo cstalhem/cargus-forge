@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Tests for #391: discuss, slice and anneal add the labels of each issue they write, with the label commands that
-# references/rules.md holds once, and ADR-001 states the decision (#390 D1). They read the repo's files only and need no
-# network.
+# references/rules.md holds once, and ADR-001 and ADR-011 state the decisions (#390 D1 and D2). They read the repo's files
+# only and need no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -12,6 +12,7 @@ discuss=$plugin/skills/discuss/SKILL.md
 slice=$plugin/skills/slice/SKILL.md
 anneal=$plugin/skills/anneal/SKILL.md
 adr=$root/docs/adr/ADR-001-github-is-the-work-state-store.md
+adr11=$root/docs/adr/ADR-011-build-acts-only-on-trusted-authors.md
 failures=0
 
 # expect <description> <command...>: the command must succeed.
@@ -38,7 +39,7 @@ frontmatter() { awk '/^---$/ { n++; next } n == 1' "$1"; }
 # section <file> <heading>: the text under a `## ` heading, up to the next one.
 section() { awk -v h="## $2" '/^## / { s = ($0 == h) ; next } s' "$1"; }
 
-for f in "$rules" "$discuss" "$slice" "$anneal" "$adr"; do
+for f in "$rules" "$discuss" "$slice" "$anneal" "$adr" "$adr11"; do
   expect "$(basename "$f") exists" test -f "$f"
 done
 
@@ -120,6 +121,13 @@ expect "ADR-001 rejects labels for build states" has "$a_rejected" '**Labels for
 expect "ADR-001 rejects slice adding the umbrella label" has "$a_rejected" '**Slice adds the umbrella label:**'
 expect "ADR-001 no longer rejects scripts that read labels" bash -c '! grep -qF "**Scripts that read labels:**" <<<"$1"' _ "$a_rejected"
 expect "ADR-001 cites #390 as a source" grep -qF '[#390](https://github.com/cstalhem/cargus-forge/issues/390)' "$adr"
+
+# ADR-011 states #390 D2.
+a11_decision=$(grep -F -- '- **Decision:**' "$adr11")
+expect "ADR-011's Decision: an outside issue is a request whatever its body or labels" \
+  has "$a11_decision" 'an outside issue is a request whatever its body or labels'
+expect "ADR-011's Decision: no skill adds a state label to an outside issue" \
+  has "$a11_decision" 'no skill adds a state label to it'
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
