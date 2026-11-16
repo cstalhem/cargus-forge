@@ -17,9 +17,6 @@
 # issue is left out. It names no next step: next picks one from the report and the bodies
 # that bodies.sh prints (#344 D1).
 #
-# With `--statuses` it prints one JSON line instead, an array with the number, status and
-# label names of each open issue, which labels.sh reads (#287 D4).
-#
 # Output:
 #   ## Report   one `### <group>` per status group that has an issue
 #   ## Cleanup  two lists, each `- none` when it is empty (#69 D8, D12):
@@ -32,9 +29,6 @@
 #               issue's branch (#378 D1).
 
 set -u
-
-statuses=false
-[ "${1:-}" = "--statuses" ] && statuses=true
 
 # `fail`, `read_branches`, `JQ_HAS_SECTION` and `JQ_TRUSTED` come from the plugin's shared file.
 # `fail` does not exist until it is loaded, so a missing file prints its own error line.
@@ -95,7 +89,6 @@ issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTE
     number, title,
     trusted: ({author_association: .authorAssociation} | trusted),
     author: (.author.login // "unknown"),
-    labels: (.labels.nodes | map(.name)),
     shaped: (.labels.nodes | any(.name == "engineering:shaped")),
     sent_back: (.labels.nodes | any(.name == "engineering:needs-discussion")),
     goal: has_section("Goal"),
@@ -309,7 +302,6 @@ done < <(git worktree list --porcelain -z 2>/dev/null)
 
 out=$(jq -n -r \
   --arg repo "$repo" \
-  --argjson statuses "$statuses" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
   --argjson blockers "$blockers" \
@@ -425,8 +417,7 @@ out=$(jq -n -r \
       {name: "To shape", status: "request"} ]
     | map(. as $g | $g + {items: [$all[] | select(.status == $g.status)]}) as $groups
 
-    | if $statuses then ($all | map({number, status, labels}) | tojson) else
-      "## Report",
+    | "## Report",
       "",
       ( $groups[] | select(.items | length > 0)
         | "### \(.name)", "", (.items[] | entry) ),
@@ -445,7 +436,6 @@ out=$(jq -n -r \
         else ($merged_branches | sort_by((.branch | capture("^(?<n>[0-9]+)").n | tonumber), .branch)[]
               | "- \(.branch) · PR #\(.pr) merged")
         end )
-    end
 ' 2>/dev/null) || fail "cannot build the report."
 
 printf '%s\n' "$out"

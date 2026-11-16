@@ -425,22 +425,8 @@ expect "WHEN grep searches status.sh for the Next line and the jq that chose it 
   bash -c '! grep -qF -e "Next:" -e "\$next" -e "\$to_ship" -e "\$review" -e "\$doing" "$1"' _ "$status"
 
 echo "# --statuses"
-cat > "$tmp/full.statuses" <<'EXPECTED'
-[{"number":1,"status":"request","labels":["engineering:needs-discussion","bug"]},
- {"number":2,"status":"ready","labels":["engineering:shaped","status:ready"]},
- {"number":3,"status":"blocked","labels":["engineering:shaped"]},
- {"number":4,"status":"in-progress","labels":["engineering:shaped"]},
- {"number":5,"status":"needs-review","labels":["engineering:shaped"]},
- {"number":6,"status":"umbrella","labels":["engineering:shaped"]},
- {"number":7,"status":"ready","labels":["engineering:shaped"]},
- {"number":8,"status":"umbrella","labels":["engineering:shaped"]},
- {"number":23,"status":"ready","labels":["engineering:shaped"]},
- {"number":24,"status":"ready","labels":["engineering:shaped"]}]
-EXPECTED
-jq -c . "$tmp/full.statuses" > "$tmp/full.statuses.expected"
 run_status "$full" --statuses > "$tmp/full.statuses.out"
-same "WHEN status.sh --statuses runs THEN it prints a JSON array with the number, status and label names of each open issue, and no pull request"   "$tmp/full.statuses.expected" "$tmp/full.statuses.out"
-expect "WHEN status.sh --statuses runs THEN it makes no write call"   test ! -e "$full/.wrote"
+same "WHEN status.sh runs with --statuses THEN it prints what it prints with no argument" "$tmp/full.out" "$tmp/full.statuses.out"
 
 echo "# trusted authors"
 # group <report> <heading>: the lines of that `### ` group of the report.
@@ -455,10 +441,6 @@ expect "WHEN an open issue with a ## Goal section has an author who is not a tru
   hasline "$shape" "**#8** Outside umbrella · from visitor, not a trusted author"
 expect "WHEN an issue's author is not a trusted author THEN status.sh does not list it under ### Ready to build" \
   bash -c '! grep -qF "**#1** " <<<"$1"' _ "$build"
-run_status "$outside" --statuses > "$tmp/outside.statuses.out"
-same "WHEN status.sh --statuses reads that issue THEN its status is request, and an OWNER, MEMBER or COLLABORATOR issue is ready" \
-  <(echo '[{"number":1,"status":"request"},{"number":2,"status":"ready"},{"number":3,"status":"ready"},{"number":7,"status":"ready"},{"number":8,"status":"request"}]') \
-  <(jq -c 'map({number, status})' "$tmp/outside.statuses.out")
 expect "WHEN an open PR whose author is not a trusted author has the first line Closes #<n> THEN status.sh gives issue #<n> the status it has without that PR" \
   bash -c 'grep -qxF "**#2** Owner issue with an outside PR" <<<"$1" && ! grep -qE "^### (Needs review|In progress)" "$2"' _ "$build" "$tmp/outside.out"
 expect "WHEN an issue and a PR are by trusted authors THEN status.sh gives them the same statuses as before" \
@@ -509,9 +491,6 @@ echo "# errors"
 FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.out"
 expect "WHEN status.sh runs with no argument and fails THEN it prints the one line 'status.sh error: <reason>'" \
   bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^status.sh error: " "$1"' _ "$tmp/err.out"
-FAKE_GH_FAIL=1 run_status "$full" --statuses > "$tmp/err.statuses.out"
-same "WHEN status.sh --statuses fails THEN it prints the same one line as with no argument" \
-  "$tmp/err.out" "$tmp/err.statuses.out"
 
 echo "# the skills"
 skill=$skill_dir/SKILL.md
@@ -531,7 +510,7 @@ done
 
 echo "# the rule"
 expect "WHEN .claude/rules/engineering-scripts.md is read THEN it holds the one-report rule" \
-  grep -qxF -- '- A plugin script renders its facts one way for every skill that reads them; a second output exists only for another script, such as status.sh --statuses for labels.sh.' "$plugin/../../.claude/rules/engineering-scripts.md"
+  grep -qxF -- '- A plugin script renders its facts one way for every skill that reads them, and takes no argument that switches its output.' "$plugin/../../.claude/rules/engineering-scripts.md"
 
 echo "# the comment rule and discuss"
 expect "WHEN references/rules.md is read THEN it holds the line that a comment is a fact only when its author is a trusted author, and that a skill reads past any other comment as if it were not there" \

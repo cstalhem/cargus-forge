@@ -114,9 +114,8 @@ expect "ADR-001's Decision: an issue is shaped only while it carries engineering
   bash -c 'grep -qF "shaped only while it carries \`engineering:shaped\`" <<<"$1" && grep -qF "discuss, slice and anneal add" <<<"$1" && grep -qF "\`status.sh\` reads" <<<"$1"' _ "$a_decision"
 expect "ADR-001's Decision: needs-discussion marks a sent-back issue, umbrella is a display label, build states stay derived" \
   bash -c 'grep -qF "\`engineering:needs-discussion\` marks a shaped issue that was sent back" <<<"$1" && grep -qF "\`engineering:umbrella\` is a display label" <<<"$1" && grep -qF "build states stay derived from links, branches and PRs" <<<"$1"' _ "$a_decision"
-expect "ADR-001's Decision no longer names labels.sh" bash -c '! grep -qF "labels.sh" <<<"$1"' _ "$a_decision"
 expect "ADR-001 rejects the body's sections deciding shaped" has "$a_rejected" "**The body's sections decide \"shaped\":**"
-expect "ADR-001 rejects one display label kept by a sweep" has "$a_rejected" '**One display label kept by a sweep (`labels.sh`):**'
+expect "ADR-001 rejects one display label kept by a sweep" has "$a_rejected" '**One display label kept by a sweep ('
 expect "ADR-001 rejects labels for build states" has "$a_rejected" '**Labels for build states:**'
 expect "ADR-001 rejects slice adding the umbrella label" has "$a_rejected" '**Slice adds the umbrella label:**'
 expect "ADR-001 no longer rejects scripts that read labels" bash -c '! grep -qF "**Scripts that read labels:**" <<<"$1"' _ "$a_rejected"
