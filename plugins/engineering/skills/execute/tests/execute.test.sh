@@ -169,6 +169,27 @@ expect "ADR-002 finds the feature branch through its link and keeps a sub-issue 
 expect "ADR-002's Decision line says each branch is created linked to its issue and found through the link" \
   bash -c 'grep -F "**Decision:**" "$1" | grep -qF "created linked to their issue and found through that link"' _ "$adr002"
 
+# Deviation 7 sends an affected open shaped issue back to discuss (#394).
+deviation7=$(sed -n '/^  7\. /,/^- An answer from another session/p' "$skill" | sed '$d')
+expect "execute has a deviation 7 that names an affected open shaped issue" \
+  bash -c 'grep -qF "affects another open shaped issue" <<<"$1"' _ "$deviation7"
+expect "deviation 7 stops and asks whether to send the issue back to discuss, recommending yes" \
+  bash -c 'grep -qF "stop and ask whether to send" <<<"$1" && grep -qF "to discuss" <<<"$1" && grep -qF "recommending yes" <<<"$1"' _ "$deviation7"
+expect "deviation 7 takes the user's or another session's yes" \
+  bash -c 'grep -qF "from the user or" <<<"$1" && grep -qF "from another session" <<<"$1"' _ "$deviation7"
+expect "deviation 7 removes engineering:shaped, then adds engineering:needs-discussion, and comments why" \
+  bash -c 'grep -qE "remove .engineering:shaped., then add .engineering:needs-discussion." <<<"$1" && grep -qF "comment" <<<"$1" && grep -qF "says why" <<<"$1"' _ "$deviation7"
+expect "deviation 7 names the sent-back issue under the PR's Deviations" \
+  bash -c 'grep -qF "## Deviations" <<<"$1"' _ "$deviation7"
+expect "deviation 7 restates no label or comment command, which rules.md holds" \
+  bash -c '! grep -qE "labels/|-X (POST|DELETE)" <<<"$1"' _ "$deviation7"
+expect "allowed-tools pre-approves the needs-discussion add" \
+  grep -qF "  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:needs-discussion')" "$skill"
+expect "allowed-tools pre-approves the shaped removal" \
+  grep -qF '  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/engineering:shaped)' "$skill"
+expect "allowed-tools pre-approves the label read-back" \
+  grep -qF "  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')" "$skill"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
   exit 1
