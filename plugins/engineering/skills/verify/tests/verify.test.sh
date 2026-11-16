@@ -87,6 +87,11 @@ expect "the glossary holds the Merge risk entry of D8" \
   bash -c 'grep -qF -x "**Merge risk**: The level, low, medium or high, that verify gives a PR or a feature branch beside its verdict, from its ratings of alignment, impact, rollback cost and error detection; it changes no verdict and no merge." "$1" && grep -qxF "_Avoid_: risk score" "$1"' _ "$glossary"
 expect "the README's verify bullet names the merge risk" \
   bash -c 'grep -E "^- \`verify\`" "$1" | grep -qF "merge risk"' _ "$readme"
+# #367: the grading agent runs on Opus, in both scopes.
+expect "step 3 launches the grading agent with model opus, in PR scope and in umbrella scope" \
+  grep -qF 'Launch one agent with the Agent tool, `subagent_type: general-purpose` and `model` `opus`, in PR scope and in umbrella scope, never a fork.' <<<"$step3"
+expect "the README's verify bullet says the grading agent runs on Opus" \
+  bash -c 'grep -E "^- \`verify\`" "$1" | grep -qF "grading agent on Opus"' _ "$readme"
 expect "the README's Build paragraph names the merge risk" \
   bash -c 'grep -E "^\*\*Build\*\*" "$1" | grep -qF "merge risk"' _ "$readme"
 

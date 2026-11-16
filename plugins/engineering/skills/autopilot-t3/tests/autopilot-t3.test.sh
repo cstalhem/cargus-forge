@@ -70,6 +70,31 @@ expect "the frontmatter has disable-model-invocation: true" \
 expect "the body injects status.sh as the Facts" \
   grep -qF '!`bash "${CLAUDE_PLUGIN_ROOT}/skills/next/status.sh"`' <<<"$body"
 
+# #367: the run is on Fable, and every child, execute and ship, is on Sonnet.
+expect "the frontmatter holds the line model: fable" grep -qx 'model: fable' <<<"$frontmatter"
+children=$(section "$skill" Children)
+expect "the Children section reads the Sonnet model for every child" \
+  grep -qF 'first read the Sonnet model for the child' <<<"$children"
+expect "the Children section passes the Sonnet model as modelSelection for every child" \
+  grep -qF -- '- `modelSelection`: `{"instanceId": "<inheritedProviderInstanceId>", "model": "<the Sonnet model id>"}`, for an execute child and a ship child alike.' <<<"$children"
+expect "the Children section starts no child when no Sonnet model is found" \
+  grep -qF 'If neither call lists a Sonnet model, start no child' <<<"$children"
+expect "no line of the skill lets a child start without a model" \
+  test "$(grep -cE 'needs no model|Pass no `modelSelection`|inherits (the run|this thread)' "$skill")" = 0
+expect "the model check names the child for a ship child as for an execute child" \
+  grep -qF "If the child's \`modelSelection.model\` is not the Sonnet model you passed" <<<"$children"
+expect "the model check is not for an execute child only" \
+  test "$(grep -cF "If an execute child's \`modelSelection.model\`" "$skill")" = 0
+proposal_model=$(grep -F -- '- Model and modes:' "$skill")
+expect "the proposal's Model and modes line says the skill puts each run's first turn on Fable" \
+  grep -qF "the skill puts each run's first turn on Fable" <<<"$proposal_model"
+expect "the proposal's Model and modes line says later turns run on the task's model" \
+  grep -qF "later turns run on the task's model" <<<"$proposal_model"
+expect "the proposal's Model and modes line says every child runs on Sonnet" \
+  grep -qF 'every child runs on Sonnet' <<<"$proposal_model"
+expect "the proposal's Model and modes line says to run the proposal in a thread on Fable" \
+  grep -qF 'Run this first proposal in a thread on Fable' <<<"$proposal_model"
+
 # Each T3 tool the skill uses is named in the body.
 for tool in orchestrator_capabilities list_scheduled_tasks schedule_task t3_thread_update \
   t3_thread_list t3_thread_read t3_pending_request t3_thread_send t3_thread_launch; do
@@ -128,6 +153,28 @@ expect "the README's What a run does lists Plugin, Children, Merge, Review, Ship
   test "$readme_steps" = "Plugin,Children,Merge,Review,Ship,Execute"
 expect "the README's Autopilot section says Autopilot merges, comments on a ready PR, then starts children" \
   grep -qF 'comments on a ready single-issue PR or final PR, then starts ship and execute children' "$readme"
+
+# #367: the README names the model of the run, of every child and of a thread started by hand.
+expect "the Autopilot section says the run is on Fable" grep -qF 'The run is on Fable' <<<"$autopilot_section"
+expect "the Autopilot section says every child is on Sonnet" \
+  grep -qF 'every child, execute and ship, is on Sonnet' <<<"$autopilot_section"
+expect "the Autopilot section says how to set an existing scheduled task's model to Fable" \
+  grep -qF 'set its Model to Fable in its Edit task dialog' <<<"$autopilot_section"
+expect "the README says a thread started by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue" \
+  grep -qF 'A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.' "$readme"
+
+# #367 D1: ADR-008's Models part and its rejected alternatives.
+adr=$plugin/../../docs/adr/ADR-008-autopilot-builds-ready-issues-unattended.md
+models=$(grep -F -- '- **Models.**' "$adr")
+expect "ADR-008's Models part puts the run on Fable, by the skill's model line and the scheduled task's model" \
+  bash -c 'grep -qF "The run is on Fable" <<<"$1" && grep -qF "skill'"'"'s \`model\` line" <<<"$1" && grep -qF "scheduled task'"'"'s model" <<<"$1"' _ "$models"
+expect "ADR-008's Models part puts every child, execute and ship, on the current Sonnet model" \
+  grep -qF 'every child, execute and ship, on the current Sonnet model' <<<"$models"
+expect "ADR-008's Models part puts verify's grading agent on Opus" grep -qF "verify's grading agent runs on Opus" <<<"$models"
+for alt in '**Ship inherits the run'"'"'s model:**' '**The grader inherits its thread'"'"'s model:**' \
+  '**The run on Sonnet:**' '**A child'"'"'s report that types the skill' '**A second execute child on a stronger model after a failure:**'; do
+  expect "ADR-008 rejects $alt" grep -qF -- "- $alt" "$adr"
+done
 
 # The plugin's description names autopilot-t3 and opens the plugin README; scripts/check-descriptions.sh checks the other listings.
 description=$(jq -r .description "$manifest")

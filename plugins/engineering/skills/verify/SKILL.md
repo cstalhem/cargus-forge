@@ -26,7 +26,7 @@ Target: $ARGUMENTS
    - **Umbrella scope:** it is not a PR (the call returns 404). Run `gh api repos/{owner}/{repo}/issues/<n>`. The issue must have a `## Goal` section. The branch is the one that `gh issue develop --list <n>` prints, as the rules say. Stop if it prints none, or more than one.
    - Anything else: stop and say why.
 2. **Code.** Run `git fetch origin <branch>`, and in umbrella scope also `git fetch origin main`. Then run `git rev-parse HEAD` and `git rev-parse origin/<branch>`. If they differ, stop and say so, because the checks must run on the code they grade.
-3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose`, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, the Repo rules section of this skill, and this task:
+3. **Grade.** Launch one agent with the Agent tool, `subagent_type: general-purpose` and `model` `opus`, in PR scope and in umbrella scope, never a fork. Give it the scope, the issue number, the PR number or the branch, the SHA, the Repo rules section of this skill, and this task:
    - When the diff adds or changes a line under `.claude/rules/`, grade the `Rules` row's rule test first, before you read the issue, the PR body or the rest of the diff, because the test asks whether a line stands alone.
    - Read GitHub with `gh api` and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api --paginate 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.

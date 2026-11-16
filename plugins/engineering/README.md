@@ -31,7 +31,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 
 | Command | What it does |
 |---|---|
-| `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. |
+| `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. Runs on Fable for the turn it is typed in, with its research agents on Sonnet. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. The turn discuss is typed in runs on Fable, and it covers loading, reading the code and the challenge round; later rounds run on the session's model, and starting the session with `/model fable` keeps all of discuss on Fable. |
 | `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
@@ -42,7 +42,9 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
-- `verify` grades a PR against its issue's scenarios with a fresh-context agent, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
+- `verify` grades a PR against its issue's scenarios with a fresh-context grading agent on Opus, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
+
+A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.
 
 discuss and execute read `references/domain-model.md` in their Load step. It holds the rules that keep the repo's domain terms in `docs/glossary.md`. They also read `references/adr.md`, which holds the rules for the repo's ADRs in `docs/adr/`: when a decision earns one, its format, and when to edit an existing ADR instead of writing a new one. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it.
 
@@ -91,16 +93,16 @@ Autopilot is the unattended Build runner. You shape requests in discuss and revi
 4. Add the repo as a T3 project, with `main` as its base ref. Each run and each child works in a worktree from `main` on the remote.
 5. In the project's settings, set the worktree cleanup to remove settled worktrees. The hourly run and every child are threads in their own worktrees, so the cleanup keeps the host from filling up.
 
-Then open a thread on the project and run `/engineering:autopilot-t3`, on the model and in the runtime mode you want for the hourly run: the scheduled task inherits both from the thread that creates it. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in T3's scheduled tasks list:
+Then open a thread on the project on Fable, in the runtime mode `full-access`, and run `/engineering:autopilot-t3`: the scheduled task inherits both from the thread that creates it. The run is on Fable, and every child, execute and ship, is on Sonnet. The skill puts the turn it is typed in on Fable, and a later turn, such as one that a child's report starts, runs on the scheduled task's model. The first run finds no scheduled task and proposes one; it creates it only after your yes. The scheduled task's settings, as you see them in T3's scheduled tasks list:
 
 | Setting | Value |
 |---|---|
 | Title | `engineering: autopilot` |
 | Schedule | every hour: an interval of 3600000 ms, counted from the moment it was created |
 | Each run | a fresh thread in its own worktree from the project's base ref, with the prompt `/engineering:autopilot-t3` |
-| Model and modes | this thread's model, runtime mode and interaction mode, inherited when the task was created. The hourly run and each ship child run on them; each execute child runs on Sonnet. |
+| Model and modes | this thread's model, runtime mode and interaction mode, inherited when the task was created. Each run's first turn is on Fable by the skill's `model` line, and its later turns are on the task's model; every child runs on Sonnet. |
 
-Pause or delete the scheduled task in that list. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
+Pause or delete the scheduled task in that list. A scheduled task created from a thread on another model runs each run's later turns on that model: set its Model to Fable in its Edit task dialog in that list. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
 
 ### What a run does
 
@@ -110,7 +112,7 @@ Each run renames its thread to `autopilot <ISO timestamp>`, so the hourly runs a
 2. **Children.** A child is a thread titled `execute #<n>` or `ship #<u>`; its title is the claim on that issue. Each child is launched in its own worktree from `main` on the remote, in `full-access` runtime mode, because no one answers an approval prompt unattended. While a child is working, the run starts nothing and ends. Right after the launch, the child gets one queued message that tells it to report to the run's thread when its work ends: `<title>: finished`, `<title>: stopped on a question` or `<title>: stopped: <reason>`, with the PR and, for a question, its recommended answer. The report arrives as a message in the run's thread and starts the next run. A child whose typed prompt did not load as a skill reports `<title>: stopped: engineering plugin not loaded in this environment` and does nothing else, and Autopilot hands the issue off. A child that stopped on a question gets an answer, through its pending request and a queued message that starts with `Autopilot: answer <k> of 3`: the child's recommended answer, or the answer that changes no scenario and no decision of the issue, at most three times. execute records each answer in the PR under `## Deviations` as `Autopilot: <question> → <answer>, because <why>`, and ship gathers those lines into the final PR, so you read them at review. A child whose verify passed but could not mark its PR ready gets the PR marked ready by Autopilot.
 3. **Merge.** Autopilot squash-merges each sub-issue PR that verify marked ready, one at a time, and reads back that it merged. It merges nothing else: a single issue's PR and a final PR wait for you, and execute, verify and ship still merge nothing.
 4. **Review.** A ready single-issue PR or final PR without an `Autopilot: ready for your review` comment gets one. Review runs before Ship and Execute, so a run hands a ready PR off before it starts the next child, and it reads the open final PR of every umbrella issue whose sub-issues are all done, whether or not the umbrella issue has a ship child.
-5. **Ship.** When every sub-issue of an umbrella issue is done and Review found no open final PR for it, Autopilot starts a child `ship #<u>`. A ship child inherits the run's model.
+5. **Ship.** When every sub-issue of an umbrella issue is done and Review found no open final PR for it, Autopilot starts a child `ship #<u>`. A ship child runs on Sonnet, as an execute child does.
 6. **Execute.** When no child is working, Autopilot starts one child `execute #<n>` for the first issue under `### Ready to build` in `/engineering:next`'s report, so sub-issues run one at a time in blocked-by order. The child runs on the current Sonnet model of the run's provider, because execute is nearly all the tokens and a sized sub-issue does not need the strongest model.
 
 In short, Autopilot merges each ready sub-issue PR, comments on a ready single-issue PR or final PR, then starts ship and execute children one at a time. A run reads the facts and does the Build work that is due, so a lost report or a missed answer waits at most one hour. Autopilot keeps no state of its own: the threads it starts, the comments it posts and `status.sh` are its record.
