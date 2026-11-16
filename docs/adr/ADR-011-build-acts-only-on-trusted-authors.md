@@ -14,12 +14,13 @@ status: active
 - The repo is public, so anyone can open an issue or post a comment, and Autopilot builds each ready issue unattended ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)).
 - A trusted author is a GitHub user whose `author_association` is OWNER, MEMBER or COLLABORATOR. `scripts/lib.sh` holds one jq definition, `trusted`, next to `has_section`, and `status.sh` and `bodies.sh` both load it.
 - `author_association` comes with the open-issue and open-PR lists that the scripts already read, so the check adds no API call. A merged PR, a branch, a sub-issue link and a "blocked by" link all need write access to create, so only those two lists need it.
-- An outside issue is a request whatever its body, so it sits under `### To shape` with the fact `from <login>, not a trusted author`, and `labels.sh` keeps `engineering:shaped` off it. An outside PR names no issue, so it gives no fact. `bodies.sh` prints the heading of an outside issue and that fact in place of its body.
+- An outside issue is a request whatever its body or labels, so it sits under `### To shape` with the fact `from <login>, not a trusted author`, and no skill adds a state label to it. `status.sh` checks the author before it reads `engineering:shaped`. An outside PR names no issue, so it gives no fact. `bodies.sh` prints the heading of an outside issue and that fact in place of its body.
 - A comment is a fact only when its author is a trusted author. One line in `references/rules.md` says so for every skill that reads a comment, `autopilot-t3` included, so no Autopilot step changes.
 - An outside item gets no hand-off and no push notification: an outside issue waits under To shape, and an outside PR waits on GitHub.
 - discuss shapes an outside issue into a new issue with the original body under `## Request`, comments `Shaped as #<new>.` on the original and closes it. This rests on the unchecked assumption that GitHub lets an issue's author edit its body after the repo owner rewrites it.
 
 ## Rejected alternatives
+- **Dropping the author check now that only people with access to the repo can add a label:** the issue's author can still edit its body after it is labelled.
 - **Also trusting the token's user:** every comment a session posts already reads as OWNER, so it adds nothing.
 - **A permission call per author:** it costs a call per item, and `author_association` only errs towards leaving out a trusted person.
 - **A separate report group for outside items:** an outside issue is a request and an outside PR is no fact, so no new status or reader is needed.
