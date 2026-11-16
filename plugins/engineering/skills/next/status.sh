@@ -3,7 +3,8 @@
 # Reads open issues, with their parent, blockers, sub-issues and linked branches, and the PRs
 # through `gh api graphql`, and remote branches through git, for the repo in the current
 # directory. It changes nothing.
-# Each status comes from facts only: the issue's body, its links, its linked branches and its PRs.
+# Each status comes from facts only: the issue's labels, its body, its links, its linked branches
+# and its PRs.
 # An issue's branch is a branch linked to it; a `<n>-*` branch with no link gives no fact.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `status.sh error: <reason>`, and nothing else: each jq
@@ -69,7 +70,8 @@ JQ_REF='def ref($r; $n): if $r == $repo then "#\($n)" else "\($r)#\($n)" end;'
 
 # Open issues, whose `parent`, `blockedBy`, `subIssues` and `linkedBranches` come with them. `goal`
 # and `scenarios` say whether the body has a `## Goal` or a `## Scenarios` section (#181 D1, D11).
-# `trusted` says whether the issue's author is a trusted author, and `author` is the login (#362
+# `shaped` says whether the issue carries `engineering:shaped` and `sent_back` whether it carries
+# `engineering:needs-discussion` (#390 D1). `trusted` says whether the issue's author is a trusted author, and `author` is the login (#362
 # D5). `parent` is the umbrella's name in the report. `branches` are the names of the branches
 # linked to the issue, which are its branches (#368 D9).
 read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
@@ -94,6 +96,8 @@ issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTE
     trusted: ({author_association: .authorAssociation} | trusted),
     author: (.author.login // "unknown"),
     labels: (.labels.nodes | map(.name)),
+    shaped: (.labels.nodes | any(.name == "engineering:shaped")),
+    sent_back: (.labels.nodes | any(.name == "engineering:needs-discussion")),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
     branches: ([.linkedBranches.nodes[].ref.name // empty] | unique),
@@ -315,7 +319,9 @@ out=$(jq -n -r \
   --argjson merged_branches "$merged_branches" \
   --argjson finished_branches "$finished_branches" '
   # The status from the facts (#181 D1), the first that applies:
-  # - request: the author of the issue is not a trusted author, whatever its body says (#362 D4);
+  # - request: the author of the issue is not a trusted author, whatever its labels and body say
+  #   (#362 D4, #390 D2), or the issue does not carry `engineering:shaped`, or it carries
+  #   `engineering:needs-discussion`, whatever its body holds (#390 D1);
   # - umbrella: the body has a `## Goal` section. Its feature branch is a branch linked to it,
   #   so this comes before the branch fact;
   # - needs review: an open ready PR whose first line names the issue;
@@ -340,6 +346,7 @@ out=$(jq -n -r \
     | $i + {
         status: (
           if ($i.trusted | not) then "request"
+          elif ($i.shaped | not) or $i.sent_back then "request"
           elif $i.goal then "umbrella"
           elif $ready_pr then "needs-review"
           elif $draft_pr or ($own_branches | length) > 0 then "in-progress"
@@ -380,6 +387,7 @@ out=$(jq -n -r \
     # The facts of an issue, between its title and its suggestion.
     def facts:
       (if .umbrella_of then ["umbrella \(.umbrella_of)"] else [] end)
+      + (if .sent_back then ["sent back"] else [] end)
       + (if .trusted then [] else ["from \(.author), not a trusted author"] end)
       + (if .status == "umbrella" then
            subs_of(.number) as $s
