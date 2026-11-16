@@ -54,6 +54,6 @@ status: active
 - A child that needs a human waits for the user, and the issue's comment names the thread to open.
 - The scheduled task starts a thread every hour, which costs tokens even when the run finds nothing to do.
 - The scheduled task is created from a run after the user's yes, never in T3's settings UI.
-- A sub-issue is built on Sonnet and graded on Opus. A scheduled task created from a thread on another model runs each run's later turns on that model, so the user deletes it and creates it again from a thread on Fable. A sub-issue that needs the strongest model to build is run by hand with `/engineering:execute #<n>` in a thread on that model.
+- A sub-issue is built on Sonnet and graded on Opus. A scheduled task created from a thread on another model runs each run's later turns on that model, so the user sets its model to Fable in T3's Edit task dialog. A sub-issue that needs the strongest model to build is run by hand with `/engineering:execute #<n>` in a thread on that model.
 - The plugin must be installed on the T3 host, and children run in `full-access` mode with no approval prompt.
 - A plugin bug that a child hits ends as a stopped issue with one comment, and becomes a new issue, not a silent retry loop.

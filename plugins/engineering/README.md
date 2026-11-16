@@ -102,7 +102,7 @@ Then open a thread on the project on Fable, in the runtime mode `full-access`, a
 | Each run | a fresh thread in its own worktree from the project's base ref, with the prompt `/engineering:autopilot-t3` |
 | Model and modes | this thread's model, runtime mode and interaction mode, inherited when the task was created. Each run's first turn is on Fable by the skill's `model` line, and its later turns are on the task's model; every child runs on Sonnet. |
 
-Pause or delete the scheduled task in that list. A scheduled task created from a thread on another model runs each run's later turns on that model: delete it in T3's scheduled tasks list, then run `/engineering:autopilot-t3` in a new thread on Fable, which proposes it again. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
+Pause or delete the scheduled task in that list. A scheduled task created from a thread on another model runs each run's later turns on that model: set its Model to Fable in its Edit task dialog in that list. A run that finds it paused, or blocked by a policy, says so in one line with the task's title and goes on, so you can drive Autopilot by hand in a thread of your own with the task paused.
 
 ### What a run does
 

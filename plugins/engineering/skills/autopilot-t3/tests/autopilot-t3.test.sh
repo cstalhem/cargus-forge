@@ -158,8 +158,8 @@ expect "the README's Autopilot section says Autopilot merges, comments on a read
 expect "the Autopilot section says the run is on Fable" grep -qF 'The run is on Fable' <<<"$autopilot_section"
 expect "the Autopilot section says every child is on Sonnet" \
   grep -qF 'every child, execute and ship, is on Sonnet' <<<"$autopilot_section"
-expect "the Autopilot section says how to create the scheduled task again from a thread on Fable" \
-  grep -qF 'delete it in T3'"'"'s scheduled tasks list, then run `/engineering:autopilot-t3` in a new thread on Fable' <<<"$autopilot_section"
+expect "the Autopilot section says how to set an existing scheduled task's model to Fable" \
+  grep -qF 'set its Model to Fable in its Edit task dialog' <<<"$autopilot_section"
 expect "the README says a thread started by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue" \
   grep -qF 'A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.' "$readme"
 
