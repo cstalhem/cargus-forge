@@ -25,10 +25,10 @@ _Avoid_: test case, user story
 **Final PR**: The one PR that takes a feature branch into `main`; ship opens it.
 _Avoid_: umbrella PR
 
-**Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. `next` works it out from the issue's body, links, branches and PRs.
+**Status**: Where an open issue or umbrella issue stands in the process: request, umbrella, ready, blocked, in progress or needs review. `next` works it out from the issue's labels, body, links, branches and PRs.
 _Avoid_: state
 
-**Request**: An open GitHub issue that discuss has not shaped yet: its body has neither a `## Scenarios` nor a `## Goal` section, or its author is not a trusted author.
+**Request**: An open GitHub issue that does not carry the shaped label `engineering:shaped`, or whose author is not a trusted author.
 
 **Finished worktree**: A local worktree on an issue branch whose PR has merged or whose issue is closed, with no uncommitted or unpushed work; `next` removes it after you confirm.
 _Avoid_: stale worktree
@@ -79,9 +79,6 @@ _Avoid_: T3 session
 
 **Anneal**: A typed run of `/engineering:anneal` that has agents study the whole repo by area and check each finding, then turns each confirmed finding into a fix sub-issue under one umbrella issue or into a request, bold rewrites included, with the rule that would have made each fix unneeded; it changes no code itself.
 _Avoid_: sweep, simplifier, audit, job
-
-**Shaped label**: The GitHub label `engineering:shaped`, which `labels.sh` keeps on each open issue whose status is not request, so a person browsing GitHub sees which issues discuss has finished; no skill reads it.
-_Avoid_: request label, status label
 
 **Rule test**: The checks that decide whether a line can be a rule: a session that never saw the PR that added it can say, from the line, the repo's glossary and the repo alone, when it applies and what it requires or forbids; and the line states what the code does not show, is a guideline rather than something that must hold every time, and says what nothing else in the repo already says.
 

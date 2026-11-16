@@ -152,7 +152,7 @@ mkdir "$full"
 cat > "$full/issues.json" <<'JSON'
 [
   {"number":1,"title":"A request","body":"just an idea","labels":{"nodes":[{"name":"engineering:needs-discussion"},{"name":"bug"}]}},
-  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"status:ready"}]}},
+  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"engineering:shaped"},{"name":"status:ready"}]}},
   {"number":3,"title":"Blocked issue","body":"## Scenarios\n- WHEN a THEN b\n","blockedBy":{"nodes":[{"number":2,"state":"OPEN","repository":{"nameWithOwner":"o/r"}}]}},
   {"number":4,"title":"In progress issue","body":"## Scenarios\n- WHEN a THEN b\n","linkedBranches":{"nodes":[{"ref":{"name":"4-in-progress"}}]}},
   {"number":5,"title":"Needs review issue","body":"## Scenarios\n- WHEN a THEN b\n"},
@@ -217,11 +217,27 @@ cat > "$merged/base_12-feature.json" <<'JSON'
 [{"number":61,"body":"Sub-issue #13 of #12. This PR goes into `12-feature`, so it has no `Closes` line."}]
 JSON
 
+# labelled: issues whose labels and authors decide the status (#390 D1, D2). Its issue numbers
+# avoid the branch names above.
+labelled=$tmp/labelled
+mkdir "$labelled"
+cat > "$labelled/issues.json" <<'JSON'
+[
+  {"number":31,"title":"Unshaped with scenarios","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[]}},
+  {"number":32,"title":"Unshaped umbrella","body":"## Goal\nx\n","labels":{"nodes":[]}},
+  {"number":33,"title":"Sent back","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"engineering:needs-discussion"}]}},
+  {"number":34,"title":"Shaped and sent back","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"engineering:shaped"},{"name":"engineering:needs-discussion"}]}},
+  {"number":35,"title":"Outside but shaped","body":"## Scenarios\n- WHEN a THEN b\n","authorAssociation":"NONE","author":{"login":"stranger"},"labels":{"nodes":[{"name":"engineering:shaped"}]}},
+  {"number":36,"title":"Shaped","body":"## Scenarios\n- WHEN a THEN b\n","labels":{"nodes":[{"name":"engineering:shaped"}]}},
+  {"number":37,"title":"Shaped umbrella","body":"## Goal\nx\n","labels":{"nodes":[{"name":"engineering:shaped"},{"name":"engineering:umbrella"}]}}
+]
+JSON
+
 # gtrust <file>: gives each issue or PR in a GraphQL fixture the authorAssociation OWNER and the
-# login `owner`, and each issue empty labels, blockers, sub-issues and linked branches, unless it
-# holds its own, so a fixture names only what matters (#362).
+# login `owner`, and each issue the label `engineering:shaped` and empty blockers, sub-issues and
+# linked branches, unless it holds its own, so a fixture names only what matters (#362, #390 D1).
 gtrust() {
-  jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: []},
+  jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: [{name: "engineering:shaped"}]},
     blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 # trust <file>: the same for a REST fixture, which bodies.sh reads.
@@ -229,7 +245,7 @@ trust() {
   jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 for f in "$full/issues.json" "$full/pulls_open.json" "$ready/issues.json" "$many/issues.json" \
-  "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json"; do gtrust "$f"; done
+  "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json" "$labelled/issues.json"; do gtrust "$f"; done
 
 # outside: issues and PRs whose authors are and are not trusted authors. Its issue numbers avoid
 # the branch names above.
@@ -313,7 +329,7 @@ cat > "$tmp/full.report" <<'EXPECTED'
 
 ### To shape
 
-**#1** A request
+**#1** A request · sent back
 ```
 /engineering:discuss #1
 ```
@@ -409,22 +425,8 @@ expect "WHEN grep searches status.sh for the Next line and the jq that chose it 
   bash -c '! grep -qF -e "Next:" -e "\$next" -e "\$to_ship" -e "\$review" -e "\$doing" "$1"' _ "$status"
 
 echo "# --statuses"
-cat > "$tmp/full.statuses" <<'EXPECTED'
-[{"number":1,"status":"request","labels":["engineering:needs-discussion","bug"]},
- {"number":2,"status":"ready","labels":["status:ready"]},
- {"number":3,"status":"blocked","labels":[]},
- {"number":4,"status":"in-progress","labels":[]},
- {"number":5,"status":"needs-review","labels":[]},
- {"number":6,"status":"umbrella","labels":[]},
- {"number":7,"status":"ready","labels":[]},
- {"number":8,"status":"umbrella","labels":[]},
- {"number":23,"status":"ready","labels":[]},
- {"number":24,"status":"ready","labels":[]}]
-EXPECTED
-jq -c . "$tmp/full.statuses" > "$tmp/full.statuses.expected"
 run_status "$full" --statuses > "$tmp/full.statuses.out"
-same "WHEN status.sh --statuses runs THEN it prints a JSON array with the number, status and label names of each open issue, and no pull request"   "$tmp/full.statuses.expected" "$tmp/full.statuses.out"
-expect "WHEN status.sh --statuses runs THEN it makes no write call"   test ! -e "$full/.wrote"
+same "WHEN status.sh runs with --statuses THEN it prints what it prints with no argument" "$tmp/full.out" "$tmp/full.statuses.out"
 
 echo "# trusted authors"
 # group <report> <heading>: the lines of that `### ` group of the report.
@@ -439,14 +441,28 @@ expect "WHEN an open issue with a ## Goal section has an author who is not a tru
   hasline "$shape" "**#8** Outside umbrella · from visitor, not a trusted author"
 expect "WHEN an issue's author is not a trusted author THEN status.sh does not list it under ### Ready to build" \
   bash -c '! grep -qF "**#1** " <<<"$1"' _ "$build"
-run_status "$outside" --statuses > "$tmp/outside.statuses.out"
-same "WHEN status.sh --statuses reads that issue THEN its status is request, and an OWNER, MEMBER or COLLABORATOR issue is ready" \
-  <(echo '[{"number":1,"status":"request"},{"number":2,"status":"ready"},{"number":3,"status":"ready"},{"number":7,"status":"ready"},{"number":8,"status":"request"}]') \
-  <(jq -c 'map({number, status})' "$tmp/outside.statuses.out")
 expect "WHEN an open PR whose author is not a trusted author has the first line Closes #<n> THEN status.sh gives issue #<n> the status it has without that PR" \
   bash -c 'grep -qxF "**#2** Owner issue with an outside PR" <<<"$1" && ! grep -qE "^### (Needs review|In progress)" "$2"' _ "$build" "$tmp/outside.out"
 expect "WHEN an issue and a PR are by trusted authors THEN status.sh gives them the same statuses as before" \
   bash -c 'grep -qxF "**#5** Needs review issue · PR #41 · review and merge PR #41" "$1" && grep -qxF "**#4** In progress issue · PR #40" "$1"' _ "$tmp/full.out"
+
+echo "# labels"
+run_status "$labelled" > "$tmp/labelled.out"
+shape=$(group "$tmp/labelled.out" "To shape")
+build=$(group "$tmp/labelled.out" "Ready to build")
+umbrellas=$(group "$tmp/labelled.out" "Umbrellas")
+expect "WHEN an open issue does not carry engineering:shaped THEN status.sh gives it the status request, whatever its body holds, with a ## Scenarios or a ## Goal section" \
+  bash -c 'grep -qxF "**#31** Unshaped with scenarios" <<<"$1" && grep -qxF "**#32** Unshaped umbrella" <<<"$1"' _ "$shape"
+expect "WHEN an open issue carries engineering:needs-discussion THEN status.sh lists it under ### To shape with the fact sent back, with or without engineering:shaped" \
+  bash -c 'grep -qxF "**#33** Sent back · sent back" <<<"$1" && grep -qxF "**#34** Shaped and sent back · sent back" <<<"$1"' _ "$shape"
+expect "WHEN an open issue does not carry engineering:needs-discussion THEN its line has no sent back fact" \
+  bash -c '! grep -qF "sent back" <<<"$(grep -F "#31" <<<"$1")"' _ "$shape"
+expect "WHEN an open issue is sent back or unshaped THEN next and Autopilot offer no build for it: the discuss command is its suggestion and no ready or umbrella group lists it" \
+  bash -c 'for n in 31 32 33 34 35; do grep -qxF "/engineering:discuss #$n" <<<"$1" || exit 1; grep -qF "#$n " <<<"$2$3" && exit 1; done; ! grep -qE "^/engineering:(execute|ship) #3[1-5]$" "$4"; exit 0' _ "$shape" "$build" "$umbrellas" "$tmp/labelled.out"
+expect "WHEN an open issue's author is not a trusted author and it carries engineering:shaped THEN its status is request" \
+  grep -qxF "**#35** Outside but shaped · from stranger, not a trusted author" <<<"$shape"
+expect "WHEN an open issue by a trusted author carries engineering:shaped THEN its status comes from its body, so a ## Scenarios section is ready and a ## Goal section is an umbrella" \
+  bash -c 'grep -qxF "**#36** Shaped" <<<"$1" && grep -qF "**#37** Shaped umbrella" <<<"$2"' _ "$build" "$umbrellas"
 
 # bodies.sh runs here with the same fake gh, which answers its open-issues path from `issues.json`.
 bodies=$skill_dir/bodies.sh
@@ -475,9 +491,6 @@ echo "# errors"
 FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.out"
 expect "WHEN status.sh runs with no argument and fails THEN it prints the one line 'status.sh error: <reason>'" \
   bash -c 'test "$(wc -l < "$1")" = 1 && grep -q "^status.sh error: " "$1"' _ "$tmp/err.out"
-FAKE_GH_FAIL=1 run_status "$full" --statuses > "$tmp/err.statuses.out"
-same "WHEN status.sh --statuses fails THEN it prints the same one line as with no argument" \
-  "$tmp/err.out" "$tmp/err.statuses.out"
 
 echo "# the skills"
 skill=$skill_dir/SKILL.md
@@ -497,7 +510,7 @@ done
 
 echo "# the rule"
 expect "WHEN .claude/rules/engineering-scripts.md is read THEN it holds the one-report rule" \
-  grep -qxF -- '- A plugin script renders its facts one way for every skill that reads them; a second output exists only for another script, such as status.sh --statuses for labels.sh.' "$plugin/../../.claude/rules/engineering-scripts.md"
+  grep -qxF -- '- A plugin script renders its facts one way for every skill that reads them, and takes no argument that switches its output.' "$plugin/../../.claude/rules/engineering-scripts.md"
 
 echo "# the comment rule and discuss"
 expect "WHEN references/rules.md is read THEN it holds the line that a comment is a fact only when its author is a trusted author, and that a skill reads past any other comment as if it were not there" \
