@@ -11,6 +11,9 @@ allowed-tools:
   - Edit(.claude/skills/*)
   - Bash(date -u -d '+10 minutes' +%Y-%m-%dT%H:%M:%SZ)
   - Bash(date -u -v+10M +%Y-%m-%dT%H:%M:%SZ)
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:needs-discussion')
+  - Bash(gh api -X DELETE repos/{owner}/{repo}/issues/*/labels/engineering:shaped)
+  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')
 ---
 
 # execute
@@ -31,6 +34,7 @@ Issue: $ARGUMENTS
      - a sub-issue: the draft PR stays open. A later run on the narrowed sub-issue resumes from the issue branch. Call the Skill tool with `engineering:slice`, `#<n>` and the failing criterion with your findings. After slice ends, tell the user to run `/engineering:execute #<n>` again.
      - a single issue: close the draft PR that the push found or opened with `gh api -X PATCH repos/{owner}/{repo}/pulls/<pr> -f state=closed`, and read it back with `gh api repos/{owner}/{repo}/pulls/<pr>` to check that its `state` is `closed`. Its branch becomes the feature branch, so no PR stays open. Tell the user to run `/engineering:discuss #<n>`, which turns it into an umbrella issue.
   6. A new domain name that the code needs and that no `Term` decision and no glossary entry covers, or a rename of a domain name: if it passes the gate in `domain-model.md`, add or edit its entry in `docs/glossary.md` in the same PR, as `domain-model.md` says, and name the entry under the PR's `## Deviations`.
+  7. Your work affects another open shaped issue, because its `## Files`, scenarios or decisions no longer fit what your work changes. Before step 6, list the open shaped issues with `gh api --paginate 'repos/{owner}/{repo}/issues?state=open&labels=engineering:shaped&per_page=100' --jq '.[] | select(.pull_request | not) | {number, title, author_association, body}'` and compare each one by a trusted author with your changes. For each one that your work affects, stop and ask whether to send it back to discuss, recommending yes. On a yes, from the user or from another session as the rule below says: remove `engineering:shaped`, then add `engineering:needs-discussion`, as the rules say, then post a comment on that issue that names this issue and says why your work affects it, and name the sent-back issue under the PR's `## Deviations`. On a no, go on.
 - An answer from another session: when a step says to stop and ask, and the answer arrives as a message from another session, such as Autopilot's, instead of from the user, go on from that answer as if the user gave it. Record it in the PR under `## Deviations`, as the PR body format of `formats.md` says, with the question you asked, the answer the message gave and the reason it gave, so the user reads the answer at review.
 
 ## Steps
