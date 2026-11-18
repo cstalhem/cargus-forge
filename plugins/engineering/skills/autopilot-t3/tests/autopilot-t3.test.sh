@@ -203,6 +203,19 @@ for alt in '**Ship inherits the run'"'"'s model:**' '**The grader inherits its t
   expect "ADR-008 rejects $alt" grep -qF -- "- $alt" "$adr"
 done
 
+# #404: the README names the optional umbrella issue argument, and ADR-008 records the typed scope.
+expect "the README's command row names the optional #<umbrella issue> argument" \
+  bash -c 'grep -F "| \`/engineering:autopilot-t3 [#umbrella issue]\` |" "$1" | grep -qF "\`#<umbrella issue>\`"' _ "$readme"
+expect "the README's Autopilot section names /engineering:autopilot-t3 #<umbrella issue>" \
+  grep -qF '/engineering:autopilot-t3 #<umbrella issue>' <<<"$autopilot_section"
+expect "ADR-008's decision names the typed /engineering:autopilot-t3 #<u>" \
+  grep -qF '`/engineering:autopilot-t3 #<u>`, typed by the user, builds only umbrella issue #<u>' "$adr"
+for alt in "**The scope in the thread's title:**" '**A lock or claim label for the scoped run:**' \
+  '**A backstop scheduled task for each typed run:**' "**A scoped run that waits while another issue's child works:**" \
+  '**A feature-branch check in Autopilot:**'; do
+  expect "ADR-008 rejects $alt" grep -qF -- "- $alt" "$adr"
+done
+
 # The plugin's description names autopilot-t3 and opens the plugin README; scripts/check-descriptions.sh checks the other listings.
 description=$(jq -r .description "$manifest")
 expect "plugin.json's description names autopilot-t3" grep -qF 'autopilot-t3' <<<"$description"
