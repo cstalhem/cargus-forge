@@ -230,6 +230,24 @@ expect "scenario 4: deviation 1 allows one test for the bug" \
 expect "scenario 4: step 3 adds no test beyond the scenario tests" \
   bash -c 'grep -qF "no test beyond the scenario tests" <<<"$1"' _ "$step3_scn"
 
+step6_scn=$(grep -E '^6\. ' "$skill")
+expect "scenario 5: the PR body format has a Scenario tests section between What it delivers and Deviations" \
+  test "$(grep -nxF '## What it delivers' <<<"$pr_body" | tail -1 | cut -d: -f1)" -lt "$(grep -nxF '## Scenario tests' <<<"$pr_body" | cut -d: -f1)" -a "$(grep -nxF '## Scenario tests' <<<"$pr_body" | cut -d: -f1)" -lt "$(grep -nxF '## Deviations' <<<"$pr_body" | cut -d: -f1)"
+expect "scenario 5: the Scenario tests section has one line per scenario, with its test and red or its no-test reason" \
+  bash -c 'grep -qF "<scenario> · <test file and name> · red: <failure line>" <<<"$1" && grep -qF "<scenario> · no test: <reason>" <<<"$1"' _ "$pr_body"
+expect "scenario 5: formats.md no longer says each scenario becomes a test" \
+  bash -c '! grep -qF "Each scenario becomes a test." "$1"' _ "$formats"
+expect "scenario 5: step 6 takes each scenario's red record from step 3" \
+  grep -qF 'red record' <<<"$step6_scn"
+expect "scenario 5: the skill does not restate the line formats of the Scenario tests section" \
+  bash -c '! grep -qE "red: <failure line>|no test: <reason>" "$1"' _ "$skill"
+expect "scenario 5: the glossary defines Scenario test with its three properties" \
+  bash -c 'grep -qF "**Scenario test**: The test that proves one scenario: it fails when the code the scenario rests on is broken, takes its expected value from the scenario'"'"'s THEN, and asserts a result rather than a call." "$1"' _ "$glossary"
+expect "scenario 5: the glossary entry for Scenario says each one gets a scenario test or a stated reason" \
+  grep -qF '**Scenario**: One acceptance criterion written as `WHEN … THEN …`; each one gets a scenario test, or a stated reason why it has none.' "$glossary"
+expect "scenario 5: the plugin README describes execute's scenario tests" \
+  bash -c 'grep -F "/engineering:execute" "$1" | grep -qF "scenario test"' _ "$readme"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
   exit 1
