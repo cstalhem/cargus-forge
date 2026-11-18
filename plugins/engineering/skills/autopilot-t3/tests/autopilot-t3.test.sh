@@ -115,6 +115,33 @@ for name in list_triggers create_trigger update_trigger list_sessions get_sessio
   expect "the skill does not name $name" test "$(grep -cF "$name" "$skill")" = 0
 done
 
+# #404: a typed umbrella issue scopes the run.
+expect "the frontmatter has argument-hint: \"[#umbrella issue]\"" \
+  grep -qx 'argument-hint: "\[#umbrella issue\]"' <<<"$frontmatter"
+expect "the body holds the line 'Umbrella issue: \$ARGUMENTS', and no other \$ARGUMENTS" \
+  bash -c 'grep -qx "Umbrella issue: \$ARGUMENTS" <<<"$1" && test "$(grep -o "\\\$ARGUMENTS" <<<"$1" | wc -l)" = 1' _ "$body"
+rules=$(section "$skill" Rules)
+expect "the Rules define the scope once" \
+  test "$(grep -cF 'an issue is in scope when it is `#<u>` or its Facts line carries `umbrella #<u>`' <<<"$rules")" = 1
+expect "the Rules say steps 5 to 9 act only on issues in scope" \
+  grep -qF 'Steps 5 to 9 read, answer, hand off, merge, review, ship and execute only issues in scope.' <<<"$rules"
+expect "the Rules say the argument is input, not state" grep -qF 'is input, not state' <<<"$rules"
+expect "the Rules start no child only while a child in scope is working" \
+  grep -qF 'starts none while a child in scope is working' <<<"$rules"
+expect "the Scheduled task step reads no scheduled task and asks no question in a run with an argument" \
+  grep -qF 'In a run with an argument, read no scheduled task and ask no question: go on to step 4.' <<<"$(step_text "$skill" 'Scheduled task')"
+expect "the Facts step stops on an argument that is not an open umbrella issue with sub-issues" \
+  grep -qF 'reply `Autopilot: #<u> is not an open umbrella issue with sub-issues; run /engineering:next to see its status.` and stop' <<<"$(step_text "$skill" Facts)"
+for step in Children Merge Review Ship Execute; do
+  expect "the $step step takes only issues in scope" grep -qF 'in scope' <<<"$(step_text "$skill" "$step")"
+done
+expect "the Children step leaves a working child that is not in scope alone" \
+  grep -qF 'A child whose issue is not in scope is left alone: it does not end the turn' <<<"$(step_text "$skill" Children)"
+expect "the Nothing to do step names the umbrella issue in a run with an argument" \
+  grep -qF '`Autopilot: nothing to do for #<u>.`' <<<"$(step_text "$skill" 'Nothing to do')"
+expect "the Reports section says a run with an argument has no backstop" \
+  grep -qF 'A run with an argument has no such backstop' <<<"$(section "$skill" Reports)"
+
 # The order of the steps.
 expect "the steps end with Merge, Review, Ship, Execute, Nothing to do" \
   test "$(step_names "$skill" | tail -n 5 | joined)" = "Merge,Review,Ship,Execute,Nothing to do"
