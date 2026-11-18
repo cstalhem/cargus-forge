@@ -36,7 +36,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:execute <#issue>` | Builds one issue on its branch test-first, one scenario at a time: it writes each scenario test, sees it fail for the right reason, then writes the code, and its PR body records each scenario test's red run or the reason a scenario has no test. It builds until the issue's verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
-| `/engineering:autopilot-t3` | Runs Autopilot once, in a thread on a T3 Code host: proposes its hourly scheduled task on the first run, then builds ready issues unattended. See [Autopilot](#autopilot). |
+| `/engineering:autopilot-t3 [#umbrella issue]` | Runs Autopilot once, in a thread on a T3 Code host: proposes its hourly scheduled task on the first run, then builds ready issues unattended. With the optional `#<umbrella issue>` argument, it builds only that umbrella issue and leaves the scheduled task alone. See [Autopilot](#autopilot). |
 | `/engineering:anneal` | Has agents study the whole repo by area, and turns each confirmed finding into a fix sub-issue under one umbrella issue, or into a request. See [Anneal](#anneal). |
 
 Two more skills run only when another skill calls them:
@@ -130,6 +130,17 @@ A hand-off is one comment, and the comment is the record: Autopilot never hands 
 | A single issue's PR or a final PR is ready | `Autopilot: ready for your review: PR #<pr>, <title>, for #<n>.` | the PR |
 
 Open the thread the comment names in T3 Code to see what the child did, answer it there, or fix the issue and run `/engineering:execute #<n>` yourself.
+
+### Build one umbrella issue
+
+`/engineering:autopilot-t3 #<umbrella issue>` builds that umbrella issue only, from its ready sub-issues to its final PR, without the scheduled task. Type it in a thread on Fable, in the runtime mode `full-access`. A run with the argument:
+
+- neither proposes nor checks the scheduled task;
+- stops with `Autopilot: #<u> is not an open umbrella issue with sub-issues; run /engineering:next to see its status.` when `/engineering:next` does not list `#<u>` under Umbrellas with its sub-issues done count;
+- answers, hands off, merges, reviews, ships and executes only the umbrella issue and its sub-issues, and does not wait on a working child of another issue, because that child reports to another thread;
+- replies `Autopilot: nothing to do for #<u>.` when nothing is left.
+
+Each child's report starts the next run in the same thread, and that run reads the argument from the skill text it already follows. A typed run has no hourly backstop: if a report is lost, type the same command again, in any thread.
 
 ## Anneal
 

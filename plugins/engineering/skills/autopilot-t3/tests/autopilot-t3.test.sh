@@ -115,6 +115,33 @@ for name in list_triggers create_trigger update_trigger list_sessions get_sessio
   expect "the skill does not name $name" test "$(grep -cF "$name" "$skill")" = 0
 done
 
+# #404: a typed umbrella issue scopes the run.
+expect "the frontmatter has argument-hint: \"[#umbrella issue]\"" \
+  grep -qx 'argument-hint: "\[#umbrella issue\]"' <<<"$frontmatter"
+expect "the body holds the line 'Umbrella issue: \$ARGUMENTS', and no other \$ARGUMENTS" \
+  bash -c 'grep -qx "Umbrella issue: \$ARGUMENTS" <<<"$1" && test "$(grep -o "\\\$ARGUMENTS" <<<"$1" | wc -l)" = 1' _ "$body"
+rules=$(section "$skill" Rules)
+expect "the Rules define the scope once" \
+  test "$(grep -cF 'an issue is in scope when it is `#<u>` or its Facts line carries `umbrella #<u>`' <<<"$rules")" = 1
+expect "the Rules say steps 5 to 9 act only on issues in scope" \
+  grep -qF 'Steps 5 to 9 read, answer, hand off, merge, review, ship and execute only issues in scope.' <<<"$rules"
+expect "the Rules say the argument is input, not state" grep -qF 'is input, not state' <<<"$rules"
+expect "the Rules start no child only while a child in scope is working" \
+  grep -qF 'starts none while a child in scope is working' <<<"$rules"
+expect "the Scheduled task step reads no scheduled task and asks no question in a run with an argument" \
+  grep -qF 'In a run with an argument, read no scheduled task and ask no question: go on to step 4.' <<<"$(step_text "$skill" 'Scheduled task')"
+expect "the Facts step stops on an argument that is not an open umbrella issue with sub-issues" \
+  grep -qF 'reply `Autopilot: #<u> is not an open umbrella issue with sub-issues; run /engineering:next to see its status.` and stop' <<<"$(step_text "$skill" Facts)"
+for step in Children Merge Review Ship Execute; do
+  expect "the $step step takes only issues in scope" grep -qF 'in scope' <<<"$(step_text "$skill" "$step")"
+done
+expect "the Children step leaves a working child that is not in scope alone" \
+  grep -qF 'A child whose issue is not in scope is left alone: it does not end the turn' <<<"$(step_text "$skill" Children)"
+expect "the Nothing to do step names the umbrella issue in a run with an argument" \
+  grep -qF '`Autopilot: nothing to do for #<u>.`' <<<"$(step_text "$skill" 'Nothing to do')"
+expect "the Reports section says a run with an argument has no backstop" \
+  grep -qF 'A run with an argument has no such backstop' <<<"$(section "$skill" Reports)"
+
 # The order of the steps.
 expect "the steps end with Merge, Review, Ship, Execute, Nothing to do" \
   test "$(step_names "$skill" | tail -n 5 | joined)" = "Merge,Review,Ship,Execute,Nothing to do"
@@ -173,6 +200,19 @@ expect "ADR-008's Models part puts every child, execute and ship, on the current
 expect "ADR-008's Models part puts verify's grading agent on Opus" grep -qF "verify's grading agent runs on Opus" <<<"$models"
 for alt in '**Ship inherits the run'"'"'s model:**' '**The grader inherits its thread'"'"'s model:**' \
   '**The run on Sonnet:**' '**A child'"'"'s report that types the skill' '**A second execute child on a stronger model after a failure:**'; do
+  expect "ADR-008 rejects $alt" grep -qF -- "- $alt" "$adr"
+done
+
+# #404: the README names the optional umbrella issue argument, and ADR-008 records the typed scope.
+expect "the README's command row names the optional #<umbrella issue> argument" \
+  bash -c 'grep -F "| \`/engineering:autopilot-t3 [#umbrella issue]\` |" "$1" | grep -qF "\`#<umbrella issue>\`"' _ "$readme"
+expect "the README's Autopilot section names /engineering:autopilot-t3 #<umbrella issue>" \
+  grep -qF '/engineering:autopilot-t3 #<umbrella issue>' <<<"$autopilot_section"
+expect "ADR-008's decision names the typed /engineering:autopilot-t3 #<u>" \
+  grep -qF '`/engineering:autopilot-t3 #<u>`, typed by the user, builds only umbrella issue #<u>' "$adr"
+for alt in "**The scope in the thread's title:**" '**A lock or claim label for the scoped run:**' \
+  '**A backstop scheduled task for each typed run:**' "**A scoped run that waits while another issue's child works:**" \
+  '**A feature-branch check in Autopilot:**'; do
   expect "ADR-008 rejects $alt" grep -qF -- "- $alt" "$adr"
 done
 
