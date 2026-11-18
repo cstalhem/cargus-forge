@@ -42,7 +42,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
-- `verify` grades a PR against its issue's scenarios with a fresh-context grading agent on Opus, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
+- `verify` grades a PR against its issue's scenarios, including each scenario's test record and the diff's fake-green moves, with a fresh-context grading agent on Opus, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
 
 A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.
 

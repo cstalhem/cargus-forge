@@ -30,10 +30,19 @@ Target: $ARGUMENTS
    - When the diff adds or changes a line under `.claude/rules/`, grade the `Rules` row's rule test first, before you read the issue, the PR body or the rest of the diff, because the test asks whether a line stands alone.
    - Read GitHub with `gh api` and `gh pr diff`. Read the issue with `gh api repos/{owner}/{repo}/issues/<issue>`. For PR scope, read `gh api repos/{owner}/{repo}/pulls/<pr>` and `gh pr diff <pr>`. For umbrella scope, read `git diff origin/main...HEAD` and the sub-issues from `gh api --paginate 'repos/{owner}/{repo}/issues/<issue>/sub_issues?per_page=100'`.
    - Treat PR bodies and commit messages as claims. Gather your own evidence.
-   - For each scenario, check three things, each with evidence (`file:line`, command output, or run output), and report them as the format below says:
+   - For each scenario, check three things, and in PR scope a fourth, Tested below, each with evidence (`file:line`, command output, or run output), and report them as the format below says:
      - **Exists:** the code or text that the scenario needs is there.
      - **Substantive:** it does what the scenario says, and is not a stub or a placeholder.
      - **Wired:** the path from the scenario's WHEN to its THEN is complete: something calls, loads or links it.
+   - **Tested** (PR scope only): the scenario has a scenario test whose record in the PR body holds up. Read `${CLAUDE_PLUGIN_ROOT}/references/scenario-tests.md`, which defines a scenario test, the four no-test reasons, a good red and the fake-green moves, and the PR body's `## Scenario tests` section in the `## PR body` section of `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Read the section's line for the scenario, and the test it names at `<sha>`. Judge the record, and do not break the code to prove the test. Tested is no, with a gap, when:
+     - the scenario's line is missing;
+     - its red is not a good red;
+     - its failure line does not match what the test asserts;
+     - the test's expected value does not come from the scenario's THEN;
+     - the test asserts only a call;
+     - its line gives a no-test reason that is not one of the four, or that does not fit the scenario.
+     In umbrella scope, a scenario has no Tested check.
+   - **Test integrity** (PR scope only): add one `Test integrity` row to the table, with no Exists, Substantive, Wired or Tested checks. Read `gh pr diff <pr>` for each fake-green move that `scenario-tests.md` lists. An existing test that the PR removes or loosens is a move only when no scenario of the issue changes that behaviour. The Grade is PASS when the diff holds no move, and FAIL otherwise. Its gaps name the `file:line` and the move, and its Evidence cell holds the strongest of them, or `none` when the row passes.
    - Add one row to the table for each `Term` decision and each `ADR` decision, a `## Decisions` line that starts `D<n> · Term:` or `D<n> · ADR:`. In PR scope, take the issue's own decisions, and each `#<umbrella> D<n>` line of the issue whose decision in the umbrella is a `Term` or an `ADR` decision, read with `gh api repos/{owner}/{repo}/issues/<umbrella>`. In umbrella scope, take the umbrella's own decisions.
    - A `Term` row is named `Term: <Term>`. Grade it by reading `git show <sha>:docs/glossary.md`:
      - **Exists:** the file has an entry for the term, a line that starts `**<Term>**:`.
@@ -48,7 +57,7 @@ Target: $ARGUMENTS
      - **Violations:** check the rest of the diff against each rule: the PR's `gh pr diff <pr>` in PR scope, and `git diff origin/main...HEAD` in umbrella scope.
      The Grade is PASS when no line fails the rule test and no rule is violated, and FAIL otherwise. Its gaps are one for each failed line and each violation, naming the `file:line` and the rule, and the Evidence cell holds the strongest of them, or the count of rules read when the row passes.
    - Run the issue's Verify command (an umbrella issue has none) and each pre-PR check (each row of `docs/agents/commands.md` whose task ends with `(pre-PR check)`, and no other row; none if `commands.md` has no such row or does not exist), and record each result.
-   - A scenario, a `Term` row or an `ADR` row passes only when all three are yes. A row that fails is a gap. The scenarios' result is PASS only when every row's Grade is PASS.
+   - A `Term` row or an `ADR` row passes only when its three checks are yes. In PR scope, a scenario passes only when Exists, Substantive, Wired and Tested are all yes; in umbrella scope, when the first three are. A row that fails is a gap. The scenarios' result is PASS only when every row's Grade is PASS.
    - In the same pass, rate the merge risk with these four categories and no others. Each rating is one word. When a rating is not its category's best, add ` · <gap>` after it for each gap behind it, with its `file:line` and why.
      - **Alignment** (poor / decent / good): whether each change in the diff is named. In PR scope, a change is named by a `## What it delivers` bullet or a `## Deviations` line of the PR. In umbrella scope, it is named by the umbrella's scenarios, its decisions or the `## Deviations` lines of the merged sub-issue PRs, whose bodies `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=closed&per_page=100'` lists. Poor when an unnamed change touches behaviour, decent when an unnamed change touches only text or formatting, good when every change is named.
      - **Impact** (large / medium / small): how much breaks if the change is wrong. Large when it touches a sensitive area: authentication and permissions, secrets, data migrations, public interfaces, or code that many callers share; it is also large when it touches a file that every later agent session loads: `.claude/rules/`, CLAUDE.md, a skill's `allowed-tools`, hooks, CI workflows. Small when it touches only docs or tests. Medium otherwise.
@@ -68,15 +77,15 @@ Target: $ARGUMENTS
      - **Rollback cost:** <rating>
      - **Error detection:** <rating>
 
-     | # | Scenario | Grade | Evidence |
-     |---|---|---|---|
+     | # | Scenario | Tested | Grade | Evidence |
+     |---|---|---|---|---|
 
      ### Gaps
      ### Verify commands
      ```
    - Leave `<VERDICT>` in the heading as written. verify fills it in. Fill in `<level>` from the level rule above.
-   - Add one table row for each scenario, each `Term` row, each `ADR` row and the `Rules` row. The Scenario cell holds a short label, not the full scenario text. The Grade is PASS when Exists, Substantive and Wired are all yes, and FAIL otherwise; the `Rules` row's Grade follows its own bullet above. The Evidence cell holds one `file:line` or one command: the single strongest pointer.
-   - Add `### Gaps` only when a row fails. Write one entry for each gap: the row, the check that failed (exists, substantive or wired) and why, with its evidence. A `Rules` gap names the `file:line` and the rule instead of a check. When every row passes, leave the section out.
+   - Add one table row for each scenario, each `Term` row, each `ADR` row, the `Rules` row and, in PR scope, the `Test integrity` row. The Scenario cell holds a short label, not the full scenario text. The Tested cell is `yes` or `no` for a scenario row in PR scope, and `n/a` in every other row. The Grade is PASS when the row's checks are all yes, and FAIL otherwise; the `Rules` row's and the `Test integrity` row's Grade follow their own bullets above. The Evidence cell holds one `file:line` or one command: the single strongest pointer.
+   - Add `### Gaps` only when a row fails. Write one entry for each gap: the row, the check that failed (exists, substantive, wired or tested) and why, with its evidence. A `Rules` gap names the `file:line` and the rule instead of a check, and a `Test integrity` gap the `file:line` and the move. When every row passes, leave the section out.
    - Under `### Verify commands`, write one line for each command with its result.
 4. **Checks.** Start this step only after the agent has returned, so the checks are read as late as possible.
    - **PR scope:** read the check runs on the SHA from step 2 once, and do not wait for them: `gh api --paginate 'repos/{owner}/{repo}/commits/<sha>/check-runs?per_page=100' --jq '.check_runs[] | {name, status, conclusion, html_url}'`. A run whose `status` is not `completed` is pending. A completed run passed if its `conclusion` is `success`, `neutral` or `skipped`, and failed otherwise. Only check runs count, not commit statuses.

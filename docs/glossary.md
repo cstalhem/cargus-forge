@@ -46,7 +46,7 @@ _Avoid_: feature flag, option
 
 **Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it; for a request that automates or delegates work, it also asks where the human boundary lies.
 
-**Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive or wired) and why.
+**Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive, wired or tested) and why.
 
 **Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, created linked to its issue, which is how skills find it.
 
