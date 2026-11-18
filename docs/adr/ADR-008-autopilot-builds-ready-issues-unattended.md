@@ -6,9 +6,9 @@ status: active
 
 # ADR-008: Autopilot builds ready issues unattended
 
-- **Decision:** An hourly T3 Code scheduled task starts a fresh T3 Code thread that runs `/engineering:autopilot-t3`, which builds each ready issue in a child thread, one at a time, answers each child's questions, merges sub-issue PRs that verify marked ready, starts ship, and hands only PRs into `main` and stuck issues to the user with one comment.
+- **Decision:** An hourly T3 Code scheduled task starts a fresh T3 Code thread that runs `/engineering:autopilot-t3`, which builds each ready issue in a child thread, one at a time, answers each child's questions, merges sub-issue PRs that verify marked ready, starts ship, and hands only PRs into `main` and stuck issues to the user with one comment. `/engineering:autopilot-t3 #<u>`, typed by the user, builds only umbrella issue #<u> in that thread.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-004](ADR-004-skills-load-on-demand-scripts-fetch-facts.md), [ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)
-- **Source:** [#224](https://github.com/cstalhem/cargus-forge/issues/224), [#262](https://github.com/cstalhem/cargus-forge/issues/262), [#265](https://github.com/cstalhem/cargus-forge/issues/265), [#368](https://github.com/cstalhem/cargus-forge/issues/368), [#367](https://github.com/cstalhem/cargus-forge/issues/367)
+- **Source:** [#224](https://github.com/cstalhem/cargus-forge/issues/224), [#262](https://github.com/cstalhem/cargus-forge/issues/262), [#265](https://github.com/cstalhem/cargus-forge/issues/265), [#368](https://github.com/cstalhem/cargus-forge/issues/368), [#367](https://github.com/cstalhem/cargus-forge/issues/367), [#404](https://github.com/cstalhem/cargus-forge/issues/404)
 
 ## Details
 - **Shape stays with the user.** Autopilot runs neither discuss nor slice, and leaves requests alone. It starts at a ready issue, one with a `## Scenarios` section and no open blocker, and ends at a PR into `main`: a single issue's PR or a final PR, which the user reviews and merges. The exception is the fix sub-issues of an anneal, which [ADR-010](ADR-010-anneal-shapes-fixes-without-discuss.md) covers: anneal writes them as ready issues without discuss.
@@ -22,6 +22,7 @@ status: active
 - **Hand-offs.** There are three: a child that asks a fourth question after three answers; a child that stopped for another reason, such as execute sending a single issue back to discuss or the plugin not loading in the child; and a single issue's PR or a final PR that is ready for review. Each is one comment, `Autopilot: stopped, <why>` on the issue or `Autopilot: ready for your review` on the PR, and no push of its own, because T3 Connect pushes when a thread finishes, fails or asks. Children run in `full-access` mode, so no child waits on a permission prompt. The comment is the record, so a run hands the same thing off only once.
 - **Models.** The run is on Fable, set by the skill's `model` line for the turn it is typed in and by the scheduled task's model for later turns, such as one that a child's report starts. It starts every child, execute and ship, on the current Sonnet model of the inherited provider instance, which it reads from `orchestrator_capabilities`, and starts no child when none is listed: execute is nearly all the tokens, and a sized issue does not need the strongest model. verify's grading agent runs on Opus, so a model other than the one that wrote the code grades it before an unattended merge. No part sets an effort level; each model runs at the host's default. That a scheduled task's prompt applies the skill's `model` line as a typed message does is an unchecked assumption.
 - **The hourly run is the backstop.** A lost report or a missed answer waits at most one hour, because the next run reads the same facts and the same threads.
+- **One umbrella issue, typed.** `/engineering:autopilot-t3 #<u>`, typed by the user, builds only umbrella issue #<u> in that thread: each run that a report starts reads the argument from the skill text it already follows, only that umbrella's children, merges, final PR, ship and execute are in scope, the run neither proposes nor checks the scheduled task, and a lost report waits for the user to type the command again. The skill's line `Umbrella issue: $ARGUMENTS` carries the argument; it is input, not state, so Autopilot still keeps nothing in the thread. A run with an argument waits only on a working child in scope, because a child of another issue reports to another thread. An argument that is not an open umbrella issue with sub-issues stops the run.
 - **The scheduled task** is `engineering: autopilot`, an interval of 3600000 ms, a fresh thread each firing. The read-back checks that one task has the prompt `/engineering:autopilot-t3`. The user pauses or deletes it in T3's scheduled tasks list. A run reports a paused task or a `blockedByPolicy`, and changes an existing task never.
 - **No trial run.** The first real issue Autopilot builds is its test, and what it shows broken becomes a new issue.
 
@@ -47,6 +48,11 @@ status: active
 - **The project root as the hourly run's workspace:** `status.sh` reads git in the current directory, and T3 removes settled worktrees on its own.
 - **The report instruction in the launch message:** text after the typed command becomes the skill's arguments.
 - **A child reports on every turn end:** Autopilot hands off and releases the claim of a child whose scheduled resume is still due.
+- **The scope in the thread's title:** a second copy of the argument, read with a tool call, in a place a rename changes.
+- **A lock or claim label for the scoped run:** it copies the thread list, which a claim label on the issue already fails for.
+- **A backstop scheduled task for each typed run:** a second task to create, find and delete.
+- **A scoped run that waits while another issue's child works:** that child reports to another thread, so the scoped thread never wakes.
+- **A feature-branch check in Autopilot:** execute already stops when the umbrella has no linked feature branch.
 
 ## Consequences
 - The user shapes requests in discuss and reviews PRs into `main`. Everything between runs unattended, and the plugin still works without Autopilot.
