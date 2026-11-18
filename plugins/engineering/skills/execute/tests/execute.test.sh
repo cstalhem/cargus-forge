@@ -190,6 +190,46 @@ expect "allowed-tools pre-approves the shaped removal" \
 expect "allowed-tools pre-approves the label read-back" \
   grep -qF "  - Bash(gh api repos/{owner}/{repo}/issues/* --jq '[.labels[].name]')" "$skill"
 
+# execute works test-first, one scenario at a time (#419). references/scenario-tests.md holds the definitions;
+# the skill points to it and states only what execute does.
+scenario_tests=$plugin/references/scenario-tests.md
+step1_scn=$(grep -E '^1\. ' "$skill")
+step3_scn=$(grep -E '^3\. ' "$skill")
+deviation1=$(sed -n '/^  1\. /,/^  2\. /p' "$skill" | sed '$d')
+
+expect "scenario 1: scenario-tests.md exists" test -f "$scenario_tests"
+expect "scenario 1: scenario-tests.md defines a scenario test by its three properties" \
+  bash -c 'grep -qF "fails when the code the scenario rests on is broken" "$1" && grep -qF "takes its expected value from the scenario'"'"'s THEN" "$1" && grep -qF "asserts a result rather than a call" "$1"' _ "$scenario_tests"
+expect "scenario 1: scenario-tests.md defines a good red" \
+  grep -qF "A good red is the test's own assertion failing, or the thing the scenario adds being absent." "$scenario_tests"
+expect "scenario 1: scenario-tests.md says a syntax error, a missing test file and a broken setup are not a good red" \
+  grep -qF "A syntax error, a missing test file or a broken setup is not one." "$scenario_tests"
+expect "scenario 1: step 1 reads scenario-tests.md" \
+  grep -qF '${CLAUDE_PLUGIN_ROOT}/references/scenario-tests.md' <<<"$step1_scn"
+expect "scenario 1: step 3 writes the scenario test first, runs it, sees a good red, and only then writes the code" \
+  bash -c 'grep -qF "write the scenario test first" <<<"$1" && grep -qF "good red" <<<"$1" && grep -qF "only then" <<<"$1"' _ "$step3_scn"
+expect "scenario 1: step 3 keeps the failure line of each red run" \
+  grep -qF 'failure line' <<<"$step3_scn"
+expect "scenario 1: step 3 does not run the Verify command before the work, because each red run replaces it" \
+  bash -c 'grep -qF "Do not run the issue'"'"'s Verify command before the work" <<<"$1"' _ "$step3_scn"
+
+expect "scenario 2: step 3 rewrites a test that passes before its code once" \
+  bash -c 'grep -qF "passes before its code" <<<"$1" && grep -qF "rewrite it once" <<<"$1"' _ "$step3_scn"
+expect "scenario 2: step 3 stops and asks when the test still passes, because the scenario is already met" \
+  bash -c 'grep -qF "stop and ask" <<<"$1" && grep -qF "already met" <<<"$1"' _ "$step3_scn"
+
+expect "scenario 3: scenario-tests.md lists exactly four no-test reasons" \
+  bash -c 'grep -qF "exactly four" "$1" && grep -qF "wording in a doc or a prompt" "$1" && grep -qF "compiler, type checker or linter already fails" "$1" && grep -qF "existing test already fails without the change" "$1" && grep -qF "Only a real run can show it" "$1"' _ "$scenario_tests"
+expect "scenario 3: step 3 writes no test for a scenario that fits a no-test reason and names the reason" \
+  bash -c 'grep -qF "no-test reasons" <<<"$1" && grep -qF "write no test" <<<"$1" && grep -qF "name the reason" <<<"$1"' _ "$step3_scn"
+expect "scenario 3: the skill does not restate the reasons that scenario-tests.md holds" \
+  bash -c '! grep -qF "type checker or linter" "$1"' _ "$skill"
+
+expect "scenario 4: deviation 1 allows one test for the bug" \
+  bash -c 'grep -qF "one test for that bug" <<<"$1"' _ "$deviation1"
+expect "scenario 4: step 3 adds no test beyond the scenario tests" \
+  bash -c 'grep -qF "no test beyond the scenario tests" <<<"$1"' _ "$step3_scn"
+
 if [ "$failures" -ne 0 ]; then
   echo "$failures failed"
   exit 1
