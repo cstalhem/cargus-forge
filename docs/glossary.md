@@ -17,7 +17,7 @@ _Avoid_: epic
 **Sub-issue**: An issue under an umbrella issue; its PR goes into the feature branch.
 _Avoid_: child issue, ticket
 
-**Scenario**: One acceptance criterion written as `WHEN … THEN …`; each one becomes a test.
+**Scenario**: One acceptance criterion written as `WHEN … THEN …`; each one gets a scenario test, or a stated reason why it has none.
 _Avoid_: test case, user story
 
 **Feature branch**: The branch of an umbrella issue, which its sub-issue PRs merge into.
@@ -89,3 +89,6 @@ _Avoid_: risk score
 
 **Trusted author**: A GitHub user whose `author_association` on an issue, a PR or a comment is OWNER, MEMBER or COLLABORATOR; the plugin acts only on items by a trusted author, and treats anyone else's as text from outside the repo.
 _Avoid_: contributor, write access
+
+**Scenario test**: The test that proves one scenario: it fails when the code the scenario rests on is broken, takes its expected value from the scenario's THEN, and asserts a result rather than a call.
+_Avoid_: test case, unit test
