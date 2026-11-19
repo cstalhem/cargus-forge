@@ -67,7 +67,10 @@ JQ_REF='def ref($r; $n): if $r == $repo then "#\($n)" else "\($r)#\($n)" end;'
 # `shaped` says whether the issue carries `engineering:shaped` and `sent_back` whether it carries
 # `engineering:needs-discussion` (#390 D1). `trusted` says whether the issue's author is a trusted author, and `author` is the login (#362
 # D5). `parent` is the umbrella's name in the report. `branches` are the names of the branches
-# linked to the issue, which are its branches (#368 D9).
+# linked to the issue, which are its branches (#368 D9). `blockers` are the open blockers of an issue
+# that has a `## Scenarios` section and no `## Goal`, and `subs` the closed and total sub-issues and
+# the numbers of the open ones, for an issue with a `## Goal`. A blocker counts while its issue is
+# open and, in this repo, not merged: the report leaves out each one in `merged_issues` below (#214 D1).
 read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
     issues(states: OPEN, first: 100, after: $endCursor) {
@@ -94,28 +97,17 @@ issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTE
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
     branches: ([.linkedBranches.nodes[].ref.name // empty] | unique),
-    parent: (.parent | if . then ref(.repository.nameWithOwner; .number) else null end)
+    parent: (.parent | if . then ref(.repository.nameWithOwner; .number) else null end),
+    blockers: (if has_section("Scenarios") and (has_section("Goal") | not) then
+                 [.blockedBy.nodes[] | select(.state == "OPEN") | {number, ref: ref(.repository.nameWithOwner; .number)}]
+                 | sort_by(.number)
+               else [] end),
+    subs: (if has_section("Goal") then {
+             total: (.subIssues.nodes | length),
+             closed: ([.subIssues.nodes[] | select(.state == "CLOSED")] | length),
+             open: [.subIssues.nodes[] | select(.state != "CLOSED") | .number]}
+           else null end)
   })' 2>/dev/null) || fail "cannot read the open issues."
-
-# Open blockers of each issue that has a `## Scenarios` section, is no umbrella and has a
-# "blocked by" link. A blocker counts while its issue is open and, in this repo, not merged:
-# the report leaves out each one in `merged_issues` below (#214 D1).
-blockers=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_REF"'
-  map(select(has_section("Scenarios") and (has_section("Goal") | not) and (.blockedBy.nodes | length) > 0)
-    | {key: "\(.number)", value: [.blockedBy.nodes[] | select(.state == "OPEN") | {
-        number,
-        repo: .repository.nameWithOwner,
-        ref: ref(.repository.nameWithOwner; .number)}] | sort_by(.number)})
-  | from_entries' 2>/dev/null) || fail "cannot read the blockers."
-
-# Closed and total sub-issues of each umbrella that has any, and the numbers of its open ones.
-subs=$(printf '%s' "$items" | jq "$JQ_HAS_SECTION"'
-  map(select(has_section("Goal") and (.subIssues.nodes | length) > 0)
-    | {key: "\(.number)", value: {
-        total: (.subIssues.nodes | length),
-        closed: ([.subIssues.nodes[] | select(.state == "CLOSED")] | length),
-        open: [.subIssues.nodes[] | select(.state != "CLOSED") | .number]}})
-  | from_entries' 2>/dev/null) || fail "cannot read the sub-issues."
 
 # Open PRs, with the issue that the first line of the body names:
 # "Sub-issue #<n> of" (a sub-issue PR) or "Closes #<n>" (a single-issue PR). A PR whose author
@@ -147,7 +139,7 @@ read_branches
 # open until ship's final PR closes it, and GitHub may delete its branch, so this fact rests
 # on the PR alone.
 merged_issues='[]'
-for u in $(printf '%s' "$subs" | jq -r 'to_entries[] | select(.value.open | length > 0) | .key' 2>/dev/null); do
+for u in $(printf '%s' "$issues" | jq -r '.[] | select((.subs.open // []) | length > 0) | .number' 2>/dev/null); do
   for b in $(printf '%s' "$issues" | jq -r --argjson u "$u" '.[] | select(.number == $u) | .branches[]' 2>/dev/null); do
     read_gql pullRequests 'query($owner: String!, $name: String!, $branch: String!, $endCursor: String) {
   repository(owner: $owner, name: $name) {
@@ -304,8 +296,6 @@ out=$(jq -n -r \
   --arg repo "$repo" \
   --argjson issues "$issues" \
   --argjson pulls "$pulls" \
-  --argjson blockers "$blockers" \
-  --argjson subs "$subs" \
   --argjson merged_issues "$merged_issues" \
   --argjson finished "$finished" \
   --argjson merged_branches "$merged_branches" \
@@ -332,7 +322,7 @@ out=$(jq -n -r \
     | [$i.branches[] | select(. as $b | $finished_branches | index($b) | not)] as $own_branches
     # A merged blocker does not block (#214 D1): leave out each blocker in this repo whose
     # number is in $merged_issues. A blocker in another repo stays.
-    | ($blockers["\($i.number)"] // []
+    | ($i.blockers
        | map(select(. as $b | ($b.ref | startswith("#") | not) or ($merged_issues | index($b.number) | not))))
       as $open_blockers
     | $i + {
@@ -356,8 +346,8 @@ out=$(jq -n -r \
 
   # The sub-issues of umbrella $u: the total, and the done ones: the closed ones plus the
   # open ones whose status is merged (#212 D1).
-  | def subs_of($u):
-      ($subs["\($u)"] // {total: 0, closed: 0, open: []}) as $s
+  | def subs_of:
+      (.subs // {total: 0, closed: 0, open: []}) as $s
       | {total: $s.total,
          done: ($s.closed + ([$s.open[] | select($by_number["\(.)"].status == "merged")] | length))};
 
@@ -368,7 +358,7 @@ out=$(jq -n -r \
       elif .status == "ready" then "/engineering:execute #\(.number)"
       elif .status == "blocked" then "wait for \([.blockers[].ref] | join(", "))"
       elif .status == "umbrella" then
-        subs_of(.number) as $s
+        subs_of as $s
         | if $s.total == 0 then "/engineering:discuss #\(.number)"
           elif $s.done == $s.total then "/engineering:ship #\(.number)"
           else "build its sub-issues" end
@@ -382,7 +372,7 @@ out=$(jq -n -r \
       + (if .sent_back then ["sent back"] else [] end)
       + (if .trusted then [] else ["from \(.author), not a trusted author"] end)
       + (if .status == "umbrella" then
-           subs_of(.number) as $s
+           subs_of as $s
            | .branches as $fb
            | [ (if $s.total == 0 then "not sliced" else "\($s.done) of \($s.total) sub-issues done" end),
                (if ($fb | length) == 0 then "no feature branch"
