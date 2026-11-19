@@ -362,6 +362,38 @@ run_status "$merged" | sed '/^## Cleanup$/,$d' > "$tmp/merged.out"
 same "WHEN a merged PR into an umbrella's linked feature branch names an open sub-issue THEN the sub-issue counts as done, a merged PR into a <n>-* branch with no link marks nothing, and an issue whose only blocker is closed is ready" \
   "$tmp/merged.expected" "$tmp/merged.out"
 
+# blocked_umbrella: an umbrella with an open "blocked by" link to a ready issue.
+blocked_umbrella=$tmp/blocked_umbrella
+mkdir "$blocked_umbrella"
+cat > "$blocked_umbrella/issues.json" <<'JSON'
+[
+  {"number":70,"title":"Blocked umbrella","body":"## Goal\nx\n\n## Scenarios\n- WHEN a THEN b\n","blockedBy":{"nodes":[{"number":71,"state":"OPEN","repository":{"nameWithOwner":"o/r"}}]}},
+  {"number":71,"title":"Its blocker","body":"## Scenarios\n- WHEN a THEN b\n"}
+]
+JSON
+gtrust "$blocked_umbrella/issues.json"
+cat > "$tmp/blocked_umbrella.expected" <<'EXPECTED'
+## Report
+
+### Ready to build
+
+**#71** Its blocker
+```
+/engineering:execute #71
+```
+
+### Umbrellas
+
+**#70** Blocked umbrella · not sliced · no feature branch
+```
+/engineering:discuss #70
+```
+
+EXPECTED
+run_status "$blocked_umbrella" | sed '/^## Cleanup$/,$d' > "$tmp/blocked_umbrella.out"
+same "WHEN an umbrella issue has an open \"blocked by\" link THEN the report prints no blocked-by line under it" \
+  "$tmp/blocked_umbrella.expected" "$tmp/blocked_umbrella.out"
+
 run_status "$none" > "$tmp/none.out"
 expect "WHEN status.sh runs and no issue is open THEN the Report part is empty and the Cleanup part follows" \
   bash -c 'test "$(sed -n 1p "$1")" = "## Report" && grep -qxF "## Cleanup" "$1"' _ "$tmp/none.out"
