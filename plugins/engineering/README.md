@@ -33,7 +33,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 |---|---|
 | `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. Runs on Fable for the turn it is typed in, with its research agents on Sonnet. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. The turn discuss is typed in runs on Fable, and it covers loading, reading the code and the challenge round; later rounds run on the session's model, and starting the session with `/model fable` keeps all of discuss on Fable. |
-| `/engineering:execute <#issue>` | Builds one issue on its branch until its verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
+| `/engineering:execute <#issue>` | Builds one issue on its branch test-first, one scenario at a time: it writes each scenario test, sees it fail for the right reason, then writes the code, and its PR body records each scenario test's red run or the reason a scenario has no test. It builds until the issue's verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot-t3 [#umbrella issue]` | Runs Autopilot once, in a thread on a T3 Code host: proposes its hourly scheduled task on the first run, then builds ready issues unattended. With the optional `#<umbrella issue>` argument, it builds only that umbrella issue and leaves the scheduled task alone. See [Autopilot](#autopilot). |
@@ -42,7 +42,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 Two more skills run only when another skill calls them:
 
 - `slice` splits an umbrella issue into sub-issues and creates its feature branch. discuss calls it, and execute calls it on a sub-issue that turns out too big.
-- `verify` grades a PR against its issue's scenarios with a fresh-context grading agent on Opus, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
+- `verify` grades a PR against its issue's scenarios, including each scenario's test record and the diff's fake-green moves, with a fresh-context grading agent on Opus, rates the PR's merge risk, and marks a passing PR ready. execute and ship call it.
 
 A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.
 

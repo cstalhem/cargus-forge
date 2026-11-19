@@ -1,6 +1,6 @@
 # Issue formats
 
-A scenario is one acceptance criterion as `WHEN <condition> THEN <result>`. Each scenario becomes a test.
+A scenario is one acceptance criterion as `WHEN <condition> THEN <result>`. Each scenario gets a scenario test, or a stated reason why it has none.
 
 Use exactly the sections of the format, in its order, and add no other section. The one exception: when discuss rewrites an existing issue, it adds the original body at the end under `## Request`, without its own `## Request` line and with each of its headings one level deeper.
 
@@ -103,10 +103,15 @@ The PR that execute opens for a single issue or a sub-issue.
 ## What it delivers
 - <change> (<D<n> | #<umbrella> D<n> | the scenario it makes pass>)
 
+## Scenario tests
+- <scenario> · <test file and name> · red: <failure line>
+- <scenario> · no test: <reason>
+
 ## Deviations
 - <one line>
 ```
 
 - The first line is `Closes #<n>` for a single issue. For a sub-issue it is "Sub-issue #<n> of #<parent>. This PR goes into `<base>`, so it has no `Closes` line."
 - Each `## What it delivers` bullet is one change, and names the decision it serves (`D<n>` or `#<umbrella> D<n>`) or the scenario it makes pass. The section does not list the changes per file.
+- `## Scenario tests` has one line for each of the issue's scenarios, in the issue's order: the first form for a scenario that has a scenario test, with the failure line of its red run, and the second for a scenario that has none, with one of the four no-test reasons.
 - `## Deviations` is there only when a deviation rule was used or a question was answered from another session. It has one line for each: the deviation, or `Autopilot: <question> → <answer>, because <why>` for an answer from another session.
