@@ -1,6 +1,6 @@
 # Commands
 
-This repo has no build or lint. A plugin is checked by validating it and by loading it in a session, and `scripts/test.sh` runs the tests: every `*.test.sh`, `test_*.py` and `*.test.mjs` file.
+This repo has no build or lint. A plugin is checked by validating it and by loading it in a session, and `scripts/test.sh` runs the tests.
 
 | Task | Command |
 |---|---|
