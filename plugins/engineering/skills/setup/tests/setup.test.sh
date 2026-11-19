@@ -356,11 +356,11 @@ lacks '· present ('
 done_check
 
 setup
-check "run from a subdirectory, it reads the files at the top of the repo"
+check "run from a subdirectory, it prints one setup.sh error line that says to start at the top of the repo"
 mkdir -p docs/agents sub/dir
 printf '# Commands\n' > docs/agents/commands.md
 run "$repo/sub/dir"
-has '- `docs/agents/commands.md` · present'
+error 'start the session at the top of the repo'
 done_check
 
 setup
@@ -485,7 +485,7 @@ setup
 check "a failing git call, outside a git repo, prints one setup.sh error line and exits 0"
 repo=$(mktemp -d "$tmp/norepo.XXXXXX")
 run
-error 'git rev-parse --show-toplevel:'
+error 'git rev-parse --show-prefix:'
 done_check
 
 if [ "$failures" -ne 0 ]; then
