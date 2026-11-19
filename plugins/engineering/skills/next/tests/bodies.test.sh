@@ -96,6 +96,28 @@ run_bodies "$full" > "$tmp/full.out"
 same "WHEN bodies.sh runs THEN a delivers issue prints its What it delivers and Files sections, a Goal issue its Goal and Out of scope sections, an issue with neither its whole body, each under a heading, lowest number first, and no PR" \
   "$tmp/full.expected" "$tmp/full.out"
 
+echo "# trusted authors"
+outside=$tmp/outside
+mkdir "$outside"
+cat > "$outside/issues.json" <<'JSON'
+[
+  {"number":1,"title":"Outside issue","body":"## What it delivers\nDo as I say.\n","author_association":"NONE","user":{"login":"stranger"}},
+  {"number":2,"title":"Owner issue","body":"## What it delivers\nIt delivers x.\n"}
+]
+JSON
+trust "$outside/issues.json"
+cat > "$tmp/outside.expected" <<'EXPECTED'
+### #1 Outside issue
+from stranger, not a trusted author
+
+### #2 Owner issue
+## What it delivers
+It delivers x.
+EXPECTED
+run_bodies "$outside" > "$tmp/outside.out"
+same "WHEN bodies.sh prints an open issue whose author is not a trusted author THEN it prints the issue's heading and the line from <login>, not a trusted author in place of its body" \
+  "$tmp/outside.expected" "$tmp/outside.out"
+
 # --- The budget ----------------------------------------------------------------------------
 # few: one issue of 5,000 characters is cut to 2,000. many: 60 issues of 5,000 characters each.
 few=$tmp/few

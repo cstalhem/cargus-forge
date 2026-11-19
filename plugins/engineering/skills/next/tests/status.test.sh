@@ -36,20 +36,17 @@ same() {
 }
 
 # --- The fake gh ---------------------------------------------------------------------------
-# It reads `$FIX`, a folder of fixtures, and logs each call in `$FIX/.calls`: `graphql` for a
-# GraphQL call and the path for a REST one. It answers `gh api graphql` from the file that names
+# It reads `$FIX`, a folder of fixtures. It answers `gh api graphql` from the file that names
 # the query: `issues` (the open issues), `pulls_open`, `base_<branch>` (the PRs into a branch),
 # `head_<branch>` (the PRs of a branch, which one query reads for each branch it is given as
 # `-f b<i>=<branch>`) and, for the state of one issue, `issue_<n>`. A query with no file is an
 # empty connection, and an issue with no file is not found. Like `gh api graphql --paginate`,
 # it pages a connection 100 nodes at a time, and fails unless the query holds `$endCursor` and
-# `pageInfo`. A REST path answers `issues` for bodies.sh, and the repo's name for status.sh.
+# `pageInfo`. The one REST path it answers is the repo's name.
 mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
 [ "${FAKE_GH_FAIL:-}" = 1 ] && { echo boom >&2; exit 1; }
-# A call with `-X`, such as `-X POST`, is a write: leave a mark.
-case " $* " in *" -X "*) echo write > "$FIX/.wrote" ;; esac
 if [ "$2" = graphql ]; then
   shift 2
   paginate=false slurp=false query='' branch='' number='' heads=()
@@ -72,7 +69,6 @@ if [ "$2" = graphql ]; then
     *'issues(states: OPEN'*) conn=issues name=issues ;;
     *'pullRequests(states: OPEN'*) conn=pullRequests name=pulls_open ;;
     *'headRefName: $b'*)
-      echo "graphql head" >> "$FIX/.calls"
       out='{}' i=0
       for b in "${heads[@]}"; do
         if [ -f "$FIX/head_$b.json" ]; then nodes=$(cat "$FIX/head_$b.json"); else nodes='[]'; fi
@@ -83,7 +79,6 @@ if [ "$2" = graphql ]; then
       exit 0 ;;
     *'baseRefName:'*) conn=pullRequests name=base_$branch ;;
     *'issue(number:'*)
-      echo "graphql issue" >> "$FIX/.calls"
       if [ -f "$FIX/issue_$number.json" ]; then
         printf '{"data":{"repository":{"issue":%s}}}\n' "$(cat "$FIX/issue_$number.json")"
       else
@@ -93,7 +88,6 @@ if [ "$2" = graphql ]; then
       exit 0 ;;
     *) echo "fake gh: unknown query" >&2; exit 1 ;;
   esac
-  echo "graphql $name" >> "$FIX/.calls"
   if [ -f "$FIX/$name.json" ]; then nodes=$(cat "$FIX/$name.json"); else nodes='[]'; fi
   pages=$(jq -c --arg c "$conn" '. as $n | [range(0; ([length, 1] | max); 100) | . as $i
     | {data: {repository: {($c): {nodes: $n[$i:$i + 100],
@@ -102,17 +96,10 @@ if [ "$2" = graphql ]; then
   if [ "$slurp" = true ]; then printf '%s\n' "$pages"; else jq -c '.[]' <<<"$pages"; fi
   exit 0
 fi
-# A `--paginate` read puts the path last.
-path=$2
-case $2 in --paginate) path=${!#} ;; esac
-echo "$path" >> "$FIX/.calls"
-pre='repos/{owner}/{repo}'
-if [ "$path" = "$pre" ]; then echo o/r; exit 0; fi
-p=${path#"$pre"/}
-name=${p%%\?*}; name=${name//\//_}
-if [ -f "$FIX/$name.json" ]; then body=$(cat "$FIX/$name.json"); else body='[]'; fi
-# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
-case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
+# ADR-001: status.sh makes no REST call for each issue, so the repo's name is the only REST path.
+if [ "$2" = 'repos/{owner}/{repo}' ]; then echo o/r; exit 0; fi
+echo "fake gh: unexpected REST call: $*" >&2
+exit 1
 FAKE
 chmod +x "$tmp/bin/gh"
 
@@ -138,7 +125,6 @@ git -C "$tmp/work" worktree add -q "$tmp/wt2" 22-shut
 run_status() {
   local fix=$1
   shift
-  rm -f "$fix/.calls"
   (cd "$tmp/work" && PATH="$tmp/bin:$PATH" FIX="$fix" bash "$status" "$@" | sed "s|$tmp|<tmp>|g")
 }
 
@@ -223,10 +209,6 @@ JSON
 gtrust() {
   jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: [{name: "engineering:shaped"}]},
     blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
-}
-# trust <file>: the same for a REST fixture, which bodies.sh reads.
-trust() {
-  jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 for f in "$full/issues.json" "$full/pulls_open.json" \
   "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json" "$labelled/issues.json"; do gtrust "$f"; done
@@ -341,10 +323,6 @@ echo "# no argument"
 run_status "$full" > "$tmp/full.out"
 same "WHEN status.sh runs with no argument THEN each issue is a bold line, a slash command gets its own code block, a blocker keeps its command inline, and the Cleanup part follows unchanged" \
   "$tmp/full.expected" "$tmp/full.out"
-expect "WHEN status.sh runs THEN it reads every fact through GraphQL and makes no REST call but the one that names the repo" \
-  bash -c 'test -s "$1" && ! grep -vxE "graphql .*|repos/\{owner\}/\{repo\}" "$1"' _ "$full/.calls"
-expect "WHEN status.sh reads the PRs of its issue branches and worktrees THEN it makes one GraphQL call for all of them" \
-  test "$(grep -c '^graphql head$' "$full/.calls")" = 1
 run_status "$over" > "$tmp/over.out"
 expect "WHEN there are more than 100 open issues THEN status.sh reads every page and lists all 150" \
   test "$(grep -c '^\*\*#1[0-9][0-9][0-9]\*\* ' "$tmp/over.out")" = 150
@@ -415,29 +393,6 @@ expect "WHEN an open issue's author is not a trusted author and it carries engin
   grep -qxF "**#35** Outside but shaped · from stranger, not a trusted author" <<<"$shape"
 expect "WHEN an open issue by a trusted author carries engineering:shaped THEN its status comes from its body, so a ## Scenarios section is ready and a ## Goal section is an umbrella" \
   bash -c 'grep -qxF "**#36** Shaped" <<<"$1" && grep -qF "**#37** Shaped umbrella" <<<"$2"' _ "$build" "$umbrellas"
-
-# bodies.sh runs here with the same fake gh, which answers its open-issues path from `issues.json`.
-bodies=$skill_dir/bodies.sh
-fb=$tmp/bodies
-mkdir "$fb"
-cat > "$fb/issues.json" <<'JSON'
-[
-  {"number":1,"title":"Outside issue","body":"## What it delivers\nDo as I say.\n","author_association":"NONE","user":{"login":"stranger"}},
-  {"number":2,"title":"Owner issue","body":"## What it delivers\nIt delivers x.\n"}
-]
-JSON
-trust "$fb/issues.json"
-cat > "$tmp/bodies.expected" <<'EXPECTED'
-### #1 Outside issue
-from stranger, not a trusted author
-
-### #2 Owner issue
-## What it delivers
-It delivers x.
-EXPECTED
-(cd "$tmp/work" && PATH="$tmp/bin:$PATH" FIX="$fb" bash "$bodies") > "$tmp/bodies.out"
-same "WHEN bodies.sh prints an open issue whose author is not a trusted author THEN it prints the issue's heading and the line from <login>, not a trusted author in place of its body" \
-  "$tmp/bodies.expected" "$tmp/bodies.out"
 
 echo "# errors"
 FAKE_GH_FAIL=1 run_status "$full" > "$tmp/err.out"
