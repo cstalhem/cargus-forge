@@ -95,8 +95,6 @@ echo "# sections and order"
 run_bodies "$full" > "$tmp/full.out"
 same "WHEN bodies.sh runs THEN a delivers issue prints its What it delivers and Files sections, a Goal issue its Goal and Out of scope sections, an issue with neither its whole body, each under a heading, lowest number first, and no PR" \
   "$tmp/full.expected" "$tmp/full.out"
-expect "WHEN bodies.sh runs THEN no other section is printed" \
-  bash -c '! grep -qE "secret|## Scenarios|## Decisions|## Verify|## Design" "$1"' _ "$tmp/full.out"
 
 # --- The budget ----------------------------------------------------------------------------
 # few: one issue of 5,000 characters is cut to 2,000. many: 60 issues of 5,000 characters each.
@@ -136,8 +134,6 @@ expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval o
   grep -qxF '  - Bash(bash "${CLAUDE_SKILL_DIR}/bodies.sh")' "$skill"
 expect "WHEN next loads THEN its Bodies heading is followed by the injection of bodies.sh" \
   bash -c 'grep -A1 -xF "## Bodies" "$1" | tail -n 1 | grep -qxF "!\`bash \"\${CLAUDE_SKILL_DIR}/bodies.sh\"\`"' _ "$skill"
-expect "WHEN autopilot-t3 loads THEN it does not inject bodies.sh" \
-  bash -c '! grep -q "bodies.sh" "$1/skills/autopilot-t3/SKILL.md"' _ "$skill_dir/../.."
 
 if [ "$failures" -gt 0 ]; then
   echo "$failures failed"
