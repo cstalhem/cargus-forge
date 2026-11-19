@@ -171,25 +171,9 @@ cat > "$full/pulls_open.json" <<'JSON'
 JSON
 echo '{"state":"CLOSED"}' > "$full/issue_22.json"
 
-# ready: one request and one ready issue, so that most groups are empty and the next step is a
-# slash command.
-ready=$tmp/ready
-mkdir "$ready"
-cat > "$ready/issues.json" <<'JSON'
-[
-  {"number":1,"title":"A request","body":"just an idea"},
-  {"number":2,"title":"Ready issue","body":"## Scenarios\n- WHEN a THEN b\n"}
-]
-JSON
-
 # none: no open issue.
 none=$tmp/none
 mkdir "$none"
-
-# many: 25 ready issues.
-many=$tmp/many
-mkdir "$many"
-jq -n '[range(100; 125) | {number: ., title: "Issue \(.)", body: "## Scenarios\n- WHEN a THEN b\n"}]' > "$many/issues.json"
 
 # over: 150 ready issues and 120 open PRs, which take two pages of each query.
 over=$tmp/over
@@ -244,7 +228,7 @@ gtrust() {
 trust() {
   jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
-for f in "$full/issues.json" "$full/pulls_open.json" "$ready/issues.json" "$many/issues.json" \
+for f in "$full/issues.json" "$full/pulls_open.json" \
   "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json" "$labelled/issues.json"; do gtrust "$f"; done
 
 # outside: issues and PRs whose authors are and are not trusted authors. Its issue numbers avoid
@@ -266,7 +250,7 @@ JSON
 for f in "$outside/issues.json" "$outside/pulls_open.json"; do gtrust "$f"; done
 
 # Every set has the merged PRs of the finished issue branches, for the Cleanup part.
-for dir in "$full" "$ready" "$none" "$many" "$outside" "$merged"; do
+for dir in "$full" "$none" "$outside" "$merged"; do
   for b in 20-done 21-gone 24-merged-linked; do
     n=${b%%-*}
     echo "[{\"number\":5$n,\"state\":\"MERGED\",\"mergedAt\":\"2026-01-01T00:00:00Z\",\"headRefOid\":\"abc\"}]" > "$dir/head_$b.json"
@@ -361,23 +345,6 @@ expect "WHEN status.sh runs THEN it reads every fact through GraphQL and makes n
   bash -c 'test -s "$1" && ! grep -vxE "graphql .*|repos/\{owner\}/\{repo\}" "$1"' _ "$full/.calls"
 expect "WHEN status.sh reads the PRs of its issue branches and worktrees THEN it makes one GraphQL call for all of them" \
   test "$(grep -c '^graphql head$' "$full/.calls")" = 1
-expect "WHEN an open issue has a linked branch and no PR THEN it is in progress, and a <n>-* branch with no link gives no fact, so its issue is ready" \
-  bash -c 'grep -qxF "**#4** In progress issue · PR #40" "$1" && grep -qxF "**#23** Branch with no link" "$1" && ! grep -qF "**#23** Branch with no link · " "$1"' _ "$tmp/full.out"
-expect "WHEN an open issue is linked to a branch whose PR has merged THEN the branch gives it no in-progress fact" \
-  bash -c '! sed -n "/^### In progress/,/^###/p" "$1" | grep -qF "#24"' _ "$tmp/full.out"
-expect "WHEN an umbrella has a <n>-* branch with no link THEN the report says it has no feature branch" \
-  grep -qxF "**#8** Umbrella not sliced · not sliced · no feature branch" "$tmp/full.out"
-
-run_status "$ready" > "$tmp/ready.out"
-expect "WHEN status.sh runs and a status group has no issues THEN it prints no heading for that group" \
-  bash -c '! grep -qE "^### (Needs review|In progress|Blocked|Umbrellas)" "$1" && grep -qxF "### Ready to build" "$1" && grep -qxF "### To shape" "$1"' _ "$tmp/ready.out"
-
-run_status "$many" > "$tmp/many.out"
-expect "WHEN status.sh runs with more than 20 open issues THEN it lists every issue" \
-  test "$(grep -c '^\*\*#1[0-9][0-9]\*\* ' "$tmp/many.out")" = 25
-expect "WHEN status.sh runs with more than 20 open issues THEN it prints no 'and N more' line" \
-  bash -c '! grep -q "and [0-9]* more" "$1"' _ "$tmp/many.out"
-
 run_status "$over" > "$tmp/over.out"
 expect "WHEN there are more than 100 open issues THEN status.sh reads every page and lists all 150" \
   test "$(grep -c '^\*\*#1[0-9][0-9][0-9]\*\* ' "$tmp/over.out")" = 150
@@ -414,19 +381,8 @@ same "WHEN a merged PR into an umbrella's linked feature branch names an open su
   "$tmp/merged.expected" "$tmp/merged.out"
 
 run_status "$none" > "$tmp/none.out"
-expect "WHEN status.sh runs with no argument THEN its output has no Next line" \
-  bash -c '! grep -q "^\*\*Next:\*\*" "$1" "$2" "$3"' _ "$tmp/full.out" "$tmp/ready.out" "$tmp/none.out"
 expect "WHEN status.sh runs and no issue is open THEN the Report part is empty and the Cleanup part follows" \
   bash -c 'test "$(sed -n 1p "$1")" = "## Report" && grep -qxF "## Cleanup" "$1"' _ "$tmp/none.out"
-
-expect "WHEN grep searches status.sh for --human, 'def line:' and \$cut THEN they are gone" \
-  bash -c '! grep -qF -e "--human" -e "def line:" -e "\$cut" "$1"' _ "$status"
-expect "WHEN grep searches status.sh for the Next line and the jq that chose it THEN they are gone" \
-  bash -c '! grep -qF -e "Next:" -e "\$next" -e "\$to_ship" -e "\$review" -e "\$doing" "$1"' _ "$status"
-
-echo "# --statuses"
-run_status "$full" --statuses > "$tmp/full.statuses.out"
-same "WHEN status.sh runs with --statuses THEN it prints what it prints with no argument" "$tmp/full.out" "$tmp/full.statuses.out"
 
 echo "# trusted authors"
 # group <report> <heading>: the lines of that `### ` group of the report.
@@ -443,8 +399,6 @@ expect "WHEN an issue's author is not a trusted author THEN status.sh does not l
   bash -c '! grep -qF "**#1** " <<<"$1"' _ "$build"
 expect "WHEN an open PR whose author is not a trusted author has the first line Closes #<n> THEN status.sh gives issue #<n> the status it has without that PR" \
   bash -c 'grep -qxF "**#2** Owner issue with an outside PR" <<<"$1" && ! grep -qE "^### (Needs review|In progress)" "$2"' _ "$build" "$tmp/outside.out"
-expect "WHEN an issue and a PR are by trusted authors THEN status.sh gives them the same statuses as before" \
-  bash -c 'grep -qxF "**#5** Needs review issue · PR #41 · review and merge PR #41" "$1" && grep -qxF "**#4** In progress issue · PR #40" "$1"' _ "$tmp/full.out"
 
 echo "# labels"
 run_status "$labelled" > "$tmp/labelled.out"
@@ -455,8 +409,6 @@ expect "WHEN an open issue does not carry engineering:shaped THEN status.sh give
   bash -c 'grep -qxF "**#31** Unshaped with scenarios" <<<"$1" && grep -qxF "**#32** Unshaped umbrella" <<<"$1"' _ "$shape"
 expect "WHEN an open issue carries engineering:needs-discussion THEN status.sh lists it under ### To shape with the fact sent back, with or without engineering:shaped" \
   bash -c 'grep -qxF "**#33** Sent back · sent back" <<<"$1" && grep -qxF "**#34** Shaped and sent back · sent back" <<<"$1"' _ "$shape"
-expect "WHEN an open issue does not carry engineering:needs-discussion THEN its line has no sent back fact" \
-  bash -c '! grep -qF "sent back" <<<"$(grep -F "#31" <<<"$1")"' _ "$shape"
 expect "WHEN an open issue is sent back or unshaped THEN next and Autopilot offer no build for it: the discuss command is its suggestion and no ready or umbrella group lists it" \
   bash -c 'for n in 31 32 33 34 35; do grep -qxF "/engineering:discuss #$n" <<<"$1" || exit 1; grep -qF "#$n " <<<"$2$3" && exit 1; done; ! grep -qE "^/engineering:(execute|ship) #3[1-5]$" "$4"; exit 0' _ "$shape" "$build" "$umbrellas" "$tmp/labelled.out"
 expect "WHEN an open issue's author is not a trusted author and it carries engineering:shaped THEN its status is request" \

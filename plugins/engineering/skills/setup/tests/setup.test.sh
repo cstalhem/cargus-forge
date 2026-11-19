@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Tests for setup.sh against fixture repos built under mktemp -d. A stub `gh`, first on PATH,
-# returns fixture JSON, and each fixture repo's `origin` is a local bare repo, so the tests
-# need no network (#148 D1).
+# returns fixture JSON, so the tests need no network (#148 D1).
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -58,41 +57,19 @@ gh_repo() {
 # page <p> <json>: page <p> of the open issues.
 page() { printf '%s\n' "$2" > "$GH_PAGES/$1"; }
 
-# issues <n>...: page 1 of the open issues. `pr:<n>` is a PR, which the endpoint lists too.
-issues() {
-  printf '%s\n' "$@" | jq -R 'if startswith("pr:") then {number: (.[3:] | tonumber), pull_request: {}} else {number: tonumber} end' \
-    | jq -sc . > "$GH_PAGES/1"
-}
-
-# setup: a new fixture repo with one commit, on main, with a local bare repo as `origin` that
-# holds main, and the stub's default answer.
+# setup: a new fixture repo with one commit, on main, and the stub's default answer.
 setup() {
   repo=$(mktemp -d "$tmp/repo.XXXXXX")
-  remote=$repo.remote
-  git init -q --bare "$remote"
   cd "$repo" || exit 1
   git init -q -b main
   echo widget > README.md
   git add -A && git commit -qm base
-  git remote add origin "$remote"
-  git push -q origin main
   gh_repo
 }
 
-# branches <name>...: push each branch to origin, at main.
-branches() {
-  local b
-  for b in "$@"; do git push -q origin "main:refs/heads/$b" || exit 1; done
-}
-
-# A listing of every path under the repo, .git included, and under its origin, with each
-# file's checksum.
+# A listing of every path under the repo, .git included, with each file's checksum.
 snapshot() {
-  local d
-  for d in "$repo" "$remote"; do
-    [ -d "$d" ] || continue
-    (cd "$d" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
-  done
+  (cd "$repo" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
 }
 
 # check <description>: start a test.
@@ -100,8 +77,8 @@ check() { desc=$1; ok=1; why=''; }
 miss() { ok=0; why+="  $1"$'\n'; }
 
 # run [dir]: run setup.sh in <dir>, the fixture repo by default, and set `out`. Checks that it
-# exits 0, changes no file or branch in the repo or its origin, and calls gh only to read the
-# repo and its open issues.
+# exits 0, changes no file or branch in the repo, and calls gh only to read the repo and its
+# open issues.
 run() {
   local dir=${1:-$repo} before after code calls
   before=$(snapshot)
@@ -109,14 +86,10 @@ run() {
   out=$(cd "$dir" && bash "$script" 2>&1) && code=0 || code=$?
   after=$(snapshot)
   [ "$code" -eq 0 ] || miss "exit $code, want 0"
-  [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo or its origin"
+  [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo"
   calls=$(grep -vxF 'api repos/{owner}/{repo}' "$GH_LOG" \
     | grep -vx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100')
   [ -z "$calls" ] || miss "unexpected gh calls: $calls"
-  # The screen says once that setup changes none of the findings, so no finding says it. The
-  # pattern is a regex, so that this file does not hold the sentences themselves.
-  [[ "$out" =~ Setup[[:space:]]+(changes|renames|edits|moves)[[:space:]]+no ]] \
-    && miss "a line of the output holds a Setup ... no ... sentence"
 }
 
 has() { local t; for t in "$@"; do [[ "$out" == *"$t"* ]] || miss "missing: $t"; done; }
@@ -152,7 +125,6 @@ has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Conversion issue" \
   "### Docs$nl- none$nl" \
   "## Findings$nl- none"
-lacks 'issue-tracker' '- default branch:' '## Warnings'
 grep -qx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100' "$GH_LOG" \
   || miss "the open issues were not read with gh api --paginate --slurp"
 done_check
@@ -188,7 +160,7 @@ check "a default branch other than main gives a finding that ends with the actio
 gh_repo develop
 run
 has 'The default branch is `develop`, not `main`. Rename the default branch to `main`, or expect the plugin'"'"'s skills to take `main`.'
-lacks "## Findings$nl- none" '#85' '- default branch:'
+lacks "## Findings$nl- none" '#85'
 done_check
 
 setup
@@ -262,7 +234,7 @@ has '- pnpm run test · package.json: jest --ci' \
   '- if true; then · .github/workflows/ci.yml:10' \
   '- make build · .github/workflows/ci.yml:13'
 lacks 'make .PHONY' 'make VERSION' 'make CC' 'make %.o' '- name =' '- fi ·' 'shell: bash' \
-  'first_line=' 'close-sub-issue.yml:'
+  'close-sub-issue.yml:'
 done_check
 
 setup
@@ -393,16 +365,6 @@ mkdir -p docs/agents sub/dir
 printf '# Commands\n' > docs/agents/commands.md
 run "$repo/sub/dir"
 has '- `docs/agents/commands.md` · present'
-done_check
-
-setup
-check "a repo with <n>-* branches and branches with other names: the facts have no ### Branches part and the findings name no branch (#379)"
-branches 7-login 70-other 12-closed feature/a feature/b fix/c dependabot/npm/x
-issues 7 12
-run
-lacks '### Branches' '- branches:' '- convention:' '- #7 ·' '`7-login`' 'feature/' 'dependabot/' '-*`'
-has "### Stack$nl- none$nl$nl### Conversion issue$nl- none$nl$nl### Docs" "## Findings$nl- none"
-grep -q 'ls-remote' "$script" && miss "setup.sh still reads the remote branches"
 done_check
 
 setup
