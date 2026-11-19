@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # setup.sh: the facts for /engineering:setup.
 # Reads the repo's settings and open issues through `gh api` REST, and the repo's files from the
-# top of the git worktree that holds the current directory. It changes nothing: it writes no file, runs no git command that writes, and makes
-# no GitHub write.
+# current directory, which must be the top of the git worktree. It changes nothing: it writes no
+# file, runs no git command that writes, and makes no GitHub write.
 # It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
 # An error prints exactly one line, `setup.sh error: <reason>`, and nothing else: the output
 # is printed only once it is complete.
@@ -73,8 +73,8 @@ report=''
 findings=()
 line() { report+="$*"$'\n'; }
 
-top=$(git rev-parse --show-toplevel 2>&1) || fail "git rev-parse --show-toplevel: $top"
-cd "$top" 2>/dev/null || fail "cannot enter the repo's top directory $top."
+prefix=$(git rev-parse --show-prefix 2>&1) || fail "git rev-parse --show-prefix: $prefix"
+[ -z "$prefix" ] || fail "start the session at the top of the repo: setup copies files to paths relative to it."
 
 # The repo's files, ignored files left out, read once for every section that needs them.
 files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \

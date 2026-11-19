@@ -46,7 +46,7 @@ Two more skills run only when another skill calls them:
 
 A thread you start by hand fits Opus at its default effort, and Sonnet is enough for execute on a sized issue.
 
-discuss and execute read `references/domain-model.md` in their Load step. It holds the rules that keep the repo's domain terms in `docs/glossary.md`. They also read `references/adr.md`, which holds the rules for the repo's ADRs in `docs/adr/`: when a decision earns one, its format, and when to edit an existing ADR instead of writing a new one. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it.
+discuss and execute read `references/domain-model.md` in their Load step. It holds the format and the gate for the repo's domain terms in `docs/glossary.md`; what each skill does with a term is in its own SKILL.md. They also read `references/adr.md`, which holds the definition of the repo's ADRs in `docs/adr/`: when a decision earns one, its format, and when to edit an existing ADR instead of writing a new one. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it, each from its own SKILL.md.
 
 execute, setup, anneal and verify inject `references/repo-rules.md`, which defines once what a rule is, the rule test, when a rule goes, and when and how a rule gets a backing skill in `.claude/skills/`. It works in a repo with no rules, skills or glossary yet.
 

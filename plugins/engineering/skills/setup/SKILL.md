@@ -11,7 +11,6 @@ allowed-tools:
   - Bash(cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml)
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/templates/commands.md")
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md")
-  - Bash(git rev-parse --show-prefix)
   - Edit(docs/agents/commands.md)
   - Edit(.claude/rules/*)
   - 'Bash(gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin''s process" -F body=@*)'
@@ -34,7 +33,7 @@ allowed-tools:
 - Judge a line of a `rules` doc only against the plugin's contract in the Contract section at the end of this skill. The line is a finding when it says something that the contract does not allow, such as another branch pattern, a merge style other than squash, or another PR target or `Closes` rule. A line that only adds to the contract is not.
 
 ## Steps
-1. **Check.** If the output of `setup.sh` at the end of this skill is a `setup.sh error:` line instead of the Facts, show that line and stop. Run `git rev-parse --show-prefix`, as its own Bash call. If it prints a path, the session is not at the top of the repo, where the `cp` writes a relative path: say to start the session there, and stop.
+1. **Check.** If the output of `setup.sh` at the end of this skill is a `setup.sh error:` line instead of the Facts, show that line and stop.
 2. **Plan.** Work out the screen from the Facts. Each part that needs a decision becomes one numbered question, written so that "yes" is the recommended answer.
    - **Docs**, the lines under `### Docs`:
      - `adr` and `glossary`: their findings say that the plugin cannot see them. No question.

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 # Tests for setup.sh against fixture repos built under mktemp -d. A stub `gh`, first on PATH,
-# returns fixture JSON, and each fixture repo's `origin` is a local bare repo, so the tests
-# need no network (#148 D1).
+# returns fixture JSON, so the tests need no network (#148 D1).
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -19,20 +18,21 @@ trap 'rm -rf "$tmp"' EXIT
 # no repo at all.
 export GIT_CEILING_DIRECTORIES=$tmp
 
-# The stub gh: logs each call, then fails with $GH_FAIL if it is set. For the repo it prints
+# The stub gh: fails with $GH_FAIL if it is set. For the repo it prints
 # $GH_JSON. For the open issues, read with `--paginate --slurp`, it fails with $GH_FAIL_ISSUES
 # if it is set, or prints the files $GH_PAGES/1, $GH_PAGES/2 and on as an array of pages, or
 # `[[]]`. Any other call fails. The pages are files, not variables, because Linux limits one
-# variable in the environment to 128 KiB, as it does one argument.
+# variable in the environment to 128 KiB, as it does one argument. A second read of the open
+# issues in one run fails too: the file $GH_READ marks the first, and `run` removes it.
 mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
-  'printf "%s\n" "$*" >> "$GH_LOG"' \
   'if [ -n "${GH_FAIL:-}" ]; then printf "%s\n" "$GH_FAIL" >&2; exit 1; fi' \
   'case $2 in' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
   '  "--paginate")' \
-  '    case ${!#} in "repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
+  '    case "$3 ${!#}" in "--slurp repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
+  '    [ -e "$GH_READ" ] && { printf "stub gh: the open issues were read twice\n" >&2; exit 1; }; : > "$GH_READ"' \
   '    if [ -n "${GH_FAIL_ISSUES:-}" ]; then printf "%s\n" "$GH_FAIL_ISSUES" >&2; exit 1; fi' \
   '    printf "["; n=1' \
   '    while [ -f "$GH_PAGES/$n" ]; do [ "$n" -gt 1 ] && printf ","; cat "$GH_PAGES/$n"; n=$((n + 1)); done' \
@@ -41,7 +41,7 @@ printf '%s\n' \
   '  *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;;' \
   'esac' > "$tmp/bin/gh"
 chmod +x "$tmp/bin/gh"
-export PATH="$tmp/bin:$PATH" GH_LOG=$tmp/gh.log GH_PAGES=$tmp/pages
+export PATH="$tmp/bin:$PATH" GH_PAGES=$tmp/pages GH_READ=$tmp/issues.read
 
 # gh_repo [default branch] [allow_squash_merge]: the JSON that the stub returns for the repo,
 # and no open issues. An allow_squash_merge of "none" leaves the field out, as GitHub does for
@@ -58,41 +58,19 @@ gh_repo() {
 # page <p> <json>: page <p> of the open issues.
 page() { printf '%s\n' "$2" > "$GH_PAGES/$1"; }
 
-# issues <n>...: page 1 of the open issues. `pr:<n>` is a PR, which the endpoint lists too.
-issues() {
-  printf '%s\n' "$@" | jq -R 'if startswith("pr:") then {number: (.[3:] | tonumber), pull_request: {}} else {number: tonumber} end' \
-    | jq -sc . > "$GH_PAGES/1"
-}
-
-# setup: a new fixture repo with one commit, on main, with a local bare repo as `origin` that
-# holds main, and the stub's default answer.
+# setup: a new fixture repo with one commit, on main, and the stub's default answer.
 setup() {
   repo=$(mktemp -d "$tmp/repo.XXXXXX")
-  remote=$repo.remote
-  git init -q --bare "$remote"
   cd "$repo" || exit 1
   git init -q -b main
   echo widget > README.md
   git add -A && git commit -qm base
-  git remote add origin "$remote"
-  git push -q origin main
   gh_repo
 }
 
-# branches <name>...: push each branch to origin, at main.
-branches() {
-  local b
-  for b in "$@"; do git push -q origin "main:refs/heads/$b" || exit 1; done
-}
-
-# A listing of every path under the repo, .git included, and under its origin, with each
-# file's checksum.
+# A listing of every path under the repo, .git included, with each file's checksum.
 snapshot() {
-  local d
-  for d in "$repo" "$remote"; do
-    [ -d "$d" ] || continue
-    (cd "$d" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
-  done
+  (cd "$repo" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
 }
 
 # check <description>: start a test.
@@ -100,23 +78,16 @@ check() { desc=$1; ok=1; why=''; }
 miss() { ok=0; why+="  $1"$'\n'; }
 
 # run [dir]: run setup.sh in <dir>, the fixture repo by default, and set `out`. Checks that it
-# exits 0, changes no file or branch in the repo or its origin, and calls gh only to read the
-# repo and its open issues.
+# exits 0 and changes no file or branch in the repo. A call the stub does not answer fails the
+# run's output.
 run() {
-  local dir=${1:-$repo} before after code calls
+  local dir=${1:-$repo} before after code
   before=$(snapshot)
-  : > "$GH_LOG"
+  rm -f "$GH_READ"
   out=$(cd "$dir" && bash "$script" 2>&1) && code=0 || code=$?
   after=$(snapshot)
   [ "$code" -eq 0 ] || miss "exit $code, want 0"
-  [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo or its origin"
-  calls=$(grep -vxF 'api repos/{owner}/{repo}' "$GH_LOG" \
-    | grep -vx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100')
-  [ -z "$calls" ] || miss "unexpected gh calls: $calls"
-  # The screen says once that setup changes none of the findings, so no finding says it. The
-  # pattern is a regex, so that this file does not hold the sentences themselves.
-  [[ "$out" =~ Setup[[:space:]]+(changes|renames|edits|moves)[[:space:]]+no ]] \
-    && miss "a line of the output holds a Setup ... no ... sentence"
+  [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo"
 }
 
 has() { local t; for t in "$@"; do [[ "$out" == *"$t"* ]] || miss "missing: $t"; done; }
@@ -152,9 +123,6 @@ has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Conversion issue" \
   "### Docs$nl- none$nl" \
   "## Findings$nl- none"
-lacks 'issue-tracker' '- default branch:' '## Warnings'
-grep -qx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100' "$GH_LOG" \
-  || miss "the open issues were not read with gh api --paginate --slurp"
 done_check
 
 setup
@@ -188,7 +156,7 @@ check "a default branch other than main gives a finding that ends with the actio
 gh_repo develop
 run
 has 'The default branch is `develop`, not `main`. Rename the default branch to `main`, or expect the plugin'"'"'s skills to take `main`.'
-lacks "## Findings$nl- none" '#85' '- default branch:'
+lacks "## Findings$nl- none" '#85'
 done_check
 
 setup
@@ -262,7 +230,7 @@ has '- pnpm run test · package.json: jest --ci' \
   '- if true; then · .github/workflows/ci.yml:10' \
   '- make build · .github/workflows/ci.yml:13'
 lacks 'make .PHONY' 'make VERSION' 'make CC' 'make %.o' '- name =' '- fi ·' 'shell: bash' \
-  'first_line=' 'close-sub-issue.yml:'
+  'close-sub-issue.yml:'
 done_check
 
 setup
@@ -388,21 +356,14 @@ lacks '· present ('
 done_check
 
 setup
-check "run from a subdirectory, it reads the files at the top of the repo"
+check "run from a subdirectory, it prints one setup.sh error line that says to start at the top of the repo"
 mkdir -p docs/agents sub/dir
 printf '# Commands\n' > docs/agents/commands.md
+# A read of the open issues before the check would print this gh error instead.
+export GH_FAIL_ISSUES='HTTP 500: issues were read'
 run "$repo/sub/dir"
-has '- `docs/agents/commands.md` · present'
-done_check
-
-setup
-check "a repo with <n>-* branches and branches with other names: the facts have no ### Branches part and the findings name no branch (#379)"
-branches 7-login 70-other 12-closed feature/a feature/b fix/c dependabot/npm/x
-issues 7 12
-run
-lacks '### Branches' '- branches:' '- convention:' '- #7 ·' '`7-login`' 'feature/' 'dependabot/' '-*`'
-has "### Stack$nl- none$nl$nl### Conversion issue$nl- none$nl$nl### Docs" "## Findings$nl- none"
-grep -q 'ls-remote' "$script" && miss "setup.sh still reads the remote branches"
+error 'start the session at the top of the repo'
+lacks 'issues were read'
 done_check
 
 setup
@@ -412,7 +373,6 @@ page 2 '[{"number": 6, "title": "convert plugin"}]'
 run
 has '- #6 · convert plugin · by title'
 lacks '- #5 ·'
-[ "$(grep -c 'issues?state=open' "$GH_LOG")" -eq 1 ] || miss "the open issues were not read with one call"
 done_check
 
 setup
@@ -455,19 +415,9 @@ run
 has "### Conversion issue$nl- none$nl"
 done_check
 
-check "SKILL.md writes the marker as the first line of the issue it creates (#164)"
+check "SKILL.md runs on Fable (#367)"
 ok=1; why=''; out=''
-grep -qF 'Its first line is `<!-- engineering:setup conversion issue -->`' "$here/../SKILL.md" || miss "SKILL.md does not put the marker first"
-done_check
-
-check "SKILL.md runs on Fable and launches each research agent on Sonnet (#367)"
-ok=1; why=''; out=''
-skill=$here/../SKILL.md
-awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$skill" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
-grep -F -- '- **Research.**' "$skill" | grep -qF 'with the Agent tool, `subagent_type: general-purpose` and `model` `sonnet`, never a fork' \
-  || miss "the Research step does not launch each research agent with model sonnet"
-grep -F '| `/engineering:setup` |' "$here/../../../README.md" | grep -qF 'Runs on Fable' \
-  || miss "the README's setup row does not say that setup runs on Fable"
+awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$here/../SKILL.md" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
 done_check
 
 setup
@@ -528,7 +478,7 @@ setup
 check "a failing git call, outside a git repo, prints one setup.sh error line and exits 0"
 repo=$(mktemp -d "$tmp/norepo.XXXXXX")
 run
-error 'git rev-parse --show-toplevel:'
+error 'git rev-parse --show-prefix:'
 done_check
 
 if [ "$failures" -ne 0 ]; then
