@@ -25,8 +25,8 @@ Request: $ARGUMENTS
 - One exception to the read scope above, for discuss only: to check a fact that a design rests on, you may run a command or tool call that changes nothing, also outside the repo, and show its output.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Read `${CLAUDE_PLUGIN_ROOT}/references/domain-model.md` every time, not only when a term comes up, and follow its `In discuss` section. Read `${CLAUDE_PLUGIN_ROOT}/references/adr.md` every time, not only when a decision comes up, and follow its `In discuss` section. If the request is `#<n>`, read the issue with `gh api repos/{owner}/{repo}/issues/<n>`. When execute stopped on that issue, it left the work so far on the current branch. Read it with `git rev-parse --abbrev-ref HEAD`, `git fetch origin main`, `git log --oneline origin/main..HEAD` and `git diff origin/main...HEAD`, so the rounds and the draft account for it. Read the code that the request touches.
-2. **Rounds.** Each round lists, as numbered questions, at most five questions whose prerequisites are settled, the ones that unblock others first. Each question has a recommended answer. "yes" accepts every recommendation; "yes, except 2: …" overrides one. Raise the term questions that `domain-model.md` asks for, against the Glossary section at the end of this skill. Raise the ADR questions that `adr.md` asks for. A small request needs the challenge and at most two more rounds. Stop when no question remains.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/size-test.md` and `${CLAUDE_PLUGIN_ROOT}/references/formats.md`. Read `${CLAUDE_PLUGIN_ROOT}/references/domain-model.md` every time, not only when a term comes up. Read `${CLAUDE_PLUGIN_ROOT}/references/adr.md` every time, not only when a decision comes up. If the request is `#<n>`, read the issue with `gh api repos/{owner}/{repo}/issues/<n>`. When execute stopped on that issue, it left the work so far on the current branch. Read it with `git rev-parse --abbrev-ref HEAD`, `git fetch origin main`, `git log --oneline origin/main..HEAD` and `git diff origin/main...HEAD`, so the rounds and the draft account for it. Read the code that the request touches.
+2. **Rounds.** Each round lists, as numbered questions, at most five questions whose prerequisites are settled, the ones that unblock others first. Each question has a recommended answer. "yes" accepts every recommendation; "yes, except 2: …" overrides one. Raise the term questions and the ADR questions below, against the Glossary section at the end of this skill and `docs/adr/`. A small request needs the challenge and at most two more rounds. Stop when no question remains.
    - **Challenge:** the first round questions the request before any question about how to build it. It opens with one line for the request and one for each requirement: `- <requirement> · <source> · keep | simplify | delete`. A source is the user's words in the request, an issue, an ADR or the code, never a person. A requirement with no source gets delete. Each simplify or delete verdict is a numbered question whose recommended answer says why. If the request is to speed up or automate a step, first ask whether that step, or the part that makes it needed, could be deleted or simplified instead; speed and automation come only in a later round. If every line is keep, the round is the one line `Challenge: nothing to cut`.
    - **Human boundary:** if the request automates or delegates work, the challenge also asks as a numbered question where the human boundary lies: which steps the user keeps, and which must never wait for the user. Later rounds design for that boundary. A recommendation that leaves a step with the user says that the step crosses the human boundary, and why.
    - A requirement that the challenge cuts gets no decision and stays out of the draft. Removing a part that exists in the repo becomes `D<n> · Delete: <part>`, with a scenario `WHEN … THEN <part> is gone`. Sources stay in the round, not in the issue.
@@ -39,7 +39,7 @@ Request: $ARGUMENTS
      - **Unchecked or not shown:** record a fact accepted as unchecked, or a result only a merged and synced plugin can show, as the decisions in `formats.md` say.
    - **Plain questions:** each question states the situation, what the recommended answer does in practice, and why. Name tools by what they do, not by their API names.
    - **Defaults:** a point with one sensible answer is not a question; state it in the round as one line, `Default: <answer>, because <why>`, before the numbered questions; "yes" accepts it, and the user can override it as they would a question.
-3. **Draft.** Run the size test. Show the draft issue body in the format it picks (pass: issue; fail: umbrella issue), then the verdict for each of the four criteria. Record each accepted term as a `Term` decision, as `domain-model.md` says, and each accepted ADR as an `ADR` decision, as `adr.md` says. An umbrella issue for a design that adds a part that runs holds the trace of the accepted design in its `## Design`. Wait for "yes". If the user changes something, update the draft and show it again.
+3. **Draft.** Run the size test. Show the draft issue body in the format it picks (pass: issue; fail: umbrella issue), then the verdict for each of the four criteria. Record each accepted term as a `Term` decision and each accepted ADR as an `ADR` decision, as the sections below say. An umbrella issue for a design that adds a part that runs holds the trace of the accepted design in its `## Design`. Wait for "yes". If the user changes something, update the draft and show it again.
 4. **Write.** After "yes", write the body to a file as the rules say, then run one of these two commands.
    - A new request: `gh api -X POST repos/{owner}/{repo}/issues -f title="<title>" -F body=@<path>`.
    - An existing issue `#<n>`: add its original body at the end, as the exception line in `formats.md` says. Then run `gh api -X PATCH repos/{owner}/{repo}/issues/<n> -f title="<title>" -F body=@<path>`.
@@ -49,6 +49,26 @@ Request: $ARGUMENTS
 5. **Hand off.**
    - Pass: show the issue URL. The next step is execute on this issue.
    - Fail: show the issue URL, then call the Skill tool with `engineering:slice` and the issue number.
+
+## Term questions
+- **Find the terms.** Check each domain word in the request, in the user's answers and in the code that the request touches against the glossary.
+- **Raise a term question** for each word that passes the gate in `domain-model.md` and is one of these:
+  - a domain term that the glossary lacks;
+  - a word used in a sense that differs from its entry;
+  - a word that the glossary lists under `_Avoid_`. Recommend the entry's term instead.
+- **Sharpen fuzzy words.** If a word could name two things, ask which one it names, and recommend a term for each.
+- **Check against the code.** If the code names the thing by another word, or does not work the way the user says, state what the code shows in the question.
+- **Ask it as a numbered question** in the round, with the other questions. Say which of the cases above it is. Write out the full entry that you recommend, in the format of `domain-model.md`: the term, the definition and the `_Avoid_` words. Do this also when the entry already exists, so the user sees what the word means. Write `_Avoid_: none` when no other word is in use, and the entry then has no `_Avoid_` line.
+- **Record each accepted term** in the draft's `## Decisions` section as `D<n> · Term: **<Term>**: <definition> _Avoid_: <words>`, the shape in `formats.md`. Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. For a changed entry, the decision holds the whole new entry, and a rename puts the old word into `_Avoid_`. An answer that keeps an entry as it is adds no decision.
+
+## ADR questions
+- **Read the ADRs.** Read `docs/adr/`, if it exists, so that you know each current decision.
+- **Raise an ADR question** for each decision in the rounds that is one of these:
+  - a decision that passes the litmus test in `adr.md`;
+  - a decision that changes what an existing ADR states. It gets an `ADR` decision that edits that ADR, so that no ADR states something false after the PR.
+- **Ask it as a numbered question** in the round, with the other questions. Say which case it is, and write out the full `ADR` decision that you recommend.
+- **Record each accepted ADR** in the draft's `## Decisions` section as an `ADR` decision, the shape in `formats.md`. Its rejected alternatives are the ones that the rounds rejected, each with its reason, because execute sees only the issue.
+- **List its files.** An issue with an `ADR` decision lists the ADR's file under `## Files`, as `docs/adr/ADR-NNN-<slug>.md` for a new ADR, and `docs/adr/README.md`.
 
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
