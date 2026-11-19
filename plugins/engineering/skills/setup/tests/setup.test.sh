@@ -359,8 +359,11 @@ setup
 check "run from a subdirectory, it prints one setup.sh error line that says to start at the top of the repo"
 mkdir -p docs/agents sub/dir
 printf '# Commands\n' > docs/agents/commands.md
+# A read of the open issues before the check would print this gh error instead.
+export GH_FAIL_ISSUES='HTTP 500: issues were read'
 run "$repo/sub/dir"
 error 'start the session at the top of the repo'
+lacks 'issues were read'
 done_check
 
 setup
