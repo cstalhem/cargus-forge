@@ -59,7 +59,7 @@ Request: $ARGUMENTS
 - **Sharpen fuzzy words.** If a word could name two things, ask which one it names, and recommend a term for each.
 - **Check against the code.** If the code names the thing by another word, or does not work the way the user says, state what the code shows in the question.
 - **Ask it as a numbered question** in the round, with the other questions. Say which of the cases above it is. Write out the full entry that you recommend, in the format of `domain-model.md`: the term, the definition and the `_Avoid_` words. Do this also when the entry already exists, so the user sees what the word means. Write `_Avoid_: none` when no other word is in use, and the entry then has no `_Avoid_` line.
-- **Record each accepted term** in the draft's `## Decisions` section as `D<n> · Term: **<Term>**: <definition> _Avoid_: <words>`, the shape in `formats.md`. Leave out ` _Avoid_: <words>` when the entry has no `_Avoid_` line. For a changed entry, the decision holds the whole new entry, and a rename puts the old word into `_Avoid_`. An answer that keeps an entry as it is adds no decision.
+- **Record each accepted term** in the draft's `## Decisions` section as a `Term` decision. For a changed entry, the decision holds the whole new entry, and a rename puts the old word into `_Avoid_`. An answer that keeps an entry as it is adds no decision.
 
 ## ADR questions
 - **Read the ADRs.** Read `docs/adr/`, if it exists, so that you know each current decision.
@@ -68,7 +68,5 @@ Request: $ARGUMENTS
   - a decision that changes what an existing ADR states. It gets an `ADR` decision that edits that ADR, so that no ADR states something false after the PR.
 - **Ask it as a numbered question** in the round, with the other questions. Say which case it is, and write out the full `ADR` decision that you recommend.
 - **Record each accepted ADR** in the draft's `## Decisions` section as an `ADR` decision, the shape in `formats.md`. Its rejected alternatives are the ones that the rounds rejected, each with its reason, because execute sees only the issue.
-- **List its files.** An issue with an `ADR` decision lists the ADR's file under `## Files`, as `docs/adr/ADR-NNN-<slug>.md` for a new ADR, and `docs/adr/README.md`.
-
 ## Glossary
 !`cat docs/glossary.md 2>/dev/null || printf '\342\200\213'`
