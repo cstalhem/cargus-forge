@@ -31,6 +31,23 @@ expect() {
   fi
 }
 
+# fixture <description> <exit code> <skill body> [text the output must contain...]
+# Runs a copy of the script on a repo with one plugin `p` whose skill `demo` has this body.
+# The plugin holds references/present.md and the skill folder holds present.sh.
+fixture() {
+  local desc=$1 want=$2 body=$3 root real=$script
+  shift 3
+  root=$(mktemp -d)
+  mkdir -p "$root/scripts" "$root/plugins/p/skills/demo" "$root/plugins/p/references"
+  cp "$script" "$root/scripts/validate-plugins.sh"
+  touch "$root/plugins/p/references/present.md" "$root/plugins/p/skills/demo/present.sh"
+  printf '%s\n' "$body" > "$root/plugins/p/skills/demo/SKILL.md"
+  script="$root/scripts/validate-plugins.sh"
+  expect "$desc" "$want" '{"success":true,"manifest":{"errors":[],"warnings":[]}}' "$@"
+  script=$real
+  rm -rf "$root"
+}
+
 expect "no errors and no warnings passes" 0 \
   '{"success":true,"manifest":{"errors":[],"warnings":[]}}'
 
@@ -53,5 +70,19 @@ expect "a version warning beside an error still fails" 1 \
   "author must be an object"
 
 expect "output that is not JSON fails" 1 'not json'
+
+fixture "an injected plugin file that is missing fails and names the skill and the path" 1 \
+  '!`cat "${CLAUDE_PLUGIN_ROOT}/references/missing.md"`' \
+  "plugins/p/skills/demo/SKILL.md" "references/missing.md"
+
+fixture "an injected skill file that is missing fails and names the skill and the path" 1 \
+  '!`bash "${CLAUDE_SKILL_DIR}/missing.sh"`' \
+  "plugins/p/skills/demo/SKILL.md" "missing.sh"
+
+fixture "injected files that exist, and a read of docs/glossary.md, pass" 0 \
+  '!`cat "${CLAUDE_PLUGIN_ROOT}/references/present.md"`
+!`bash "${CLAUDE_SKILL_DIR}/present.sh"`
+!`cat docs/glossary.md 2>/dev/null || printf "x"`
+!`date +%F`'
 
 [ "$failures" -eq 0 ]

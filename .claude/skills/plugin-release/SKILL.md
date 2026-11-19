@@ -1,7 +1,7 @@
 ---
 name: plugin-release
-description: "The reasons behind how a Cargus Forge plugin change is validated and merged: load errors versus warnings, squash-merge, and why plugins carry no version"
-when_to_use: "When shipping a change to any plugin in this repo: reading a validator error or warning, or merging a plugin PR"
+description: "The reasons behind how a Cargus Forge plugin change is merged: squash-merge, and why plugins carry no version"
+when_to_use: "When shipping a change to any plugin in this repo: merging a plugin PR"
 ---
 
 # Releasing a plugin
@@ -10,8 +10,7 @@ The reasons behind the rules for shipping a change to a plugin in this marketpla
 
 ## Reasons
 
-- **Validate:** wrong field types (e.g. a string where an array is expected) are load errors; unrecognized fields are warnings only.
-- **Merge:** squash-merge, so the PR becomes one commit and `main` stays linear, and delete the branch. The squash message is the PR title and description, so write the description for `git log`. Do not rebase-merge: it replays each commit and drops merge commits, so a branch that merged `main` in hits the same conflicts again.
+- **Merge:** delete the branch after the squash-merge. The squash message is the PR title and description, so write the description for `git log`. Do not rebase-merge: it replays each commit and drops merge commits, so a branch that merged `main` in hits the same conflicts again.
 
 ## Anti-Patterns
 

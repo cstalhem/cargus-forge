@@ -58,20 +58,12 @@ tmux capture-pane -p -t t | grep -v '^\s*$' | tail -40               # read the 
 - Quote the path, because an install path can contain spaces. A path with `"`, `$` or a backtick would still break it.
 - A read-only `cat` runs without approval in `default` mode. A command that is not read-only needs a matching `allowed-tools` line, or the skill does not load.
 - If the command fails or is blocked:
-  - a typed skill stops with 0 turns, an empty result and `is_error: false` in `claude -p`;
+  - a typed skill stops with 0 turns, an empty result and `is_error: false` in `claude -p`, so check `num_turns` in the result, not only `is_error`;
   - a skill called through the Skill tool gets the error as the tool result, and the model reports it.
 - An output that is empty or only whitespace shows as `(Bash completed with no output)`. For a section that should look empty, print a zero-width space instead, for example `cat <file> 2>/dev/null || printf '\342\200\213'`.
-- `claude plugin validate --strict` does not catch a missing injected file. Check it in the verify step, for example with `test -f`.
 - What Claude Code 2.1.316 showed with `claude -p`: an injected output of 29,014 characters came through in full, and one of 30,014 became `<persisted-output>Output too large … Full output saved to: …/tool-results/<id>.txt</persisted-output>` with a 2KB preview and no sign to the model that the rest was missing. The limit applies to each injection separately, so a script whose output grows with the repo needs a budget of its own.
 
 ## Anti-Patterns
 
-- **What went wrong:** Test runs of `claude -p` started from inside a session added their events to that session's transcript.
-  **Why:** The child process inherits `CLAUDE_CODE_SESSION_ID` and reuses the session unless it gets its own `--session-id`.
-  **Fix:** Unset the variable and pass a new UUID, as in "Run in a fresh session".
-- **What went wrong:** A skill with a broken injection line ran in `claude -p`, returned an empty result and reported success.
-  **Why:** A failed or blocked `` !`…` `` command stops a typed skill before the first turn, and `claude -p` does not mark that as an error.
-  **Fix:** Check the injected file in the verify step, and check `num_turns` in the result, not only `is_error`.
 - **What went wrong:** A test session loaded a plugin with `--plugin-dir` from outside its working folder, and the skill stopped at its first `` !`cat …` `` line.
-  **Why:** Claude Code lets an injected `cat` read only from the session's working folders, and a `--plugin-dir` outside them is not one.
   **Fix:** Copy the plugin into the test repo and load it with `--plugin-dir ./plugins/<name>`.
