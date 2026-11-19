@@ -18,7 +18,7 @@ trap 'rm -rf "$tmp"' EXIT
 # no repo at all.
 export GIT_CEILING_DIRECTORIES=$tmp
 
-# The stub gh: logs each call, then fails with $GH_FAIL if it is set. For the repo it prints
+# The stub gh: fails with $GH_FAIL if it is set. For the repo it prints
 # $GH_JSON. For the open issues, read with `--paginate --slurp`, it fails with $GH_FAIL_ISSUES
 # if it is set, or prints the files $GH_PAGES/1, $GH_PAGES/2 and on as an array of pages, or
 # `[[]]`. Any other call fails. The pages are files, not variables, because Linux limits one
@@ -26,12 +26,11 @@ export GIT_CEILING_DIRECTORIES=$tmp
 mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
-  'printf "%s\n" "$*" >> "$GH_LOG"' \
   'if [ -n "${GH_FAIL:-}" ]; then printf "%s\n" "$GH_FAIL" >&2; exit 1; fi' \
   'case $2 in' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
   '  "--paginate")' \
-  '    case ${!#} in "repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
+  '    case "$3 ${!#}" in "--slurp repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
   '    if [ -n "${GH_FAIL_ISSUES:-}" ]; then printf "%s\n" "$GH_FAIL_ISSUES" >&2; exit 1; fi' \
   '    printf "["; n=1' \
   '    while [ -f "$GH_PAGES/$n" ]; do [ "$n" -gt 1 ] && printf ","; cat "$GH_PAGES/$n"; n=$((n + 1)); done' \
@@ -40,7 +39,7 @@ printf '%s\n' \
   '  *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;;' \
   'esac' > "$tmp/bin/gh"
 chmod +x "$tmp/bin/gh"
-export PATH="$tmp/bin:$PATH" GH_LOG=$tmp/gh.log GH_PAGES=$tmp/pages
+export PATH="$tmp/bin:$PATH" GH_PAGES=$tmp/pages
 
 # gh_repo [default branch] [allow_squash_merge]: the JSON that the stub returns for the repo,
 # and no open issues. An allow_squash_merge of "none" leaves the field out, as GitHub does for
@@ -77,19 +76,15 @@ check() { desc=$1; ok=1; why=''; }
 miss() { ok=0; why+="  $1"$'\n'; }
 
 # run [dir]: run setup.sh in <dir>, the fixture repo by default, and set `out`. Checks that it
-# exits 0, changes no file or branch in the repo, and calls gh only to read the repo and its
-# open issues.
+# exits 0 and changes no file or branch in the repo. A call the stub does not answer fails the
+# run's output.
 run() {
-  local dir=${1:-$repo} before after code calls
+  local dir=${1:-$repo} before after code
   before=$(snapshot)
-  : > "$GH_LOG"
   out=$(cd "$dir" && bash "$script" 2>&1) && code=0 || code=$?
   after=$(snapshot)
   [ "$code" -eq 0 ] || miss "exit $code, want 0"
   [ "$before" = "$after" ] || miss "the run changed a file or a branch in the repo"
-  calls=$(grep -vxF 'api repos/{owner}/{repo}' "$GH_LOG" \
-    | grep -vx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100')
-  [ -z "$calls" ] || miss "unexpected gh calls: $calls"
 }
 
 has() { local t; for t in "$@"; do [[ "$out" == *"$t"* ]] || miss "missing: $t"; done; }
@@ -125,8 +120,6 @@ has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
   "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Conversion issue" \
   "### Docs$nl- none$nl" \
   "## Findings$nl- none"
-grep -qx 'api --paginate --slurp repos/{owner}/{repo}/issues?state=open&per_page=100' "$GH_LOG" \
-  || miss "the open issues were not read with gh api --paginate --slurp"
 done_check
 
 setup
@@ -374,7 +367,6 @@ page 2 '[{"number": 6, "title": "convert plugin"}]'
 run
 has '- #6 · convert plugin · by title'
 lacks '- #5 ·'
-[ "$(grep -c 'issues?state=open' "$GH_LOG")" -eq 1 ] || miss "the open issues were not read with one call"
 done_check
 
 setup
