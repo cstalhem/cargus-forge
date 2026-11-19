@@ -22,7 +22,8 @@ export GIT_CEILING_DIRECTORIES=$tmp
 # $GH_JSON. For the open issues, read with `--paginate --slurp`, it fails with $GH_FAIL_ISSUES
 # if it is set, or prints the files $GH_PAGES/1, $GH_PAGES/2 and on as an array of pages, or
 # `[[]]`. Any other call fails. The pages are files, not variables, because Linux limits one
-# variable in the environment to 128 KiB, as it does one argument.
+# variable in the environment to 128 KiB, as it does one argument. A second read of the open
+# issues in one run fails too: the file $GH_READ marks the first, and `run` removes it.
 mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
@@ -31,6 +32,7 @@ printf '%s\n' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
   '  "--paginate")' \
   '    case "$3 ${!#}" in "--slurp repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
+  '    [ -e "$GH_READ" ] && { printf "stub gh: the open issues were read twice\n" >&2; exit 1; }; : > "$GH_READ"' \
   '    if [ -n "${GH_FAIL_ISSUES:-}" ]; then printf "%s\n" "$GH_FAIL_ISSUES" >&2; exit 1; fi' \
   '    printf "["; n=1' \
   '    while [ -f "$GH_PAGES/$n" ]; do [ "$n" -gt 1 ] && printf ","; cat "$GH_PAGES/$n"; n=$((n + 1)); done' \
@@ -39,7 +41,7 @@ printf '%s\n' \
   '  *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;;' \
   'esac' > "$tmp/bin/gh"
 chmod +x "$tmp/bin/gh"
-export PATH="$tmp/bin:$PATH" GH_PAGES=$tmp/pages
+export PATH="$tmp/bin:$PATH" GH_PAGES=$tmp/pages GH_READ=$tmp/issues.read
 
 # gh_repo [default branch] [allow_squash_merge]: the JSON that the stub returns for the repo,
 # and no open issues. An allow_squash_merge of "none" leaves the field out, as GitHub does for
@@ -81,6 +83,7 @@ miss() { ok=0; why+="  $1"$'\n'; }
 run() {
   local dir=${1:-$repo} before after code
   before=$(snapshot)
+  rm -f "$GH_READ"
   out=$(cd "$dir" && bash "$script" 2>&1) && code=0 || code=$?
   after=$(snapshot)
   [ "$code" -eq 0 ] || miss "exit $code, want 0"

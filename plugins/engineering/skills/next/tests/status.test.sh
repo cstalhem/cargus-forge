@@ -69,6 +69,9 @@ if [ "$2" = graphql ]; then
     *'issues(states: OPEN'*) conn=issues name=issues ;;
     *'pullRequests(states: OPEN'*) conn=pullRequests name=pulls_open ;;
     *'headRefName: $b'*)
+      # One call reads the PRs of every issue branch, so a second call in one run fails.
+      [ -e "$FIX/.heads-read" ] && { echo 'fake gh: the PRs of the issue branches were read twice' >&2; exit 1; }
+      : > "$FIX/.heads-read"
       out='{}' i=0
       for b in "${heads[@]}"; do
         if [ -f "$FIX/head_$b.json" ]; then nodes=$(cat "$FIX/head_$b.json"); else nodes='[]'; fi
@@ -125,6 +128,7 @@ git -C "$tmp/work" worktree add -q "$tmp/wt2" 22-shut
 run_status() {
   local fix=$1
   shift
+  rm -f "$fix/.heads-read"
   (cd "$tmp/work" && PATH="$tmp/bin:$PATH" FIX="$fix" bash "$status" "$@" | sed "s|$tmp|<tmp>|g")
 }
 
