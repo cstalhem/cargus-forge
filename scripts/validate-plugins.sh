@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Validate each plugin and the marketplace root with `claude plugin validate --json`.
+# Reads the manifest's problems and those of each skill, agent and command in `contents`.
 # Fails on every error and on every warning except the one about a missing `version`:
 # plugins carry no version, because Claude Code versions them by commit SHA. A plugin's
 # report names that warning `version`; the marketplace root's names it `plugins[N] plugin.json → version`.
@@ -14,7 +15,7 @@ for dir in plugins/*/ .; do
   report=$(claude plugin validate --json "$dir" 2>&1) || code=$?
   # claude exits 1 on an error but still prints the JSON report, so read the report first.
   if ! problems=$(jq -r '
-        (.manifest.errors[]?, (.manifest.warnings[]? | select((.path == "version" or (.path // "" | endswith(" → version"))) | not)))
+        (.manifest, .contents[]?) | .errors[]?, (.warnings[]? | select((.path == "version" or (.path // "" | endswith(" → version"))) | not))
         | "  " + (.path // "-") + ": " + .message
       ' <<<"$report" 2>/dev/null); then
     echo "$dir: claude plugin validate gave no JSON report (exit $code)"
