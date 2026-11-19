@@ -11,3 +11,4 @@ paths:
 - A skill step that branches on session state has one case per distinct action, never one case per way of reaching the same action.
 - Skills match a PR's first line only against the formats execute writes (`Sub-issue #<n> of`, `Closes #<n>`).
 - A skill's call to a T3 tool rests on the schema that the host loads through ToolSearch, not on t3code's `main`, and checks the call's result, because the host can run an older T3 build.
+- A test under plugins/engineering runs a script, or compares a frontmatter value, an injected command or a manifest field; it never matches a fixed phrase in a skill body, reference, README, ADR, glossary or rule file.
