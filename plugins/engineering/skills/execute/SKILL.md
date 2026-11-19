@@ -74,17 +74,15 @@ Issue: $ARGUMENTS
 
 ## Term and ADR decisions
 execute writes the glossary and `docs/adr/` in the issue's PR. The PR review is the human approval of each entry that no `Term` decision holds. The Glossary section at the end of this skill holds the file as it was when the skill loaded, and step 2 can switch or update the branch after that, so read `docs/glossary.md` and `docs/adr/` on the issue branch, if they exist, before you judge that no entry covers a name, before you write an entry and before you write an ADR.
-- **Write each `Term` decision**, the issue's own and each one it points to as `#<umbrella> D<n>`. Add its entry to `docs/glossary.md`, or edit the entry for that term in place. The entry is the decision's text: `**<Term>**: <definition>`, with the decision's `_Avoid_` words on a line under it. If the file does not exist, create it with the `# Glossary` heading.
+- **Write each `Term` and `ADR` decision** that step 1's Decisions bullet names.
+- **A `Term` decision:** add its entry to `docs/glossary.md`, or edit the entry for that term in place. The entry is the decision's text: `**<Term>**: <definition>`, with the decision's `_Avoid_` words on a line under it. If the file does not exist, create it with the `# Glossary` heading. Put a new entry at the end of the file.
 - **Add a missing term.** If the code needs a new domain name that passes the gate in `domain-model.md`, and no `Term` decision and no entry covers it, add an entry for it. This is deviation rule 6.
 - **Record a rename.** If the work renames a domain name, edit its entry in place, or add one if it has none and passes the gate. The entry gets the new term, and the old word goes into its `_Avoid_` line. Unless a `Term` decision holds the rename, this is deviation rule 6.
 - **Use the terms.** Name new code and doc text with the glossary's terms, and not with a word that it lists under `_Avoid_`.
-- **Check each entry** against the format and the gate before you commit it. If a `Term` decision does not fit them, stop and ask. Do not change the decision, because it is the user's.
-- Put a new entry at the end of the file.
-- **Write each `ADR` decision:** the issue's own, and each `#<umbrella> D<n>` line in its `## Decisions` whose decision in the umbrella is an `ADR` decision.
 - **A new ADR:** number it as `Location` in `adr.md` says, write it in the format there, and add its row to `docs/adr/README.md`.
 - **An existing ADR:** edit it as `Edit or new` in `adr.md` says, and update its index row if its title or status changed.
 - **Fill it from the issue.** The Decision holds the decision's sentence, and Rejected alternatives holds each of its rejected alternatives with its reason. Write Details and Consequences from the issue's other decisions and scenarios, only where the decision needs them.
-- **Check each ADR** against the format and the length before you commit it. If an `ADR` decision does not fit them, stop and ask. Do not change the decision, because it is the user's.
+- **Check each entry and each ADR** against its format, and the gate or the length, before you commit it. If a decision does not fit them, stop and ask. Do not change the decision, because it is the user's.
 - **A change that makes an ADR false** and that no `ADR` decision covers is a change to the architecture: deviation rule 4, so stop and ask.
 - Commit each entry and each ADR with the code that uses or records it.
 - **Name it in the PR.** Under `## What it delivers`, list `docs/glossary.md` with each entry that the PR adds or edits, and each ADR that the PR adds or edits, with the decision it serves. Under `## Deviations`, name each entry from deviation rule 6. If the issue's `## Files` does not list `docs/glossary.md`, name the file under `## Deviations` too.

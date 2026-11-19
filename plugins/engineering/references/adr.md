@@ -1,6 +1,7 @@
 # ADRs
 
 An ADR (architecture decision record) states one current decision of a repo and the alternatives it rejected, so that a later reader knows why the code is the way it is and does not propose a rejected alternative again.
+
 ## Location
 - One file for each decision: `docs/adr/ADR-NNN-<slug>.md`. `NNN` has three digits. The slug is lowercase ASCII, about 40 characters at most, and fixed once the file is committed; only the title inside the file can change.
 - A new ADR takes the highest number in `docs/adr/` plus one. A number is never reused.
@@ -19,7 +20,7 @@ A decision that fails one stays a decision in its issue only.
 - An ADR states the current decision. When a decision is refined or changed, edit its ADR in place. Git holds the history.
 - A reversed choice moves to Rejected alternatives, with the reason it was dropped. It is the strongest rejected alternative, because it was tried.
 - An ADR has no "amended by" or "superseded by" note, no change marker and no narration, such as "we decided" or "after the discussion". It states its reasons as facts.
-- An ADR uses the glossary's terms. A term that it settles or changes gets its own `Term` decision in the same issue, as `domain-model.md` says.
+- An ADR uses the glossary's terms. A term that it settles or changes gets its own `Term` decision in the same issue, as `formats.md` says.
 
 ## Edit or new
 The question is whether the decision answers the same question as an existing ADR.
