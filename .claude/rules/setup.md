@@ -7,3 +7,4 @@ paths:
 # Setup and next tests
 
 - A test proves a behaviour the code has now: it never checks that a removed feature, name or string stays absent, and never greps a script's own source.
+- A test asserts a script's output, never a log of the calls its fake gh received.
