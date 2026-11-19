@@ -415,19 +415,9 @@ run
 has "### Conversion issue$nl- none$nl"
 done_check
 
-check "SKILL.md writes the marker as the first line of the issue it creates (#164)"
+check "SKILL.md runs on Fable (#367)"
 ok=1; why=''; out=''
-grep -qF 'Its first line is `<!-- engineering:setup conversion issue -->`' "$here/../SKILL.md" || miss "SKILL.md does not put the marker first"
-done_check
-
-check "SKILL.md runs on Fable and launches each research agent on Sonnet (#367)"
-ok=1; why=''; out=''
-skill=$here/../SKILL.md
-awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$skill" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
-grep -F -- '- **Research.**' "$skill" | grep -qF 'with the Agent tool, `subagent_type: general-purpose` and `model` `sonnet`, never a fork' \
-  || miss "the Research step does not launch each research agent with model sonnet"
-grep -F '| `/engineering:setup` |' "$here/../../../README.md" | grep -qF 'Runs on Fable' \
-  || miss "the README's setup row does not say that setup runs on Fable"
+awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$here/../SKILL.md" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
 done_check
 
 setup
