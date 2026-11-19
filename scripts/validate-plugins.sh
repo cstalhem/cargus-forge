@@ -30,4 +30,25 @@ for dir in plugins/*/ .; do
   fi
 done
 
+# `claude plugin validate` does not catch a skill that injects a file that does not exist, so check each
+# !`cat "${CLAUDE_PLUGIN_ROOT}/<path>"` and !`bash "${CLAUDE_SKILL_DIR}/<path>"` here. A `cat docs/glossary.md`
+# reads the user's repo and may be absent, so it has no variable and is not matched.
+for skill in plugins/*/skills/*/SKILL.md; do
+  while IFS= read -r injection; do
+    var=${injection#*\$\{}
+    var=${var%%\}*}
+    path=${injection#*\}/}
+    path=${path%\"}
+    if [ "$var" = CLAUDE_PLUGIN_ROOT ]; then
+      file=${skill%%/skills/*}/$path
+    else
+      file=$(dirname "$skill")/$path
+    fi
+    if [ ! -f "$file" ]; then
+      echo "$skill: injects $path, which does not exist"
+      status=1
+    fi
+  done < <(grep -oE '!`(cat|bash) "\$\{CLAUDE_(PLUGIN_ROOT|SKILL_DIR)\}/[^"]+"' "$skill")
+done
+
 exit "$status"
