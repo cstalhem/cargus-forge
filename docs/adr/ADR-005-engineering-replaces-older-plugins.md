@@ -9,8 +9,8 @@ status: active
 - **Decision:** The engineering plugin takes over the roles of knowledge-system and adr-management. It takes their ideas and copies no files. The two older plugins are deprecated when engineering is stable.
 
 ## Details
-- `references/domain-model.md` holds only the glossary rules: the format, the gate, and how discuss and execute use it.
-- `references/adr.md` holds the ADR rules: the litmus test, the format, when to edit an ADR instead of writing a new one, and how discuss and execute use them. It is a reference that discuss and execute read, not a skill. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it.
+- `references/domain-model.md` holds only the glossary rules: the format and the gate. discuss and execute each hold their own glossary steps.
+- `references/adr.md` holds the ADR rules: the litmus test, the format, and when to edit an ADR instead of writing a new one. It is a reference that discuss and execute read, not a skill. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it, each from its own steps.
 - ADRs stay living documents: each one states the current decision, and git holds its history.
 - Engineering holds knowledge-system's rules tier and its reflection step, as rules in `.claude/rules/` and a reflect step in execute ([ADR-009](ADR-009-conventions-are-claude-code-rules.md)). It leaves out knowledge-system's staging tier.
 - adr-management stays until engineering is stable. It and knowledge-system are deprecated together then.
