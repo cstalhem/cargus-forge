@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Test for discuss's model line (#357): its frontmatter runs it on Fable. It reads the repo's files only and needs no
-# network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 skill=$here/../SKILL.md
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift

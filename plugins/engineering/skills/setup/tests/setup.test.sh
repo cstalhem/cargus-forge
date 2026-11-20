@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Tests for setup.sh against fixture repos built under mktemp -d. A stub `gh`, first on PATH,
-# returns fixture JSON, so the tests need no network (#148 D1).
 set -uo pipefail
 
 here=$(cd "$(dirname "$0")" && pwd)
@@ -14,16 +12,8 @@ export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_NOSYSTEM=1
 
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT
-# git looks for no repo above $tmp, so a directory under it that is not a fixture repo is in
-# no repo at all.
 export GIT_CEILING_DIRECTORIES=$tmp
 
-# The stub gh: fails with $GH_FAIL if it is set. For the repo it prints
-# $GH_JSON. For the open issues, read with `--paginate --slurp`, it fails with $GH_FAIL_ISSUES
-# if it is set, or prints the files $GH_PAGES/1, $GH_PAGES/2 and on as an array of pages, or
-# `[[]]`. Any other call fails. The pages are files, not variables, because Linux limits one
-# variable in the environment to 128 KiB, as it does one argument. A second read of the open
-# issues in one run fails too: the file $GH_READ marks the first, and `run` removes it.
 mkdir "$tmp/bin" "$tmp/pages"
 printf '%s\n' \
   '#!/usr/bin/env bash' \
@@ -43,9 +33,6 @@ printf '%s\n' \
 chmod +x "$tmp/bin/gh"
 export PATH="$tmp/bin:$PATH" GH_PAGES=$tmp/pages GH_READ=$tmp/issues.read
 
-# gh_repo [default branch] [allow_squash_merge]: the JSON that the stub returns for the repo,
-# and no open issues. An allow_squash_merge of "none" leaves the field out, as GitHub does for
-# a read-only token.
 gh_repo() {
   GH_JSON=$(jq -nc --arg b "${1:-main}" --arg s "${2:-true}" '
     {full_name: "acme/widget", default_branch: $b}
@@ -55,10 +42,8 @@ gh_repo() {
   rm -f "$GH_PAGES"/*
 }
 
-# page <p> <json>: page <p> of the open issues.
 page() { printf '%s\n' "$2" > "$GH_PAGES/$1"; }
 
-# setup: a new fixture repo with one commit, on main, and the stub's default answer.
 setup() {
   repo=$(mktemp -d "$tmp/repo.XXXXXX")
   cd "$repo" || exit 1
@@ -68,18 +53,13 @@ setup() {
   gh_repo
 }
 
-# A listing of every path under the repo, .git included, with each file's checksum.
 snapshot() {
   (cd "$repo" && find . | LC_ALL=C sort && find . -type f -exec cksum {} + | LC_ALL=C sort)
 }
 
-# check <description>: start a test.
 check() { desc=$1; ok=1; why=''; }
 miss() { ok=0; why+="  $1"$'\n'; }
 
-# run [dir]: run setup.sh in <dir>, the fixture repo by default, and set `out`. Checks that it
-# exits 0 and changes no file or branch in the repo. A call the stub does not answer fails the
-# run's output.
 run() {
   local dir=${1:-$repo} before after code
   before=$(snapshot)
@@ -93,7 +73,6 @@ run() {
 has() { local t; for t in "$@"; do [[ "$out" == *"$t"* ]] || miss "missing: $t"; done; }
 lacks() { local t; for t in "$@"; do [[ "$out" != *"$t"* ]] || miss "unexpected: $t"; done; }
 
-# error <text>: the output is one `setup.sh error:` line that holds <text>, and nothing else.
 error() {
   [ "$(printf '%s\n' "$out" | wc -l)" -eq 1 ] || miss "not one line"
   [[ "$out" == "setup.sh error: "* ]] || miss "does not start with setup.sh error:"
@@ -359,7 +338,6 @@ setup
 check "run from a subdirectory, it prints one setup.sh error line that says to start at the top of the repo"
 mkdir -p docs/agents sub/dir
 printf '# Commands\n' > docs/agents/commands.md
-# A read of the open issues before the check would print this gh error instead.
 export GH_FAIL_ISSUES='HTTP 500: issues were read'
 run "$repo/sub/dir"
 error 'start the session at the top of the repo'

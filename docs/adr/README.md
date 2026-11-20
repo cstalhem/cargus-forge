@@ -14,3 +14,4 @@ Each ADR states one current decision. ADRs are living documents, and git holds t
 | [ADR-009](ADR-009-conventions-are-claude-code-rules.md) | Conventions are Claude Code rules in the repo | active | |
 | [ADR-010](ADR-010-anneal-shapes-fixes-without-discuss.md) | An anneal shapes behaviour-preserving fixes without discuss | active | builds on ADR-008 |
 | [ADR-011](ADR-011-build-acts-only-on-trusted-authors.md) | Build acts only on items by trusted authors | active | builds on ADR-001 |
+| [ADR-012](ADR-012-code-carries-no-comments.md) | Code carries no comments, and a ratchet holds the count | active | builds on ADR-009 |
