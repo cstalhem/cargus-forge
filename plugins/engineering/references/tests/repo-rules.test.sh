@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
-# Test for the four skills that inject references/repo-rules.md: execute, setup, anneal and verify each inject it
-# under ## Repo rules and pre-approve the cat. It reads the repo's files only and needs no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
 plugin=$(CDPATH= cd -- "$here/../.." && pwd)
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift

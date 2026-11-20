@@ -1,0 +1,12 @@
+4 .github/workflows/plugins.yml
+5 plugins/knowledge-system/hooks/reflect-on-push.sh
+2 plugins/knowledge-system/hooks/retrieve-on-start.sh
+9 plugins/obsidian/skills/process-meeting/scripts/process-transcript-outline.sh
+5 plugins/research/skills/run/scripts/check_report.py
+8 plugins/research/skills/run/tests/notes-viewer.test.mjs
+7 scripts/check-descriptions.sh
+6 scripts/check-descriptions.test.sh
+4 scripts/test.sh
+6 scripts/test.test.sh
+10 scripts/validate-plugins.sh
+10 scripts/validate-plugins.test.sh

@@ -9,7 +9,7 @@ status: active
 - **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total.
 
 ## Details
-- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`, `autopilot-t3`. `research` is not built (#200), and neither is the plan page (#201).
+- **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`, `autopilot-t3`, `anneal`, `delete-comment`. `research` is not built (#200), and neither is the plan page (#201).
 - **Called skills:** `slice`, `verify`. `grill`, `tdd` and `ste-writing` are not built and have no request.
 - **Reflect is a step of execute, not a skill.** It asks once, after the checks pass, what the work proved that a rule should hold, and it writes each evidenced proposal into the issue's PR.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill. Autopilot starts a Build phase through a child thread whose prompt is the typed `/engineering:execute #<n>` or `/engineering:ship #<u>` ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)): the prompt types the skill, so execute keeps its required argument and `disable-model-invocation`, and no skill calls a typed skill.
@@ -17,6 +17,9 @@ status: active
   - A line such as `` !`${CLAUDE_SKILL_DIR}/status.sh` `` runs when the skill is invoked, and the model sees only its output.
   - Each command is pre-approved in `allowed-tools`.
   - Scripts exit 0 and print errors as text, because a non-zero exit stops the skill.
+  - An error is exactly one line, `<script> error: <reason>`, and nothing else: each `jq` call sends its stderr to `/dev/null`, and a script prints its output only once it is complete, so the model never reads half a report.
+  - A helper that can fail, such as `read_list`, sets a variable and is called in the main shell, never in a pipe or `$(…)`, where its `exit 0` would end only the subshell and the script would go on without the fact.
+  - The pages of a paginated read reach `jq` on stdin, never as an argument, because Linux limits one argument, and one environment variable, to 128 KiB.
   - Scripts use bash, `gh` and `jq`.
 - **Size and placement:**
   - No skill body is longer than about 150 lines.

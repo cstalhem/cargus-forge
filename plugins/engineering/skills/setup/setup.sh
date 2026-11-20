@@ -1,53 +1,6 @@
 #!/usr/bin/env bash
-# setup.sh: the facts for /engineering:setup.
-# Reads the repo's settings and open issues through `gh api` REST, and the repo's files from the
-# current directory, which must be the top of the git worktree. It changes nothing: it writes no
-# file, runs no git command that writes, and makes no GitHub write.
-# It always exits 0 and prints errors as text, because a non-zero exit stops the skill.
-# An error prints exactly one line, `setup.sh error: <reason>`, and nothing else: the output
-# is printed only once it is complete.
-#
-# The plugin's templates are found from this script's own path, `<plugin>/skills/setup/`, so
-# the script runs from the user's repo.
-#
-# Output:
-#   ## Facts
-#   ### Repo                 `- repo:` and `- allow_squash_merge:` lines.
-#   ### Files                a line `- <path> · <state>` for the repo profile,
-#                            `docs/agents/commands.md`: present or missing (#181 D2), and one for
-#                            `.claude/rules/`: `present (<n> files)` when it holds a `.md` file,
-#                            else `missing` (#217 D1).
-#   ### Optional behaviours  a line `- <name> · <path> · <state>` for each optional behaviour:
-#                            missing, current or differs. A file that differs gets a fenced
-#                            `diff -u` block under its line, from the repo's file (`-`) to what
-#                            setup would write (`+`).
-#   ### Commands             a line `- <command> · <source>` for each command found in
-#                            `package.json`, a Makefile, `pyproject.toml` and the run lines of
-#                            `.github/workflows/*`, or `- none` (#85 D7).
-#   ### Stack                the repo's stack (#217 D3): a line `- language: <name> · <n> files`
-#                            for each known file extension in `git ls-files`, by count; a line
-#                            `- <manifest>: <name>, …` for each `package.json`, `pyproject.toml`,
-#                            `go.mod`, `Cargo.toml` and `Gemfile` at the top of the repo, with its
-#                            dependency names and no versions (#217 D2); a line `- config: <path>`
-#                            for each linter or formatter config; or `- none`.
-#   ### Conversion issue     a line `- #<n> · <title> · by marker` (or `by title`) for each open
-#                            issue that is the conversion issue, or `- none` (#164). The marker
-#                            `<!-- engineering:setup conversion issue -->` on a line of the body
-#                            wins; only without one, a title with `convert` and `plugin` or
-#                            `engineering`.
-#   ### Docs                 a line `- <kind> · <path>` for each doc that setup found, or `- none`
-#                            (#151 D2): `adr` for an ADR folder other than `docs/adr/`, and
-#                            `glossary` for a glossary-like file other than `docs/glossary.md`,
-#                            each with a finding; `rules` for the CLAUDE.md, AGENTS.md,
-#                            CONTRIBUTING.md and PR templates, which the model reads and judges.
-#   ## Findings              a line `- <finding>` for each finding, or `- none`. A finding is
-#                            what setup reports and leaves as it is, and ends with the action that
-#                            the user can take.
-
 set -u
 
-# `fail` and `read_list` come from the plugin's shared file. `fail` does not
-# exist until it is loaded, so a missing file prints its own error line.
 lib=$(dirname "${BASH_SOURCE[0]}")/../../scripts/lib.sh
 if [ ! -f "$lib" ]; then
   printf '%s error: cannot find %s\n' "$(basename "$0")" "$lib"
@@ -63,8 +16,6 @@ plugin_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." 2>/dev/null && pwd -P) \
   || fail "cannot find the plugin's directory from $0."
 templates=$plugin_root/templates
 
-# Each optional behaviour (#85 D5): its name, the file that turns it on, and the template that
-# file is a byte-identical copy of.
 behaviours=(
   "close-sub-issue|.github/workflows/close-sub-issue.yml|close-sub-issue.yml"
 )
@@ -76,7 +27,6 @@ line() { report+="$*"$'\n'; }
 prefix=$(git rev-parse --show-prefix 2>&1) || fail "git rev-parse --show-prefix: $prefix"
 [ -z "$prefix" ] || fail "start the session at the top of the repo: setup copies files to paths relative to it."
 
-# The repo's files, ignored files left out, read once for every section that needs them.
 files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
   || fail "git ls-files: $files"
 
@@ -87,7 +37,6 @@ facts_repo() {
     || fail "gh api repos/{owner}/{repo} did not return a repo: $out"
   default_branch=$(printf '%s' "$out" | jq -er '.default_branch | strings' 2>/dev/null) \
     || fail "gh api repos/{owner}/{repo} did not return a default branch: $out"
-  # GitHub leaves the merge settings out for a token that cannot change them.
   squash=$(printf '%s' "$out" | jq -r '.allow_squash_merge | if type == "boolean" then tostring else "unknown" end' 2>/dev/null) \
     || fail "gh api repos/{owner}/{repo} did not return a repo: $out"
 
@@ -105,8 +54,6 @@ facts_repo() {
   esac
 }
 
-# Adds a fenced `diff -u` block from what is in the repo to what setup would write.
-# $1 and $2 are the labels, $3 and $4 the files.
 add_diff() {
   local d rc
   d=$(diff -u -L "$1" -L "$2" "$3" "$4" 2>&1)
@@ -125,7 +72,6 @@ facts_files() {
   else
     line "- \`$path\` · missing"
   fi
-  # A folder with no .md file, as an empty folder, is missing (#217 D1).
   [ ! -d "$rules" ] || n=$(find "$rules" -type f -name '*.md' | wc -l | tr -d ' ')
   if [ "$n" -gt 0 ]; then
     line "- \`$rules/\` · present ($n files)"
@@ -161,7 +107,6 @@ facts_behaviours() {
 
 commands=''
 
-# package.json scripts, each run with the package manager its lockfile names.
 commands_package_json() {
   local runner=npm out
   [ -f package.json ] || return
@@ -179,7 +124,6 @@ commands_package_json() {
   fi
 }
 
-# Makefile targets, with their line. A pattern rule or a target with a variable is left out.
 commands_makefile() {
   local file out
   for file in GNUmakefile makefile Makefile; do
@@ -196,7 +140,6 @@ commands_makefile() {
   done
 }
 
-# pyproject.toml: the tasks of poe, taskipy, pdm, hatch and rye, and the tools it configures.
 commands_pyproject() {
   local out
   [ -f pyproject.toml ] || return
@@ -228,9 +171,6 @@ commands_pyproject() {
   [ -z "$out" ] || commands+="$out"$'\n'
 }
 
-# The run lines of each workflow, with their line. A `run: |` block gives one command per line,
-# and a line that ends with `\` joins the next. An optional behaviour's file is left out,
-# because it is the plugin's, not the repo's.
 commands_workflows() {
   local file entry path skip out
   shopt -s nullglob
@@ -245,10 +185,8 @@ commands_workflows() {
       function indent(s) { match(s, /^ */); return RLENGTH }
       function emit(cmd, at) {
         gsub(/^[ \t]+|[ \t]+$/, "", cmd)
-        # A comment or a line with only a shell keyword is not a command.
         if (cmd != "" && cmd !~ /^#/ && cmd !~ /^(then|else|fi|do|done|esac|[{}]|;;)$/) print "- " cmd " · " f ":" at
       }
-      # Adds a line of a command, which goes out once a line does not end with a backslash.
       function part(s, at) {
         if (pending == "") pending_at = at
         sub(/^[ \t]+/, "", s)
@@ -293,15 +231,12 @@ facts_commands() {
 
 stack=''
 
-# Adds the line of a manifest: $1 is its name, $2 its dependency names, one on each line. The
-# names are sorted and have no version (#217 D2).
 stack_manifest() {
   local joined
   joined=$(printf '%s\n' "$2" | LC_ALL=C sort -u | awk 'NF { printf "%s%s", (n++ ? ", " : ""), $0 }')
   stack+="- $1: ${joined:-none}"$'\n'
 }
 
-# package.json: dependencies and devDependencies.
 stack_package_json() {
   local names
   [ -f package.json ] || return
@@ -312,14 +247,10 @@ stack_package_json() {
   fi
 }
 
-# pyproject.toml: the requirements in `[project] dependencies`, `[project.optional-dependencies]`
-# and `[dependency-groups]`, which are quoted strings in an array, named up to their version or
-# extras, and the keys of the poetry dependency tables, except `python`.
 stack_pyproject() {
   local names
   [ -f pyproject.toml ] || return
   names=$(awk '
-    # Prints the name that each quoted string of s starts with, and ends the array at a `]`.
     function reqs(s,   b) {
       gsub(/\{[^}]*\}/, "", s)
       while (match(s, /"[^"]*"|\047[^\047]*\047/)) {
@@ -353,7 +284,6 @@ stack_pyproject() {
   stack_manifest pyproject.toml "$names"
 }
 
-# go.mod: the modules of its `require` lines, except the indirect ones.
 stack_go_mod() {
   local names
   [ -f go.mod ] || return
@@ -366,9 +296,6 @@ stack_go_mod() {
   stack_manifest go.mod "$names"
 }
 
-# Cargo.toml: the keys of its dependency tables (`dependencies`, `dev-dependencies`,
-# `build-dependencies`, `workspace.dependencies`, and those under `target.*`), and the name
-# of a `[dependencies.<name>]` table.
 stack_cargo() {
   local names
   [ -f Cargo.toml ] || return
@@ -387,7 +314,6 @@ stack_cargo() {
   stack_manifest Cargo.toml "$names"
 }
 
-# Gemfile: the name of each `gem` line.
 stack_gemfile() {
   local names
   [ -f Gemfile ] || return
@@ -395,8 +321,6 @@ stack_gemfile() {
   stack_manifest Gemfile "$names"
 }
 
-# The linter and formatter configs at the top of the repo, and the `[tool.black]`, `[tool.ruff]`
-# and `[tool.mypy]` tables of pyproject.toml, which are the only config that black has.
 stack_configs() {
   local f tools
   for f in \
@@ -423,11 +347,6 @@ stack_configs() {
   [ -z "$tools" ] || stack+="$tools"$'\n'
 }
 
-# The repo's stack (#217 D3): its languages by file count, the dependency names of the manifests
-# at the top of the repo, and its linter and formatter configs. A language is a file extension
-# in the table below, so a file with another extension counts for no language. The files are
-# the ones that `git ls-files` lists once at the top, ignored files left out. The model
-# picks the stack components from these lines and detects nothing itself.
 facts_stack() {
   local languages
   languages=$(printf '%s\n' "$files" | awk '
@@ -463,8 +382,6 @@ facts_stack() {
   line
 }
 
-# Adds each line of $1 that starts with `F ` to the report, and each one that starts with
-# `W ` to the findings (a `W` line is a finding), without that start.
 add_lines() {
   local l
   while IFS= read -r l; do
@@ -475,13 +392,8 @@ add_lines() {
   done <<<"$1"
 }
 
-# The open conversion issue (#164). An issue holds the marker when a line of its body is the
-# marker, which setup puts at the start of the issue it creates. Only when none does, the title
-# is the fallback: lowercased, it contains `convert` and either `plugin` or `engineering`. A
-# closed issue does not count, so the list holds open issues only (D2).
 facts_conversion() {
   local marker='<!-- engineering:setup conversion issue -->' out
-  # The issues endpoint lists PRs too.
   read_list 'repos/{owner}/{repo}/issues?state=open'
   out=$(printf '%s' "$items" | jq -r --arg marker "$marker" '
     [.[] | select(has("pull_request") | not)] as $open
@@ -497,13 +409,6 @@ facts_conversion() {
   line
 }
 
-# The docs that the plugin cannot see, or whose rules can conflict with it (#151 D2). It lists
-# the repo's files that `git ls-files` lists once at the top, so ignored files are left out. An ADR folder is a
-# folder other than `docs/adr/` with a doc file in it, where the folder's name is an ADR name,
-# the file's name starts with `adr` and a number, or the folder is the one that `.adr-dir`
-# names (adr-tools). A glossary-like file is a doc file named like a glossary, other than
-# `docs/glossary.md`. The rule docs are CLAUDE.md, AGENTS.md, CONTRIBUTING.md and the PR
-# templates, in the places that Claude Code and GitHub read them.
 facts_docs() {
   local adr_dir='' out
   if [ -f .adr-dir ]; then
@@ -551,7 +456,6 @@ facts_docs() {
   line
 }
 
-# The report: one section after the other, then the findings that the sections gave.
 line '## Facts'
 line
 facts_repo

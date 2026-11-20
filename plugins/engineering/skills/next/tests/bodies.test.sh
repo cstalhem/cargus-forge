@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Tests for bodies.sh and the next skill's use of it. bodies.sh runs with a fake `gh` first on PATH
-# that answers the open-issues path from a fixture. The tests need no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -10,7 +8,6 @@ tmp=$(mktemp -d) && tmp=$(cd "$tmp" && pwd -P) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift
@@ -22,7 +19,6 @@ expect() {
   fi
 }
 
-# same <description> <expected file> <actual file>: the two files must be identical.
 same() {
   if diff -u "$2" "$3" > "$tmp/diff"; then
     echo "ok: $1"
@@ -33,9 +29,6 @@ same() {
   fi
 }
 
-# --- The fake gh ---------------------------------------------------------------------------
-# It answers `gh api <path>` for the open issues from `$FIX/issues.json`, and any other path with
-# an empty list. `FAKE_GH_FAIL=1` makes every call fail.
 mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -44,22 +37,16 @@ case ${!#} in
   *issues\?state=open*) if [ -f "$FIX/issues.json" ]; then body=$(cat "$FIX/issues.json"); else body='[]'; fi ;;
   *) body='[]' ;;
 esac
-# `--slurp` wraps the pages of a `--paginate` read in one array: the fake has one page.
 case " $* " in *" --slurp "*) printf '[%s]\n' "$body" ;; *) printf '%s\n' "$body" ;; esac
 FAKE
 chmod +x "$tmp/bin/gh"
 
 run_bodies() { PATH="$tmp/bin:$PATH" FIX="$1" bash "$bodies"; }
 
-# trust <file>: gives each issue in the fixture the author_association OWNER and the login `owner`,
-# unless it holds its own, so a fixture names only the authors that matter (#362).
 trust() {
   jq '[.[] | {author_association: "OWNER", user: {login: "owner"}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 
-# --- The fixtures --------------------------------------------------------------------------
-# full: an issue with `## What it delivers`, one with `## Goal`, one with neither, and a PR. They
-# are listed out of order, so that the sort shows.
 full=$tmp/full
 mkdir "$full"
 cat > "$full/issues.json" <<'JSON'
@@ -118,8 +105,6 @@ run_bodies "$outside" > "$tmp/outside.out"
 same "WHEN bodies.sh prints an open issue whose author is not a trusted author THEN it prints the issue's heading and the line from <login>, not a trusted author in place of its body" \
   "$tmp/outside.expected" "$tmp/outside.out"
 
-# --- The budget ----------------------------------------------------------------------------
-# few: one issue of 5,000 characters is cut to 2,000. many: 60 issues of 5,000 characters each.
 few=$tmp/few
 mkdir "$few"
 jq -n '[{number: 1, title: "Long", body: ("x" * 5000)}]' > "$few/issues.json"
@@ -141,7 +126,6 @@ expect "WHEN bodies.sh runs on 60 open issues of 5,000 characters each THEN the 
 run_bodies "$tmp/none" > "$tmp/none.out"
 same "WHEN no issue is open THEN bodies.sh prints - none" <(echo '- none') "$tmp/none.out"
 
-# --- Errors --------------------------------------------------------------------------------
 echo "# errors"
 FAKE_GH_FAIL=1 run_bodies "$full" > "$tmp/err.out"
 expect "WHEN gh api fails THEN bodies.sh prints exactly one 'bodies.sh error: <reason>' line" \
@@ -149,7 +133,6 @@ expect "WHEN gh api fails THEN bodies.sh prints exactly one 'bodies.sh error: <r
 expect "WHEN gh api fails THEN bodies.sh exits 0" \
   bash -c 'FAKE_GH_FAIL=1 PATH="$1/bin:$PATH" FIX="$2" bash "$3" > /dev/null' _ "$tmp" "$full" "$bodies"
 
-# --- The skill -----------------------------------------------------------------------------
 echo "# the skill"
 skill=$skill_dir/SKILL.md
 expect "WHEN next loads THEN an allowed-tools line is exactly the pre-approval of bodies.sh" \

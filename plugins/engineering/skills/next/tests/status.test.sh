@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Tests for status.sh and the next skill's use of it. status.sh runs in a temporary git repo whose
-# origin is a local bare repo, with a fake `gh` first on PATH that answers each GraphQL query from
-# fixtures. The tests need no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -11,7 +8,6 @@ tmp=$(mktemp -d) && tmp=$(cd "$tmp" && pwd -P) || exit 1
 trap 'rm -rf "$tmp"' EXIT
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift
@@ -23,7 +19,6 @@ expect() {
   fi
 }
 
-# same <description> <expected file> <actual file>: the two files must be identical.
 same() {
   if diff -u "$2" "$3" > "$tmp/diff"; then
     echo "ok: $1"
@@ -34,14 +29,6 @@ same() {
   fi
 }
 
-# --- The fake gh ---------------------------------------------------------------------------
-# It reads `$FIX`, a folder of fixtures. It answers `gh api graphql` from the file that names
-# the query: `issues` (the open issues), `pulls_open`, `base_<branch>` (the PRs into a branch),
-# `head_<branch>` (the PRs of a branch, which one query reads for each branch it is given as
-# `-f b<i>=<branch>`) and, for the state of one issue, `issue_<n>`. A query with no file is an
-# empty connection, and an issue with no file is not found. Like `gh api graphql --paginate`,
-# it pages a connection 100 nodes at a time, and fails unless the query holds `$endCursor` and
-# `pageInfo`. The one REST path it answers is the repo's name.
 mkdir "$tmp/bin"
 cat > "$tmp/bin/gh" <<'FAKE'
 #!/usr/bin/env bash
@@ -68,7 +55,6 @@ if [ "$2" = graphql ]; then
     *'issues(states: OPEN'*) conn=issues name=issues ;;
     *'pullRequests(states: OPEN'*) conn=pullRequests name=pulls_open ;;
     *'headRefName: $b'*)
-      # One call reads the PRs of every issue branch, so a second call in one run fails.
       [ -e "$FIX/.heads-read" ] && { echo 'fake gh: the PRs of the issue branches were read twice' >&2; exit 1; }
       : > "$FIX/.heads-read"
       out='{}' i=0
@@ -94,23 +80,15 @@ if [ "$2" = graphql ]; then
   pages=$(jq -c --arg c "$conn" '. as $n | [range(0; ([length, 1] | max); 100) | . as $i
     | {data: {repository: {($c): {nodes: $n[$i:$i + 100],
         pageInfo: {hasNextPage: ($i + 100 < ($n | length)), endCursor: "c\($i)"}}}}}]' <<<"$nodes")
-  # `--slurp` wraps the pages in one array; without it each page is a line.
   if [ "$slurp" = true ]; then printf '%s\n' "$pages"; else jq -c '.[]' <<<"$pages"; fi
   exit 0
 fi
-# ADR-001: status.sh makes no REST call for each issue, so the repo's name is the only REST path.
 if [ "$2" = 'repos/{owner}/{repo}' ]; then echo o/r; exit 0; fi
 echo "fake gh: unexpected REST call: $*" >&2
 exit 1
 FAKE
 chmod +x "$tmp/bin/gh"
 
-# --- The repo ------------------------------------------------------------------------------
-# `origin` holds main, an umbrella's feature branch, a branch with a draft PR, and two issue
-# branches whose PR has merged. One of them has a clean local worktree, so it is finished. A
-# local branch that was never pushed has a clean worktree too, and is finished when its issue is closed.
-# Four more `<n>-*` branches have no link to their issue, or are linked to one whose PR has merged:
-# `8-unlinked-feature`, `12-feature`, `23-unlinked` and `24-merged-linked`.
 git init -q --bare "$tmp/origin.git"
 git init -q -b main "$tmp/work"
 git -C "$tmp/work" -c user.name=t -c user.email=t@example.com commit -q --allow-empty -m init
@@ -123,7 +101,6 @@ git -C "$tmp/work" worktree add -q "$tmp/wt" 21-gone
 git -C "$tmp/work" branch -q 22-shut
 git -C "$tmp/work" worktree add -q "$tmp/wt2" 22-shut
 
-# run_status <fixtures> [args...]: status.sh in the repo, with the fake gh and those fixtures.
 run_status() {
   local fix=$1
   shift
@@ -131,11 +108,6 @@ run_status() {
   (cd "$tmp/work" && PATH="$tmp/bin:$PATH" FIX="$fix" bash "$status" "$@" | sed "s|$tmp|<tmp>|g")
 }
 
-# --- The fixtures --------------------------------------------------------------------------
-# Each is a folder of GraphQL nodes, one file for each query (see the fake gh above). An issue
-# names its branches in `linkedBranches`, as the query reads them. full: one issue in each status
-# group, an umbrella with sub-issues, a merged remote branch and two finished worktrees, an issue
-# whose `<n>-*` branch has no link, and an issue linked to a branch whose PR has merged.
 full=$tmp/full
 mkdir "$full"
 cat > "$full/issues.json" <<'JSON'
@@ -160,18 +132,14 @@ cat > "$full/pulls_open.json" <<'JSON'
 JSON
 echo '{"state":"CLOSED"}' > "$full/issue_22.json"
 
-# none: no open issue.
 none=$tmp/none
 mkdir "$none"
 
-# over: 150 ready issues and 120 open PRs, which take two pages of each query.
 over=$tmp/over
 mkdir "$over"
 jq -n '[range(1000; 1150) | {number: ., title: "Issue \(.)", body: "## Scenarios\n- WHEN a THEN b\n"}]' > "$over/issues.json"
 jq -n '[range(1000; 1120) | {number: (. + 1000), isDraft: false, body: "Closes #\(.)"}]' > "$over/pulls_open.json"
 
-# merged: an umbrella whose open sub-issue has a merged PR into the feature branch, and an issue
-# whose only "blocked by" link is to a closed issue.
 merged=$tmp/merged
 mkdir "$merged"
 cat > "$merged/issues.json" <<'JSON'
@@ -190,8 +158,6 @@ cat > "$merged/base_12-feature.json" <<'JSON'
 [{"number":61,"body":"Sub-issue #13 of #12. This PR goes into `12-feature`, so it has no `Closes` line."}]
 JSON
 
-# labelled: issues whose labels and authors decide the status (#390 D1, D2). Its issue numbers
-# avoid the branch names above.
 labelled=$tmp/labelled
 mkdir "$labelled"
 cat > "$labelled/issues.json" <<'JSON'
@@ -206,9 +172,6 @@ cat > "$labelled/issues.json" <<'JSON'
 ]
 JSON
 
-# gtrust <file>: gives each issue or PR in a GraphQL fixture the authorAssociation OWNER and the
-# login `owner`, and each issue the label `engineering:shaped` and empty blockers, sub-issues and
-# linked branches, unless it holds its own, so a fixture names only what matters (#362, #390 D1).
 gtrust() {
   jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: [{name: "engineering:shaped"}]},
     blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
@@ -216,8 +179,6 @@ gtrust() {
 for f in "$full/issues.json" "$full/pulls_open.json" \
   "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json" "$labelled/issues.json"; do gtrust "$f"; done
 
-# outside: issues and PRs whose authors are and are not trusted authors. Its issue numbers avoid
-# the branch names above.
 outside=$tmp/outside
 mkdir "$outside"
 cat > "$outside/issues.json" <<'JSON'
@@ -234,7 +195,6 @@ cat > "$outside/pulls_open.json" <<'JSON'
 JSON
 for f in "$outside/issues.json" "$outside/pulls_open.json"; do gtrust "$f"; done
 
-# Every set has the merged PRs of the finished issue branches, for the Cleanup part.
 for dir in "$full" "$none" "$outside" "$merged"; do
   for b in 20-done 21-gone 24-merged-linked; do
     n=${b%%-*}
@@ -242,10 +202,6 @@ for dir in "$full" "$none" "$outside" "$merged"; do
   done
 done
 
-# --- The expected output of status.sh with no argument -------------------------------------
-# The report, written for the fixtures above: each issue is a bold line, a command that is a
-# slash command gets its own code block, and a group with no issue has no heading. The
-# Cleanup part follows it.
 cat > "$tmp/full.report" <<'EXPECTED'
 ## Report
 
@@ -361,7 +317,6 @@ run_status "$merged" | sed '/^## Cleanup$/,$d' > "$tmp/merged.out"
 same "WHEN a merged PR into an umbrella's linked feature branch names an open sub-issue THEN the sub-issue counts as done, a merged PR into a <n>-* branch with no link marks nothing, and an issue whose only blocker is closed is ready" \
   "$tmp/merged.expected" "$tmp/merged.out"
 
-# blocked_umbrella: an umbrella with an open "blocked by" link to a ready issue.
 blocked_umbrella=$tmp/blocked_umbrella
 mkdir "$blocked_umbrella"
 cat > "$blocked_umbrella/issues.json" <<'JSON'
@@ -398,7 +353,6 @@ expect "WHEN status.sh runs and no issue is open THEN the Report part is empty a
   bash -c 'test "$(sed -n 1p "$1")" = "## Report" && grep -qxF "## Cleanup" "$1"' _ "$tmp/none.out"
 
 echo "# trusted authors"
-# group <report> <heading>: the lines of that `### ` group of the report.
 group() { awk -v h="### $2" '/^##/ { s = ($0 == h); next } s' "$1"; }
 hasline() { grep -qxF -- "$2" <<<"$1"; }
 run_status "$outside" > "$tmp/outside.out"

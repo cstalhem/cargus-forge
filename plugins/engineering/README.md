@@ -1,6 +1,6 @@
 # Engineering
 
-Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot-t3, anneal.
+Set up a repo for the plugin, turn a request into GitHub issues, build each one into a verified pull request, let Autopilot build ready issues unattended, have agents study the whole repo for simplifications with anneal, delete code comments with delete-comment, and see where each issue stands: setup, discuss, slice, execute, verify, ship, next, autopilot-t3, anneal, delete-comment.
 
 The plugin keeps its record of the work in GitHub: issues, branches and pull requests. discuss and slice write issues only after your yes. You merge every PR into `main` yourself; when you turn [Autopilot](#autopilot) on, it merges sub-issue PRs into their feature branch for you. The skills run in T3 Code threads.
 
@@ -38,6 +38,7 @@ Then run `/engineering:setup` once per repo, from its top folder. Plugin updates
 | `/engineering:ship <#umbrella issue>` | Takes an umbrella issue's feature branch to a ready final PR into `main`. |
 | `/engineering:autopilot-t3 [#umbrella issue]` | Runs Autopilot once, in a thread on a T3 Code host: proposes its hourly scheduled task on the first run, then builds ready issues unattended. With the optional `#<umbrella issue>` argument, it builds only that umbrella issue and leaves the scheduled task alone. See [Autopilot](#autopilot). |
 | `/engineering:anneal` | Has agents study the whole repo by area, and turns each confirmed finding into a fix sub-issue under one umbrella issue, or into a request. See [Anneal](#anneal). |
+| `/engineering:delete-comment [path]` | Sorts each code comment under the path, or in the whole repo, deletes it, moves a real reason into an ADR, files a request for code that a comment excused, and lowers the repo's comment baseline. Leaves its changes uncommitted. |
 
 Two more skills run only when another skill calls them:
 

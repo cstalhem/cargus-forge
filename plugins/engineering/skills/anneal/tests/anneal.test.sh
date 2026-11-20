@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Tests for the anneal skill's wiring: its injected commands with their allowed-tools entry, and that it is typed
-# only. They read the repo's files only and need no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -8,7 +6,6 @@ plugin=$(CDPATH= cd -- "$here/../../.." && pwd)
 skill=$plugin/skills/anneal/SKILL.md
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift

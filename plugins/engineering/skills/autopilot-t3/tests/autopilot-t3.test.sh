@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Tests for the autopilot-t3 skill: it is typed only, and the plugin README's first paragraph is the plugin's
-# description. They read the repo's files only and need no network.
 set -u
 
 here=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
@@ -10,7 +8,6 @@ readme=$plugin/README.md
 manifest=$plugin/.claude-plugin/plugin.json
 failures=0
 
-# expect <description> <command...>: the command must succeed.
 expect() {
   local desc=$1
   shift
