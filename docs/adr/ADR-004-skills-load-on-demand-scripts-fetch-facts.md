@@ -6,11 +6,12 @@ status: active
 
 # ADR-004: Skills load on demand, and scripts fetch the facts
 
-- **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total.
+- **Decision:** Skills that orchestrate a phase run only when you type them. Skills that hold a reusable discipline are called by other skills. Each skill gets its facts from scripts that Claude Code runs before the model reads the skill. The plugin aims at about 1,500 lines of instructions in total. The voice for text the user reads lives in `references/rules.md`, which every skill includes.
+- **Source:** [#405](https://github.com/cstalhem/cargus-forge/issues/405)
 
 ## Details
 - **Typed skills** (`disable-model-invocation: true`, so they cost no context until typed): `setup`, `discuss`, `execute`, `ship`, `next`, `autopilot-t3`, `anneal`, `delete-comment`. `research` is not built (#200), and neither is the plan page (#201).
-- **Called skills:** `slice`, `verify`. `grill`, `tdd` and `ste-writing` are not built and have no request.
+- **Called skills:** `slice`, `verify`. `grill` and `tdd` are not built and have no request.
 - **Reflect is a step of execute, not a skill.** It asks once, after the checks pass, what the work proved that a rule should hold, and it writes each evidenced proposal into the issue's PR.
 - **Calls go one way.** A typed skill calls called skills. It never calls another typed skill. Autopilot starts a Build phase through a child thread whose prompt is the typed `/engineering:execute #<n>` or `/engineering:ship #<u>` ([ADR-008](ADR-008-autopilot-builds-ready-issues-unattended.md)): the prompt types the skill, so execute keeps its required argument and `disable-model-invocation`, and no skill calls a typed skill.
 - **Scripted facts:**
@@ -26,6 +27,7 @@ status: active
   - Critical rules go at the top, because only the start of a skill is restored after compaction.
   - The glossary rules live in `references/domain-model.md`, which discuss and execute read in their Load step instead of calling a skill.
   - Rules that several skills share live in `references/rules.md`. Each skill pulls it in with `` !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"` `` as the first line of its Rules section, pre-approved in `allowed-tools`, so the rules are part of the skill body. A missing file stops a typed skill with no output, makes the Skill tool return the error for a called skill, and is not caught by `claude plugin validate`.
+  - The voice for text the user reads, such as questions, plans, replies, PR bodies and comments, is the last four lines of `references/rules.md`, with no heading, because a heading there would pull in the skill's own rules that follow it.
   - The plugin has no `CLAUDE.md`, because Claude Code does not load one from a plugin.
   - Facts about a repo live in `docs/agents/`, which skills read on demand.
 
@@ -35,6 +37,9 @@ status: active
 - **A second, cloud autopilot skill:** no session runs in the cloud.
 - **The model fetches facts with tool calls:** it can skip a fact or fetch it a different way, and it uses more turns and context.
 - **A called `reflect` skill:** one more skill body for a step with one question and no reusable discipline.
+- **A `ste-writing` skill for the voice:** a called skill loads only when called, and the voice must hold in every reply of every skill.
+- **A voice line in each skill that asks questions:** seven copies that drift, and discuss already had one that did not stop the #404 round.
+- **A separate voice file that each skill reads:** one more pre-approved read for each skill, and a read step the model can skip.
 - **A large framework:** GSD core has about 95,000 lines of instructions and loads 35,000 to 40,000 tokens before its plan phase starts.
 
 ## Consequences
