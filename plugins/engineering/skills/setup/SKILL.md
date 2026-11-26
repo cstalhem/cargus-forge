@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Look at a repo and turn what it needs before the plugin works in it into a setup umbrella issue. Shows the facts from setup.sh and each proposed sub-issue on one screen, asks numbered questions, then writes the umbrella, its feature branch and one sub-issue for each accepted proposal to GitHub. In a repo with code it starts an Opus agent that proposes the repo profile's rows and runs each check. It changes no file in the repo, commits and pushes nothing, and opens no PR. A sub-issue writes each file, through execute.
+description: Look at a repo and turn what it needs before the plugin works in it into a setup umbrella issue. Shows the facts from setup.sh and each proposed sub-issue on one screen, asks numbered questions, then writes the umbrella, its feature branch and one sub-issue for each accepted proposal to GitHub. In a repo with code it starts an Opus agent that proposes the repo profile's rows and runs each check, and in a repo with workflows of its own it starts one that finds a workflow that already closes issues on merge. It changes no file in the repo, commits and pushes nothing, and opens no PR. A sub-issue writes each file, through execute.
 model: fable
 disable-model-invocation: true
 allowed-tools:
@@ -22,7 +22,7 @@ allowed-tools:
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
 - The `## Facts` and `## Findings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, and do not change them.
 - Setup changes no file in the repo. Its writes are the setup umbrella, its feature branch, its sub-issues and their labels, and only after the user accepts a proposal.
-- Setup starts an agent only in a repo with code, which is a repo whose `### Stack` is not `- none`, and reads no web page. Every agent is a general-purpose agent started with the Agent tool, never a fork, with `model` `opus`. It changes no tracked file and writes nothing to GitHub. No second agent checks its proposals, because verify grades each entry in its PR.
+- Setup starts an agent only for an area in step 3 whose condition holds, and reads no web page. A repo with code is a repo whose `### Stack` is not `- none`. Every agent is a general-purpose agent started with the Agent tool, never a fork, with `model` `opus`. It changes no tracked file and writes nothing to GitHub. No second agent checks its proposals, because verify grades each entry in its PR.
 - A sub-issue stands alone: set no "blocked by" link.
 - Setup changes no repo setting. A finding is a note for the user.
 - The branch pattern `<n>-<slug>` and squash merge are fixed in the plugin's `references/issue-tracker.md`. Ask about neither.
@@ -32,13 +32,14 @@ allowed-tools:
 2. **Open umbrella.** If `### Setup umbrella` lists an issue, name each one as `#<n> · <title>`, say that setup writes nothing while one is open, and end.
 3. **Analyse.** Start one agent for each area below whose condition holds, all in one message, so that they run in parallel. Start none when no area's condition holds.
    - **Repo profile:** when `### Stack` is not `- none`. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/profile.md` with the Read tool. Brief the agent with its text in full, then the lines under `### Stack` and the `docs/agents/commands.md` line under `### Files`. Its rows come back in your context, in no file.
+   - **Workflows:** when `### Workflows` lists a file, which is a workflow file other than the plugin's. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/workflows.md` with the Read tool. Brief the agent with its text in full, then the lines under `### Workflows`. The workflows that it returns come back in your context, in no file.
 4. **Plan.** Each proposal that the Facts support becomes one sub-issue and one numbered question, written so that "yes" is the recommended answer.
    - **Repo profile:** when the `docs/agents/commands.md` line under `### Files` says `missing`, or the agent returned a row. The sub-issue is "Write the repo profile" when the file is missing and "Add rows to the repo profile" when it is present.
      - A row is a pre-PR check, with ` (pre-PR check)` after its task, only when its kind is `check` and its run is `pass`. Any other row is written without it.
      - Each row whose run is `fail` is a note: `- <command> fails on the current tree (<failure line>), so its row is not a pre-PR check. Fix it, then add "(pre-PR check)" to its task.`
      - A missing file and no row from the agent is the case of a repo that has no commands, with the body below.
    - **Close-sub-issue workflow:** when its line under `### Optional behaviours` says `missing` or `differs`. The sub-issue is "Add the close-sub-issue workflow". It closes a sub-issue when its PR merges into the feature branch, so the issues that it blocks show as unblocked at once.
-   - **Notes:** each line under `## Findings` other than `- none` is a note for the user, and so is each failing command above.
+   - **Notes:** each line under `## Findings` other than `- none` is a note for the user, and so is each failing command above and each workflow that the workflows agent returned: `- <file> already closes issues when a PR merges (<source>). It stays, and the workflow sub-issue still adds the plugin's workflow.` The workflow sub-issue is unchanged by it.
    If there is no proposal and no note, the screen is the line `Everything is up to date. Setup writes nothing.`, and you end. If there is a note and no proposal, the one question is to write the umbrella with its notes and no sub-issue, and its `## Scenarios` is `- none`.
    Write each body in the issue format of `formats.md`, which you read in this step with `${CLAUDE_PLUGIN_ROOT}/references/formats.md`:
    - **Repo profile body for rows:**
