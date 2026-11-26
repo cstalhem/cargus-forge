@@ -25,7 +25,7 @@ findings=()
 line() { report+="$*"$'\n'; }
 
 prefix=$(git rev-parse --show-prefix 2>&1) || fail "git rev-parse --show-prefix: $prefix"
-[ -z "$prefix" ] || fail "start the session at the top of the repo: setup copies files to paths relative to it."
+[ -z "$prefix" ] || fail "start the session at the top of the repo: setup reads the repo's files at paths relative to it."
 
 files=$(git -c core.quotePath=false ls-files --cached --others --exclude-standard 2>&1) \
   || fail "git ls-files: $files"
@@ -192,14 +192,17 @@ facts_workflows() {
 }
 
 facts_docs() {
-  local adr_dir='' out
+  local adr_dir='' own='' top out
+  top=$(pwd -P) || fail "cannot read the current directory."
+  case $plugin_root in "$top"/*) own=${plugin_root#"$top"/}/ ;; esac
   if [ -f .adr-dir ]; then
     adr_dir=$(head -n 1 .adr-dir 2>/dev/null | tr -d '\r') || fail "cannot read .adr-dir."
     adr_dir=$(printf '%s' "$adr_dir" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's#^\./##' -e 's#/*$##')
   fi
-  out=$(printf '%s\n' "$files" | awk -v adrdir="$adr_dir" '
+  out=$(printf '%s\n' "$files" | awk -v adrdir="$adr_dir" -v own="$own" '
     function doc(name) { return tolower(name) ~ /\.(md|mdx|markdown|rst|txt|adoc)$/ }
     $0 == "" { next }
+    own != "" && index($0, own) == 1 { next }
     {
       path = $0; lp = tolower(path)
       n = split(path, parts, "/")

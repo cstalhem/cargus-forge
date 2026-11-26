@@ -331,6 +331,24 @@ has "### Docs$nl- adr · \`docs/adr/\` · 2 files$nl- glossary · \`docs/glossar
 done_check
 
 setup
+check "docs: in the repo that holds the plugin, the plugin's own files are not the repo's docs, and a glossary outside the plugin is still found"
+mkdir -p plugins/engineering/scripts plugins/engineering/skills/setup/briefs plugins/engineering/decisions docs
+cp "$here/../../../scripts/lib.sh" plugins/engineering/scripts/lib.sh
+cp -R "$templates" plugins/engineering/templates
+cp "$script" plugins/engineering/skills/setup/setup.sh
+cp "$here/../briefs/glossary.md" plugins/engineering/skills/setup/briefs/glossary.md
+printf '# x\n' | tee plugins/engineering/decisions/0001-a.md docs/terminology.md > /dev/null
+git add -A && git commit -qm plugin
+real_script=$script
+script=$repo/plugins/engineering/skills/setup/setup.sh
+run
+script=$real_script
+has "### Docs$nl- glossary · \`docs/terminology.md\`$nl$nl" \
+  "## Findings$nl- \`docs/terminology.md\` looks like a glossary"
+lacks 'briefs/glossary.md' 'plugins/engineering/decisions'
+done_check
+
+setup
 check "docs: a docs/adr/ that holds only a README is not listed"
 mkdir -p docs/adr
 printf '# x\n' > docs/adr/README.md
