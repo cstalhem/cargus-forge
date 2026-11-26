@@ -20,6 +20,8 @@ printf '%s\n' \
   'if [ -n "${GH_FAIL:-}" ]; then printf "%s\n" "$GH_FAIL" >&2; exit 1; fi' \
   'case $2 in' \
   '  "repos/{owner}/{repo}") printf "%s\n" "$GH_JSON" ;;' \
+  '  "repos/{owner}/{repo}/branches/main") printf "%s" "$GH_MAIN_OUT"; if [ -n "$GH_MAIN_ERR" ]; then printf "%s\n" "$GH_MAIN_ERR" >&2; exit 1; fi; printf "\n" ;;' \
+  '  "repos/{owner}/{repo}/actions/permissions") printf "%s" "$GH_ACTIONS_OUT"; if [ -n "$GH_ACTIONS_ERR" ]; then printf "%s\n" "$GH_ACTIONS_ERR" >&2; exit 1; fi; printf "\n" ;;' \
   '  "--paginate")' \
   '    case "$3 ${!#}" in "--slurp repos/{owner}/{repo}/issues?state=open&per_page=100") ;; *) printf "stub gh: unexpected call: %s\n" "$*" >&2; exit 1 ;; esac' \
   '    [ -e "$GH_READ" ] && { printf "stub gh: the open issues were read twice\n" >&2; exit 1; }; : > "$GH_READ"' \
@@ -38,6 +40,7 @@ gh_repo() {
     {full_name: "acme/widget", default_branch: $b}
     + (if $s == "none" then {} else {allow_squash_merge: ($s == "true")} end)')
   export GH_JSON
+  export GH_MAIN_OUT=main GH_MAIN_ERR='' GH_ACTIONS_OUT=true GH_ACTIONS_ERR=''
   unset GH_FAIL GH_FAIL_ISSUES
   rm -f "$GH_PAGES"/*
 }
@@ -93,15 +96,38 @@ done_check() {
 nl=$'\n'
 
 setup
-check "a new repo: prints the facts, every file missing, no commands or docs, and no findings"
+check "a new repo: prints the facts, every file missing, no setup umbrella, workflows or docs, and no findings"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl" \
+has "### Repo$nl- repo: \`acme/widget\`$nl- allow_squash_merge: \`true\`$nl- actions_enabled: \`true\`$nl" \
   "### Files$nl- \`docs/agents/commands.md\` · missing$nl- \`.claude/rules/\` · missing$nl$nl" \
   '- close-sub-issue · `.github/workflows/close-sub-issue.yml` · missing' \
-  "### Commands$nl- none$nl$nl### Stack$nl- none$nl$nl### Conversion issue" \
-  "### Docs$nl- none$nl" \
+  "### Stack$nl- none$nl$nl### Setup umbrella$nl- none$nl$nl### Workflows$nl- none$nl$nl### Docs$nl- none$nl" \
   "## Findings$nl- none"
+done_check
+
+setup
+check "the remote has no main branch: one setup.sh error line that says so"
+export GH_MAIN_OUT='{"message":"Branch not found","documentation_url":"https://docs.github.com/rest/branches/branches#get-a-branch","status":"404"}'
+export GH_MAIN_ERR='gh: Branch not found (HTTP 404)'
+run
+error 'the remote has no `main` branch'
+done_check
+
+setup
+check "Actions off gives a finding that the close-sub-issue workflow will not run"
+GH_ACTIONS_OUT=false
+run
+has '- actions_enabled: `false`' \
+  '- Actions is off for the repo, so the close-sub-issue workflow will not run.'
+done_check
+
+setup
+check "Actions that the token cannot read is unknown, with a finding"
+export GH_ACTIONS_OUT='{"message":"You must have repository read permissions or have the repository Actions policies fine-grained permission.","documentation_url":"https://docs.github.com/rest/actions/permissions#get-github-actions-permissions-for-a-repository","status":"403"}'
+export GH_ACTIONS_ERR='gh: You must have repository read permissions or have the repository Actions policies fine-grained permission. (HTTP 403)'
+run
+has '- actions_enabled: `unknown`' '- Whether Actions is on is unknown'
 done_check
 
 setup
@@ -155,71 +181,7 @@ has '- allow_squash_merge: `unknown`' '- `allow_squash_merge` is unknown' \
 done_check
 
 setup
-check "each command is printed with its source"
-printf '%s\n' '{ "scripts": { "test": "jest --ci", "lint": "eslint ." } }' > package.json
-: > pnpm-lock.yaml
-printf '%s\n' \
-  '.PHONY: build test' \
-  'VERSION := 1.0' \
-  'CC ?= cc' \
-  'build test: deps' \
-  '	$(CC) -o app main.c' \
-  '%.o: %.c' \
-  'lint:' > Makefile
-printf '%s\n' \
-  '[project]' \
-  'name = "widget"' \
-  '' \
-  '[tool.poe.tasks]' \
-  'check = "ruff check ."' \
-  '' \
-  '[tool.hatch.envs.default.scripts]' \
-  'cov = "pytest --cov"' \
-  '' \
-  '[tool.pytest.ini_options]' \
-  'addopts = "-q"' > pyproject.toml
-mkdir -p .github/workflows
-printf '%s\n' \
-  'jobs:' \
-  '  test:' \
-  '    steps:' \
-  '      - run: npm ci' \
-  '      - name: Test' \
-  '        run: |' \
-  '          npm test' \
-  '          npm run lint \' \
-  '            --fix' \
-  '          if true; then' \
-  '          fi' \
-  '        shell: bash' \
-  "      - run: 'make build'" > .github/workflows/ci.yml
-cp "$templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml
-run
-has '- pnpm run test · package.json: jest --ci' \
-  '- pnpm run lint · package.json: eslint .' \
-  '- make build · Makefile:4' \
-  '- make test · Makefile:4' \
-  '- make lint · Makefile:7' \
-  '- poe check · pyproject.toml [tool.poe.tasks]' \
-  '- hatch run cov · pyproject.toml [tool.hatch.envs.default.scripts]' \
-  '- pytest · pyproject.toml [tool.pytest.ini_options]' \
-  '- npm ci · .github/workflows/ci.yml:4' \
-  '- npm test · .github/workflows/ci.yml:7' \
-  '- npm run lint --fix · .github/workflows/ci.yml:8' \
-  '- if true; then · .github/workflows/ci.yml:10' \
-  '- make build · .github/workflows/ci.yml:13'
-lacks 'make .PHONY' 'make VERSION' 'make CC' 'make %.o' '- name =' '- fi ·' 'shell: bash' \
-  'close-sub-issue.yml:'
-done_check
-
 setup
-check "a package.json that is not valid JSON is reported among the commands, not as an error"
-printf '{ "scripts": \n' > package.json
-run
-has '### Commands' '- package.json is not valid JSON, so its scripts were not read' \
-  '- package.json: not valid JSON, so its dependencies were not read'
-done_check
-
 setup
 check "stack: languages are counted by extension, sorted by count then name, and an unknown extension counts for no language (#217 D3)"
 mkdir -p lib sub
@@ -227,91 +189,27 @@ touch a.py lib/b.py LEGACY.PY c.ts sub/d.tsx main.go lib.rs data.xyz notes.md Ma
 run
 want=$(printf '%s\n' '- language: Python · 3 files' '- language: TypeScript · 2 files' '- language: Go · 1 files' '- language: Rust · 1 files')
 [ "$(printf '%s\n' "$out" | grep '^- language:')" = "$want" ] || miss "the language lines are not $want"
-has "### Commands$nl- none$nl$nl### Stack$nl- language: Python"
-lacks 'xyz' 'Markdown' "### Stack$nl- none" '- Makefile' '- config:'
+has "### Stack$nl- language: Python"
+lacks 'xyz' 'Markdown' "### Stack$nl- none"
 done_check
 
 setup
-check "stack: each manifest kind gives a line with its sorted dependency names and no versions (#217 D2)"
-printf '%s\n' '{ "name": "w", "dependencies": { "react": "^18", "express": "4" }, "devDependencies": { "vitest": "1", "typescript": "5" } }' > package.json
-printf '%s\n' \
-  '[project]' \
-  'name = "widget"' \
-  'dependencies = [' \
-  '  "requests>=2",' \
-  "  \"fastapi[all]>=0.1; python_version > '3.8'\"," \
-  ']' \
-  '' \
-  '[project.optional-dependencies]' \
-  'dev = ["pytest>=7", "requests"]' \
-  '' \
-  '[dependency-groups]' \
-  'lint = ["flake8-bugbear", {include-group = "dev"}]' \
-  '' \
-  '[tool.poetry.dependencies]' \
-  'python = "^3.11"' \
-  'django = { version = "^4" }' > pyproject.toml
-printf '%s\n' \
-  'module example.com/widget' \
-  '' \
-  'go 1.22' \
-  '' \
-  'require (' \
-  '	github.com/gin-gonic/gin v1.9.0' \
-  '	golang.org/x/text v0.3.0 // indirect' \
-  ')' \
-  '' \
-  'require github.com/stretchr/testify v1.8.0' > go.mod
-printf '%s\n' \
-  '[package]' \
-  'name = "widget"' \
-  'version = "0.1.0"' \
-  '' \
-  '[dependencies]' \
-  'serde = "1"' \
-  'tokio = { version = "1", features = ["full"] }' \
-  'anyhow.workspace = true' \
-  '' \
-  '[dev-dependencies]' \
-  'criterion = "0.5"' \
-  '' \
-  '[dependencies.clap]' \
-  'version = "4"' > Cargo.toml
-printf '%s\n' \
-  "source 'https://rubygems.org'" \
-  "gem 'rails', '~> 7.0'" \
-  '  gem "rspec"' \
-  "# gem 'commented'" > Gemfile
+check "with manifests, a Makefile and linter configs in the repo, the facts hold the languages and nothing parsed from those files"
+mkdir -p .github/workflows
+printf '%s\n' '{ "name": "w", "scripts": { "test": "jest" }, "dependencies": { "react": "^18" } }' > package.json
+printf '%s\n' 'build:' > Makefile
+printf '%s\n' '[project]' 'dependencies = ["requests"]' > pyproject.toml
+touch .eslintrc.json a.py b.py c.ts
 run
-has "### Stack$nl- package.json: express, react, typescript, vitest$nl" \
-  '- pyproject.toml: django, fastapi, flake8-bugbear, pytest, requests'"$nl" \
-  '- go.mod: github.com/gin-gonic/gin, github.com/stretchr/testify'"$nl" \
-  '- Cargo.toml: anyhow, clap, criterion, serde, tokio'"$nl" \
-  "- Gemfile: rails, rspec$nl"
-lacks '^18' 'x/text' 'commented' 'dev,' 'include-group' '- language:' "### Stack$nl- none"
+[ "$(printf '%s\n' "$out" | grep '^###')" = "$(printf '%s\n' '### Repo' '### Files' '### Optional behaviours' '### Stack' '### Setup umbrella' '### Workflows' '### Docs')" ] \
+  || miss "the sections are not Repo, Files, Optional behaviours, Stack, Setup umbrella, Workflows, Docs"
+[ "$(printf '%s\n' "$out" | sed -n '/^### Stack$/,/^$/p')" = "$(printf '%s\n' '### Stack' '- language: Python · 2 files' '- language: TypeScript · 1 files' '')" ] \
+  || miss "the Stack section is not the two language lines"
 done_check
 
 setup
-check "stack: a manifest with no dependencies gives its line with none"
-printf '%s\n' '{ "name": "w" }' > package.json
-run
-has "### Stack$nl- package.json: none$nl$nl"
-done_check
-
 setup
-check "stack: each linter and formatter config present gives a config line (#217 D3)"
-mkdir -p docs
-touch .eslintrc.json prettier.config.js biome.json ruff.toml .flake8 mypy.ini .golangci.yml rustfmt.toml .rubocop.yml .editorconfig
-printf '%s\n' '[tool.black]' 'line-length = 88' '' '[tool.ruff.lint]' 'select = ["E"]' '' '[tool.ruff.format]' > pyproject.toml
-run
-has '- config: .eslintrc.json' '- config: prettier.config.js' '- config: biome.json' '- config: ruff.toml' \
-  '- config: .flake8' '- config: mypy.ini' '- config: .golangci.yml' '- config: rustfmt.toml' \
-  '- config: .rubocop.yml' '- config: .editorconfig' '- config: pyproject.toml [tool.black]' \
-  '- config: pyproject.toml [tool.ruff]'
-lacks '[tool.mypy]' '- config: .prettierrc' "### Stack$nl- none"
-[ "$(printf '%s\n' "$out" | grep -c 'tool.ruff')" = 1 ] || miss "[tool.ruff] is not one line"
-done_check
-
+setup
 setup
 check ".claude/rules/ holding a .md file, in a subfolder too, is present with the count of .md files (#217 D1)"
 mkdir -p .claude/rules/deep
@@ -346,51 +244,37 @@ done_check
 
 setup
 check "the open issues are read with one paginated call, and a PR on a page is not an issue"
-page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, title: "convert plugin", pull_request: {}}]')"
-page 2 '[{"number": 6, "title": "convert plugin"}]'
+page 1 "$(jq -nc '[range(1000; 1099) | {number: .}] + [{number: 5, title: "setup", body: "<!-- engineering:setup umbrella -->", pull_request: {}}]')"
+page 2 '[{"number": 6, "title": "Setup", "body": "<!-- engineering:setup umbrella -->\n## Goal"}]'
 run
-has '- #6 · convert plugin · by title'
+has '- #6 · Setup'
 lacks '- #5 ·'
 done_check
 
 setup
 check "open issues over 128 KiB of JSON, the limit of one argument, give the facts (#179)"
-page 1 "$(jq -nc '[range(1000; 1099) | {number: ., body: ("x" * 2000)}] + [{number: 7, title: "convert plugin", body: ("y" * 2000)}]')"
+page 1 "$(jq -nc '[range(1000; 1099) | {number: ., body: ("x" * 2000)}] + [{number: 7, title: "Setup", body: ("<!-- engineering:setup umbrella -->\n" + ("y" * 2000))}]')"
 [ "$(wc -c < "$GH_PAGES/1")" -gt 131072 ] || miss "the fixture's page 1 is not over 128 KiB"
 run
 [ "${out%%"$nl"*}" = '## Facts' ] || miss "the first line is not ## Facts"
-has '- #7 · convert plugin · by title'
+has '- #7 · Setup'
 lacks 'setup.sh error:'
 done_check
 
 setup
-check "an open issue whose body holds the marker line is the conversion issue, even when its title says nothing (#164)"
-page 1 '[{"number":3,"title":"Setup items","body":"<!-- engineering:setup conversion issue -->\n/engineering:setup found"},{"number":4,"title":"convert plugin","body":"x"},{"number":5,"title":"Other","body":"a marker <!-- engineering:setup conversion issue --> inside a line"}]'
+check "an open issue whose body holds the marker line is the setup umbrella, even when its title says nothing"
+page 1 '[{"number":3,"title":"Things to do","body":"<!-- engineering:setup umbrella -->\n## Goal"},{"number":4,"title":"Setup umbrella","body":"x"},{"number":5,"title":"Other","body":"a marker <!-- engineering:setup umbrella --> inside a line"}]'
 run
-has "### Conversion issue$nl- #3 · Setup items · by marker$nl"
-lacks '#4 ·' '#5 ·' 'by title'
+has "### Setup umbrella$nl- #3 · Things to do$nl$nl"
+lacks '#4 ·' '#5 ·'
 done_check
 
 setup
-check "with no marker, a title with convert and plugin or engineering names the conversion issue (#164)"
-page 1 '[{"number":4,"title":"Engineering: Convert this repo","body":"x"},{"number":5,"title":"convert the build","body":"x"},{"number":6,"title":"Plugin notes","body":null}]'
+check "with no marker in any open issue body, the setup umbrella is none, whatever the titles say"
+page 1 '[{"number":4,"title":"engineering: setup umbrella","body":"x"},{"number":5,"title":"Setup","body":null}]'
 run
-has "### Conversion issue$nl- #4 · Engineering: Convert this repo · by title$nl"
-lacks '#5 ·' '#6 ·'
-done_check
-
-setup
-check "more than one match names each one (#164)"
-page 1 '[{"number":4,"title":"convert to plugin"},{"number":5,"title":"convert to engineering"}]'
-run
-has '- #4 · convert to plugin · by title' '- #5 · convert to engineering · by title'
-done_check
-
-setup
-check "with no open issue that matches, the conversion issue is none, and a PR does not count (#164)"
-page 1 '[{"number":4,"title":"convert plugin","pull_request":{}},{"number":5,"title":"Fix a bug"}]'
-run
-has "### Conversion issue$nl- none$nl"
+has "### Setup umbrella$nl- none$nl"
+lacks '#4 ·' '#5 ·'
 done_check
 
 check "SKILL.md runs on Fable (#367)"
@@ -411,8 +295,8 @@ printf 'vendor/\n' > .gitignore
 git add -A && git commit -qm docs
 printf '# x\n' > CONTRIBUTING.md
 run
-has "### Docs$nl- adr · \`architecture/records/\` · 1 file$nl- adr · \`doc/decisions/\` · 2 files$nl- adr · \`notes/\` · 1 file$nl" \
-  "- glossary · \`CONTEXT.md\`$nl- glossary · \`wiki/Glossary.md\`$nl" \
+has "### Docs$nl- adr · \`docs/adr/\` · 1 file$nl- adr · \`architecture/records/\` · 1 file$nl- adr · \`doc/decisions/\` · 2 files$nl- adr · \`notes/\` · 1 file$nl" \
+  "- glossary · \`docs/glossary.md\`$nl- glossary · \`CONTEXT.md\`$nl- glossary · \`wiki/Glossary.md\`$nl" \
   '- rules · `.github/CONTRIBUTING.md`' \
   '- rules · `.github/PULL_REQUEST_TEMPLATE/feature.md`' \
   '- rules · `.github/pull_request_template.md`' \
@@ -421,7 +305,36 @@ has "### Docs$nl- adr · \`architecture/records/\` · 1 file$nl- adr · \`doc/de
   '- rules · `CONTRIBUTING.md`' \
   '- `doc/decisions/` looks like an ADR folder (2 files), which the plugin cannot see: it reads ADRs only in `docs/adr/`. Move its ADRs into `docs/adr/`.' \
   '- `wiki/Glossary.md` looks like a glossary, which the plugin cannot see: it reads terms only in `docs/glossary.md`. Move its terms into `docs/glossary.md`.'
-lacks 'adr · `docs/adr/`' 'glossary · `docs/glossary.md`' 'src/decisions' 'vendor/' 'README.md'
+lacks 'src/decisions' 'vendor/' 'README.md' '`docs/adr/` looks like' '`docs/glossary.md` looks like'
+done_check
+
+setup
+check "docs: an ADR in docs/adr/ is listed with a count that leaves out its README, and docs/glossary.md is listed"
+mkdir -p docs/adr
+printf '# x\n' | tee docs/adr/README.md docs/adr/ADR-001-a.md docs/adr/ADR-002-b.md docs/glossary.md > /dev/null
+run
+has "### Docs$nl- adr · \`docs/adr/\` · 2 files$nl- glossary · \`docs/glossary.md\`$nl$nl" \
+  "## Findings$nl- none"
+done_check
+
+setup
+check "docs: a docs/adr/ that holds only a README is not listed"
+mkdir -p docs/adr
+printf '# x\n' > docs/adr/README.md
+run
+has "### Docs$nl- none$nl"
+done_check
+
+setup
+check "workflows: each workflow file other than the plugin's is listed by path, and with none the section says none"
+run
+has "### Workflows$nl- none$nl"
+mkdir -p .github/workflows
+cp "$templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml
+printf 'name: ci\n' | tee .github/workflows/ci.yml .github/workflows/release.yaml > /dev/null
+run
+has "### Workflows$nl- \`.github/workflows/ci.yml\`$nl- \`.github/workflows/release.yaml\`$nl$nl"
+lacks '- `.github/workflows/close-sub-issue.yml`'$'\n'
 done_check
 
 setup
