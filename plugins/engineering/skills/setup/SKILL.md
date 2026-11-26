@@ -1,116 +1,123 @@
 ---
 name: setup
-description: Write a repo's profile for the plugin, propose rules for `.claude/rules/`, and turn on its optional behaviours. Shows the facts from setup.sh on one screen, asks numbered questions, then writes the accepted files to the working tree and lists them to commit. It commits, pushes and labels nothing, and opens no PR. Its one GitHub write, after a yes, is one issue that lists what to convert.
+description: Look at a repo and turn what it needs before the plugin works in it into a setup umbrella issue. Shows the facts from setup.sh and each proposed sub-issue on one screen, asks numbered questions, then writes the umbrella, its feature branch and one sub-issue for each accepted proposal to GitHub. In a repo with code it starts an Opus agent that proposes the repo profile's rows and runs each check, in a repo with workflows of its own it starts one that finds a workflow that already closes issues on merge, in a repo with code and no ADR it starts one that finds decisions with a written reason and a rejected alternative, in a repo with code and no glossary it starts one that proposes the repo's domain terms, and in a repo with code it starts one that proposes rules from the repo and finds doc lines that conflict with the plugin's contract. It changes no file in the repo, commits and pushes nothing, and opens no PR. A sub-issue writes each file, through execute.
 model: fable
 disable-model-invocation: true
 allowed-tools:
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md")
-  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md")
-  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh")
-  - Bash(mkdir -p .github/workflows)
-  - Bash(cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml)
   - Bash(cat "${CLAUDE_PLUGIN_ROOT}/templates/commands.md")
-  - Bash(cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md")
-  - Edit(docs/agents/commands.md)
-  - Edit(.claude/rules/*)
-  - 'Bash(gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin''s process" -F body=@*)'
+  - Bash(sha256sum "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml")
+  - Bash(bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh")
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues -f title=* -F body=@*)
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/*/sub_issues -F sub_issue_id=*)
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:shaped')
+  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:umbrella')
   - Bash(gh api repos/{owner}/{repo}/issues/*)
+  - Bash(gh issue develop *)
 ---
 
 # setup
 
 ## Rules
 !`cat "${CLAUDE_PLUGIN_ROOT}/references/rules.md"`
-- The research agents of step 2's Rules part are the one exception to the first rule above: they read the web, with WebSearch and WebFetch. Setup reads the web nowhere else.
-- The `## Facts` and `## Findings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, other than the read-back in step 6, and do not change them.
-- Setup writes files to the working tree only. It does not commit, push, open a PR, add a label, create a branch or change a repo setting. Its one GitHub write is the conversion issue of step 7, and only after the user accepts its question.
-- The `cp` of step 5.1 writes each optional behaviour's file. Do not write or edit those files yourself. You write only `docs/agents/commands.md` and the files under `.claude/rules/`, with the Write or Edit tool.
-- The repo owns `docs/agents/commands.md` once setup has written it: never rewrite that file, and only add the rows that the user accepts.
-- The repo owns `.claude/rules/` once it holds a file: setup writes no rule into it and asks nothing about rules.
-- An optional behaviour's file is a byte-identical copy of its template. Never edit one.
+- The `## Facts` and `## Findings` sections at the end of this skill are the output of `setup.sh`, which read GitHub and the repo's files when this skill loaded. Do not fetch the facts again, and do not change them.
+- Setup changes no file in the repo. Its writes are the setup umbrella, its feature branch, its sub-issues, their labels and the one request, and only after the user accepts a proposal.
+- Setup starts an agent only for an area in step 3 whose condition holds, and reads no web page. A repo with code is a repo whose `### Stack` is not `- none`. Every agent is a general-purpose agent started with the Agent tool, never a fork, with `model` `opus`. It changes no tracked file and writes nothing to GitHub. No second agent checks its proposals, because verify grades each entry in its PR.
+- A sub-issue stands alone: set no "blocked by" link.
+- Setup changes no repo setting. A finding is a note for the user.
 - The branch pattern `<n>-<slug>` and squash merge are fixed in the plugin's `references/issue-tracker.md`. Ask about neither.
-- On an existing repo, setup reports and changes nothing else. It renames, deletes or creates no branch, and it edits no doc other than the repo profile, and creates no file other than the rules files under `.claude/rules/`: not the ADRs, glossaries, CLAUDE.md, AGENTS.md, CONTRIBUTING.md or PR templates under `### Docs`.
-- Judge a line of a `rules` doc only against the plugin's contract in the Contract section at the end of this skill. The line is a finding when it says something that the contract does not allow, such as another branch pattern, a merge style other than squash, or another PR target or `Closes` rule. A line that only adds to the contract is not.
 
 ## Steps
 1. **Check.** If the output of `setup.sh` at the end of this skill is a `setup.sh error:` line instead of the Facts, show that line and stop.
-2. **Plan.** Work out the screen from the Facts. Each part that needs a decision becomes one numbered question, written so that "yes" is the recommended answer.
-   - **Docs**, the lines under `### Docs`:
-     - `adr` and `glossary`: their findings say that the plugin cannot see them. No question.
-     - `rules`: read the file with the Read tool. Flag each line that conflicts with the contract: it is a finding. No question.
-   - **`docs/agents/commands.md`**, its line under `### Files`:
-     - Propose the commands: from `### Commands`, and from the README.md, CONTRIBUTING.md and CLAUDE.md of the repo if they name a command that the Facts lack. Read each of the three files with the Read tool, one call per file, and run no Bash command to read them. A file that does not exist names no command. Take the commands that a developer runs to build, test, lint, format or type-check the code. One row for each task, with the command that runs locally rather than a CI step that wraps it. Leave out install, deploy and release steps, and shell lines that only set up CI. A task that should pass before every PR ends with `(pre-PR check)`. Give each row its source.
-     - `missing`: create it from the Commands template at the end of this skill. Use form 1 with the proposed rows, or form 2 when you propose none. One question for the whole file.
-     - `present`: keep it. Read it, and find each proposed command that its table lacks. Each one is its own question, which adds that row to the table.
-   - **Rules**, the `.claude/rules/` line under `### Files`:
-     - `present (<n> files)`: the repo owns it. Show reports `### .claude/rules/ · kept`, and proposes no rule. No question, and launch no research agent.
-     - `missing`: build the candidate rules. Read the files that the `rules` lines under `### Docs` name, with the Read tool, one call per file, to learn which conventions the repo already states. Read the tool configs listed as `config:` under `### Stack`, and the repo's other docs and layout, for conventions that no rule doc states.
-       - **Research.** Launch one research agent for each stack component, in parallel, in one message, with the Agent tool, `subagent_type: general-purpose` and `model` `sonnet`, never a fork. A component is a `language:` line under `### Stack`, or one dependency name on a `- <manifest>: <name>, <name>, …` line there: each name is its own component. `config:` lines are not components. Launch at most four: when there are more, take the first four components in the order of `### Stack`, which lists languages first, by file count, then the dependency names in the order that the manifest lines print them. Brief each agent with this text, filled in:
-         ```
-         Component: <the language, or the dependency name>.
-         The repo's own convention lines, which are already covered: <each convention line that the rule docs state, or "none">.
-         Repo rules: <the Repo rules section at the end of this skill, pasted in full>.
-         Use WebSearch and WebFetch to read the component's official docs and widely used guides. Find conventions for using it that Claude would plausibly get wrong in this repo without a rule. Return a finding only if you can name its source URL. Do not return a well-known language feature, a generic best practice, or a pattern that this repo does not use: check the repo's files for that. Do not return a line that the repo's own convention lines already state.
-         Return at most ten lines, each `- <rule> · <url>`, where the rule is a rule as the Repo rules above define it and passes its rule test, and the url is the one page that shows it. Return nothing else. If your fetches fail, return the single line `no network`.
-         ```
-       - Add what you know of the components that no agent covered, or whose agent returned `no network`, where Claude would plausibly get a convention of this repo wrong without a rule.
-       - Each candidate is a rule as the Repo rules section defines it, and passes its rule test. Its source is `repo: <path>` when a repo file shows it, `docs: <url>` when a research agent's finding gave it, and `proposed` when it comes from what you know of the stack.
-       - When every agent returned `no network`, every candidate that is not from the repo has the source `proposed`, and the `### Rules` part says so.
-       - Drop a candidate that restates a line of the repo's CLAUDE.md, AGENTS.md or CONTRIBUTING.md, or a convention that a linter or formatter config in the repo enforces.
-       - A candidate that one command can check is not a rule: add it to the `commands.md` proposal above as a `(pre-PR check)` row.
-       - Group the rest into areas. An area is a folder when `### Stack` or the repo layout maps it to one, such as `src/api/**`, and its file gets those `paths`. A cross-cutting area gets no `paths`. The file is `.claude/rules/<area>.md`, with the area written as a lowercase slug.
-       - One question for the whole set of files. If no candidate is left, ask none.
-   - **Optional behaviours**, each line under `### Optional behaviours`:
-     - `missing`: one question to add it, with its recommendation.
-     - `current`: up to date. No question.
-     - `differs`: one question to replace it with the template, with the diff from the Facts.
-     - close-sub-issue: recommend yes. It closes a sub-issue when its PR merges into the feature branch, so the issues that it blocks show as unblocked at once. Without it, a merged sub-issue stays open until the final PR closes it.
-   - **Conversion issue, already open:** if `### Conversion issue` lists at least one issue, setup has made one before. Ask no conversion question and offer no new issue. Name each listed issue on the screen. When it lists more than one, say that setup offers none until the user closes the extra ones.
-   - **Conversion issue:** only if `### Conversion issue` says `- none`. Its items are the findings: each line under the Facts' `## Findings` other than `- none` (a repo setting, an ADR folder or a glossary that the plugin cannot see), and each line that you flagged in the `rules` docs. If there is at least one, ask one more question, the last one: create one GitHub issue titled `engineering: convert this repo to the plugin's process`, with no label, that lists each finding with its suggested action. Its body starts with the line `<!-- engineering:setup conversion issue -->`, which a later setup run finds it by, and has neither a `## Scenarios` nor a `## Goal` section, so it is a request, which `/engineering:discuss` shapes later. If there is none, ask no such question.
-     - The suggested action of a finding from `setup.sh` is the one that its last sentence states. For a flagged line, it is to edit or remove it so that it agrees with the contract.
-3. **Show.** Your reply is these parts, in this order, and nothing else:
+2. **Open umbrella.** If `### Setup umbrella` lists an issue, name each one as `#<n> · <title>`, say that setup writes nothing while one is open, and end.
+3. **Analyse.** Start one agent for each area below whose condition holds, all in one message, so that they run in parallel. Start none when no area's condition holds.
+   - **Repo profile:** when `### Stack` is not `- none`. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/profile.md` with the Read tool. Brief the agent with its text in full, then the lines under `### Stack` and the `docs/agents/commands.md` line under `### Files`. Its rows come back in your context, in no file.
+   - **Workflows:** when `### Workflows` lists a file, which is a workflow file other than the plugin's. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/workflows.md` with the Read tool. Brief the agent with its text in full, then the lines under `### Workflows`. The workflows that it returns come back in your context, in no file.
+   - **ADRs:** when `### Stack` is not `- none` and `### Docs` lists no line that starts `- adr ·`. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/adrs.md` with the Read tool. Brief the agent with its text in full, then the lines under `### Stack`. Its `Sourced` and `Unsourced` decisions come back in your context, in no file.
+   - **Glossary:** when `### Stack` is not `- none` and `### Docs` lists no line that starts `- glossary ·`. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/glossary.md` and `${CLAUDE_PLUGIN_ROOT}/references/domain-model.md` with the Read tool. Brief the agent with the text of both in full, then the lines under `### Stack`. Its terms come back in your context, in no file.
+   - **Rules:** when `### Stack` is not `- none`, also when `.claude/rules/` is present. Read `${CLAUDE_PLUGIN_ROOT}/skills/setup/briefs/rules.md`, `${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md` and `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md` with the Read tool. Brief the agent with the text of all three in full, then the lines under `### Stack`, the `docs/agents/commands.md` and `.claude/rules/` lines under `### Files`, and the lines under `### Docs` that start `- rules ·`. Its `Rules`, `Checks` and `Conflicts` come back in your context, in no file.
+4. **Plan.** Each proposal that the Facts support becomes one sub-issue and one numbered question, written so that "yes" is the recommended answer.
+   - **Repo profile:** when the `docs/agents/commands.md` line under `### Files` says `missing`, or the profile agent returned a row, or the rules agent returned a check. The sub-issue is "Write the repo profile" when the file is missing and "Add rows to the repo profile" when it is present.
+     - A check of the rules agent is a row of kind `check`, with its `check` as the task. A command that both agents returned is one row.
+     - A row is a pre-PR check, with ` (pre-PR check)` after its task, only when its kind is `check` and its run is `pass`. Any other row is written without it.
+     - Each row whose run is `fail` is a note: `- <command> fails on the current tree (<failure line>), so its row is not a pre-PR check. Fix it, then add "(pre-PR check)" to its task.`
+     - A missing file and no row from either agent is the case of a repo that has no commands, with the body below.
+   - **Close-sub-issue workflow:** when its line under `### Optional behaviours` says `missing` or `differs`. The sub-issue is "Add the close-sub-issue workflow". It closes a sub-issue when its PR merges into the feature branch, so the issues that it blocks show as unblocked at once.
+   - **ADRs:** when `### Docs` lists a line `- adr · \`<folder>/\`` whose folder is not `docs/adr/`, or the agent returned a `Sourced` decision. The sub-issue is "Add the repo's ADRs to docs/adr/". It moves each such folder and writes each sourced decision as a new ADR.
+   - **Unsourced decisions:** when the agent returned an `Unsourced` decision. It is a proposal that has one numbered question and no sub-issue: one request with no label that lists each of them, which the umbrella names under `## Out of scope`.
+   - **Glossary:** when `### Docs` lists a line `- glossary · \`<file>\`` whose file is not `docs/glossary.md`, or the agent returned a term. The sub-issue is "Add the repo's glossary to docs/glossary.md". It moves the terms of each such file and writes each proposed term as a new entry.
+   - **Rules:** when the rules agent returned a rule. The sub-issue is "Add the repo's rules to .claude/rules/". It writes each rule as one line of its area's file, and deletes each moved line from its doc. A proposal that the agent returned as a check is a profile row, never a rule.
+   - **Doc conflicts:** when the rules agent returned a conflict. One sub-issue holds every conflict: "Make the repo's docs agree with the plugin's contract".
+   - **Notes:** each line under `## Findings` other than `- none` and other than a line that says `looks like an ADR folder` or `looks like a glossary`, which the ADR and glossary sub-issues cover, is a note for the user, and so is each failing command above and each workflow that the workflows agent returned: `- <file> already closes issues when a PR merges (<source>). It stays, and the workflow sub-issue still adds the plugin's workflow.` The workflow sub-issue is unchanged by it.
+   If there is no proposal and no note, the screen is the line `Everything is up to date. Setup writes nothing.`, and you end. If there is a note or an unsourced-decisions proposal and no sub-issue, the umbrella has no sub-issue and its `## Scenarios` is `- none`. The questions are then the proposal's, and, when there is none, the one question is to write the umbrella with its notes.
+   Write each body in the issue format of `formats.md`, which you read in this step with `${CLAUDE_PLUGIN_ROOT}/references/formats.md`:
+   - **Repo profile body for rows:**
+     - `## What it delivers` says that `docs/agents/commands.md` holds the repo profile with these rows, and holds them in a code block. A missing file gets the whole of form 1 of the Commands template at the end of this skill, with the heading `# Commands`, a blank line and the table. A present file gets only the rows to add, as table lines.
+     - `## Scenarios` holds one line for each row: `- WHEN docs/agents/commands.md is read THEN it holds a row for the command <command>`.
+     - `## Files` holds `docs/agents/commands.md`.
+     - `## Verify` holds `grep -qF -- '<command>' docs/agents/commands.md` for each row, joined with ` && `, and `test -s docs/agents/commands.md && ` in front when the file is missing.
+   - **Repo profile body for a repo that has no commands:**
+     - `## What it delivers` says that `docs/agents/commands.md` holds the repo profile of a repo that has no commands, and then holds the file in a code block: the heading `# Commands`, a blank line, and the sentence of form 2 of the Commands template at the end of this skill, with no second sentence.
+     - `## Scenarios` holds `- WHEN docs/agents/commands.md is read THEN it starts with the heading "# Commands" and holds the sentence "This repo has no build, tests or lint."`.
+     - `## Files` holds `docs/agents/commands.md`.
+     - `## Verify` holds `grep -q '^This repo has no build, tests or lint\.' docs/agents/commands.md`.
+   - **Workflow body:**
+     - `## What it delivers` says that `.github/workflows/close-sub-issue.yml` is a byte-identical copy of `templates/close-sub-issue.yml` in the engineering plugin, copied and not edited.
+     - `## Scenarios` holds `- WHEN .github/workflows/close-sub-issue.yml is read THEN its SHA-256 checksum is <the checksum under ## Template checksum>`.
+     - `## Files` holds `.github/workflows/close-sub-issue.yml`.
+     - `## Verify` holds `test "$(sha256sum .github/workflows/close-sub-issue.yml | cut -d ' ' -f 1)" = <the checksum>`.
+   - **ADR body:**
+     - `## What it delivers` says that `docs/adr/` holds the repo's ADRs in the plugin's format, indexed in `docs/adr/README.md`: the ADRs that each moved folder holds, which are then gone from it, and one new ADR for each sourced decision. Under it, one line `- <title>: <source>` for each sourced decision.
+     - `## Scenarios` holds `- WHEN docs/adr/ is read THEN it holds each ADR of <folder>/ in the plugin's format` for each moved folder, and `- WHEN docs/adr/README.md is read THEN it indexes an ADR titled <title>` for each sourced decision.
+     - `## Decisions` holds one `ADR` decision with `new: <title>` for each sourced decision, filled in from what the agent returned.
+     - `## Files` holds each moved folder, `docs/adr/` and `docs/adr/README.md`.
+     - `## Verify` holds `test -f docs/adr/README.md && test ! -e <folder>` for each moved folder, and `grep -qF -- '<title>' docs/adr/README.md` for each sourced decision, all joined with ` && `, the first part left out when the repo has no moved folder.
+   - **Glossary body:**
+     - `## What it delivers` says that `docs/glossary.md` holds the repo's terms in the plugin's format: the terms that each moved file holds, with that file then gone, and one new entry for each proposed term. When `docs/glossary.md` already exists, a moved term joins it in place and no term appears twice. Under it, one line `- <Term>: used in <file:line>` for each proposed term.
+     - `## Scenarios` holds `- WHEN docs/glossary.md is read THEN it holds each term of <file> in the plugin's format` for each moved file, and `- WHEN docs/glossary.md is read THEN it holds an entry for <Term>` for each proposed term.
+     - `## Decisions` holds one `Term` decision for each proposed term, filled in from what the agent returned.
+     - `## Files` holds each moved file and `docs/glossary.md`.
+     - `## Verify` holds `test -s docs/glossary.md && test ! -e <file>` for each moved file, and `grep -qF -- '**<Term>**' docs/glossary.md` for each proposed term, all joined with ` && `, the first part left out when the repo has no moved file.
+   - **Rules body:**
+     - `## What it delivers` says that `.claude/rules/` holds the repo's rules, one line each in the file of its area, and that each moved line is gone from its doc. Under it, one line `- <rule>: <shown>` for each rule, with the two places of its `shown`, or `moves <file:line>`.
+     - `## Scenarios` holds `- WHEN .claude/rules/<area>.md is read THEN it holds <rule>` for each rule, and `- WHEN <doc> is read THEN it does not hold "<the moved line>"` for each moved line.
+     - `## Files` holds each `.claude/rules/<area>.md` and each doc that a moved line leaves.
+     - `## Verify` holds `grep -qF -- '<rule>' .claude/rules/<area>.md` for each rule and `! grep -qF -- '<the moved line>' <doc>` for each moved line, all joined with ` && `.
+   - **Doc conflicts body:**
+     - `## What it delivers` says that each doc line below agrees with the plugin's contract. Under it, one line `- <file:line>: "<line>" becomes "<becomes>" (<why>)` for each conflict.
+     - `## Scenarios` holds `- WHEN <file> is read THEN it holds "<becomes>" and not "<line>"` for each conflict.
+     - `## Files` holds each doc.
+     - `## Verify` holds `grep -qF -- '<becomes>' <file> && ! grep -qF -- '<line>' <file>` for each conflict, all joined with ` && `.
+   - **Request body:** it has neither `## Scenarios` nor `## Goal`. It says in one sentence that each decision below has no written reason or no written rejected alternative, so setup proposed no ADR for it, and that it becomes an ADR once the missing part is written down. Then one line for each unsourced decision: `- <title>: <decision> (shown at <file:line>; missing: <reason | rejected alternative>)`. Its title is `Decisions in <repo> with no written reason or rejected alternative`.
+   - **Umbrella body:** its first line is `<!-- engineering:setup umbrella -->`. Then, in the umbrella format:
+     - `## Goal`: `<repo> is ready for the plugin once each sub-issue is merged.`
+     - `## Scenarios`: the scenarios of each accepted sub-issue.
+     - `## Design`: one sentence that says that each sub-issue is one step that the repo needs before the plugin works in it, that each one stands alone, and that the final PR into `main` is the review. Then the line `For you to do:` and one line `- <note>` for each note, or `- none`.
+     - `## Out of scope`: `- Changing a repo setting`, and `- Decisions with no written reason or rejected alternative: #<request>` when the request is accepted.
+5. **Show.** Your reply is these parts, in this order, and nothing else:
    1. `# Setup for <repo>`.
-   2. `## What setup will write`, holding:
-      1. `### docs/agents/commands.md · <state>`, where the state is `create`, or `kept` for a `commands.md` that is present. Under it, the proposed table with a source for each row, or form 2's sentence when you propose none. For a kept `commands.md`, only the commands that its table lacks, or `- none`.
-      2. `### .claude/rules/ · <state>`, where the state is `create`, `kept` for a folder that is present, or `none to propose` when no candidate is left. Under it, only when the state is `create`: for each area, `#### <area> · paths: <globs>`, or `#### <area> · no paths`, then one line `- <rule> · <source>` for each of its rules, where the source is `repo: <path>`, `docs: <url>` or `proposed`. When every research agent returned `no network`, the part starts with the line `No network: every research agent returned \`no network\`, so each rule that is not from the repo is \`proposed\`.`
-      3. `### Optional behaviours`: one line for each, `- <name> · <path> · <state>`, where the state is `add`, `up to date` or `differs`. An `add` or `differs` line ends with ` · recommended: <answer>, because <reason>`, and has the diff under a `differs` line. Print no file for an `add`: its name, path and recommendation are enough, because the file is a byte-identical copy of the plugin's template.
-   3. `## What setup found but will not change`, opening with the line `Setup leaves these as they are.`, followed on the same line by ` Fix them yourself, or let setup file one issue that lists them (question <N>).` only when you ask the conversion question, where `<N>` is its number. Then:
-      1. `### Findings`: the lines under the Facts' `## Findings`, as printed, then one line for each line that step 2 flagged in the `rules` docs, `- <path> · "<the line, quoted>" · <what the contract says instead> · edit or remove it so that it agrees with the contract`. `- none` when there is neither.
-      2. `### Conversion issue`, only when the Facts list one: `- #<n> · <title>` for each, as the Facts print it.
-   4. `## Questions`: the numbered questions. Each one names the file it writes and what it writes, and the rules question names each `.claude/rules/<area>.md` file with its number of rules, and the conversion question names the issue's title, says that it has no label, and gives the number of findings it lists. Then, only when the AskUserQuestion tool is not in your tools, the line `Answer "yes", or "yes, except <numbers>".`
-   If step 2 found no question, the body of `## Questions` is the line `Everything is up to date. Setup writes nothing.`, and you end.
-4. **Answer.** Claude Code ends the pre-approvals of this skill's `allowed-tools` when the user sends a message, and an answer in AskUserQuestion's pop-up is not a message. So take the answer in the pop-up when the tool is in your tools, and run steps 5 to 8 in the same turn as the answer.
+   2. `## What setup will write`: one line for the umbrella, one for its feature branch, and for each proposal `### <sub-issue title>` with its draft body. Say that setup changes no file in the repo, and that each sub-issue's PR does.
+   3. `## For you to do`: each note, as the Facts print it or as step 4 words it, or `- none`.
+   4. `## Questions`: the numbered questions. Each one names the sub-issue it writes and what its PR will add, or the request it writes. Then, only when the AskUserQuestion tool is not in your tools, the line `Answer "yes", or "yes, except <numbers>".`
+6. **Answer.** Claude Code ends the pre-approvals of this skill's `allowed-tools` when the user sends a message, and an answer in AskUserQuestion's pop-up is not a message. So take the answer in the pop-up when the tool is in your tools, and run steps 7 and 8 in the same turn as the answer.
    - **Pop-up:** if the AskUserQuestion tool is in your tools, call it in the same turn as the screen, right after it, with one question, `Apply the answers to the questions above?`, header `Setup`, and the options `Apply everything recommended`, `Choose item by item` and `Write nothing`. Do not search for the tool: if it is not in your tools, take the typed answer.
      - `Apply everything recommended` accepts every question.
      - `Choose item by item`: call AskUserQuestion again with one question for each numbered question, at most four questions per call, in the order of their numbers, until each has an answer. Each question starts with its number, its header is `Q<number>`, and its options are `Yes` and `No`. The questions answered `Yes` are accepted.
      - `Write nothing` accepts none.
      - Text typed into the pop-up is read as a typed answer.
    - **Typed answer:** otherwise the user's next message answers the questions. "yes" accepts every question. "yes, except <numbers>" accepts every question but those. "no" accepts none.
-   If the answer changes a proposal, such as a row of the commands table, show the changed proposal and ask again, in the same way. If the answer is unclear, ask again. If it accepts no question, reply `Setup wrote nothing.`, and end: write no file and create no issue.
-5. **Apply.** Write the accepted files in this order:
-   1. If the user accepted close-sub-issue, run `mkdir -p .github/workflows`, then `cp "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml" .github/workflows/close-sub-issue.yml`, each as its own Bash call, with no pipe, redirect or chain, alone in its message, and wait for its result before the next call. If one fails or is refused, say so, write no other file, create no issue, and stop.
-   2. If the user accepted the `commands.md` question, write the file with the Write tool, in the form that step 3 showed, without the template's comments and without the source of each row.
-   3. If the user accepted the rules question, write each `.claude/rules/<area>.md` with the Write tool, in the form that step 3 showed, without the sources. A file with `paths` starts with the frontmatter `---`, `paths:`, one line `  - "<glob>"` for each glob, and `---`. Then comes the heading `# <Area>`, and then one line `- <rule>` for each rule, as the Repo rules section defines it, and with no source tag. A cross-cutting area has no frontmatter.
-   4. For each accepted command that a kept `commands.md` lacks, add its row at the end of the file's table with the Edit tool. If the file has no table, add form 1's table at the end of the file, with the accepted rows.
-6. **Read back.** If step 5 wrote no file, skip this step. Run `bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"` again. The close-sub-issue path that step 5.1 copied must read `current` in its output. Read `docs/agents/commands.md` if step 5 wrote it: it must hold each accepted row. If step 5 wrote rules files, the `.claude/rules/` line of the output must read `present (<n> files)` with the number of files that step 5 wrote, and each file must hold each accepted rule. If a check fails, stop and name the file and what differs.
-7. **Conversion issue.** Only if the user accepted the conversion question:
-   1. Write the body with the Write tool to a new file, as the rules say. Its first line is `<!-- engineering:setup conversion issue -->`, then comes the line `/engineering:setup reported these findings, which differ from the plugin's process. Setup changed none of them.`, then `## Findings`, then one line for each finding from step 2: `- <what setup found> · suggested action: <action>`. Name each path and quoted line as the screen did.
-   2. Run `gh api -X POST repos/{owner}/{repo}/issues -f title="engineering: convert this repo to the plugin's process" -F body=@<path>`, as its own Bash call. Pass no `labels` field.
-   3. Read it back with `gh api repos/{owner}/{repo}/issues/<n>`, with the number that the POST returned. Check that its title is the one above, that its body is the file you wrote, and that it has no labels.
-   If the POST fails, or the read-back differs, do not create another issue and do not change this one. Name what failed in step 8.
-8. **Report.** Your reply is these parts, in this order, and nothing else:
-   1. Only if step 5 wrote or changed a file: `## Files to commit`, then one line `- <path>` for each file that it wrote or changed.
-   2. Only if step 7 ran: `## Conversion issue`, then `- #<n> · <its html_url> · no label`, or the line that names what failed.
-   3. The line `Setup committed, pushed and labelled nothing.`, and only if step 5 wrote or changed a file, ` Commit these files on a branch and open a PR.` after it on the same line.
-   4. Only if a path is under `.github/workflows/`: the line `Pushing a file under .github/workflows/ needs a token with the workflow scope.`
+   If the answer is unclear, ask again. If it accepts no question, reply `Setup wrote nothing.`, and end: write nothing to GitHub.
+7. **Write.** In this order, writing each body to a file as the rules say and reading each write back as the rules say:
+   1. If the unsourced-decisions proposal is accepted, create the request with its title and body and no label, before the umbrella, because the umbrella's body names its number. Read it back, and stop if its body is not the file you wrote.
+   2. Create the umbrella issue titled `Set up <repo> for the plugin`. Read it back, and stop if its body is not the file you wrote. Then add `engineering:shaped`, and after that `engineering:umbrella`, as the rules say.
+   3. Create the feature branch `<u>-setup`, with `<u>` the umbrella's number, from `main` as the rules say.
+   4. For each accepted sub-issue proposal, create its sub-issue with its title and body. Set its parent to the umbrella and read the parent back, and stop if it is not `<u>`. Then add `engineering:shaped` to it.
+8. **Report.** Your reply is the URL of the umbrella issue, of its feature branch, of each sub-issue and of the request, then the next step: Autopilot builds the umbrella issue, or `/engineering:execute #<first sub-issue>` by hand. It ends with the line `Setup changed no file in the repo.`
 
 ## Commands template
 !`cat "${CLAUDE_PLUGIN_ROOT}/templates/commands.md"`
 
-## Contract
-!`cat "${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md"`
-
-## Repo rules
-!`cat "${CLAUDE_PLUGIN_ROOT}/references/repo-rules.md"`
+## Template checksum
+!`sha256sum "${CLAUDE_PLUGIN_ROOT}/templates/close-sub-issue.yml"`
 
 !`bash "${CLAUDE_PLUGIN_ROOT}/skills/setup/setup.sh"`
