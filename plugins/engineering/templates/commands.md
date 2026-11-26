@@ -1,4 +1,4 @@
-<!-- The template of docs/agents/commands.md. /engineering:setup writes that file once, in one of the two forms below, without these comments. The repo owns the file after that. -->
+<!-- The template of docs/agents/commands.md. A sub-issue of the setup umbrella that /engineering:setup writes holds that file, in one of the two forms below, without these comments. The repo owns the file after that. -->
 <!-- Form 1: the repo has commands. One row for each command the user accepted. execute, verify and ship run each row whose task ends with "(pre-PR check)". -->
 # Commands
 

@@ -36,13 +36,11 @@ _Avoid_: stale worktree
 **Verdict**: The result verify gives a PR or a feature branch: PASS, FAIL, or PENDING when a PR's check runs have not all completed.
 _Avoid_: conclusion
 
-**Repo profile**: The file `docs/agents/commands.md`, which holds a repo's commands for the plugin's skills; setup writes it, and the plugin's contract stays in the plugin.
+**Repo profile**: The file `docs/agents/commands.md`, which holds a repo's commands for the plugin's skills; a sub-issue of the setup umbrella writes it, and the plugin's contract stays in the plugin.
 _Avoid_: repo config, agent docs
 
 **Optional behaviour**: A per-repo behaviour of the plugin that is on when its file is in the repo, such as `.github/workflows/close-sub-issue.yml`; setup offers each one.
 _Avoid_: feature flag, option
-
-**Conversion issue**: The one request that setup creates after a yes, which lists each finding it reported with its suggested action.
 
 **Challenge**: The first round of discuss, which asks whether a request needs to exist and gives each of its requirements, with its source, a verdict of keep, simplify or delete, before any question about how to build it; for a request that automates or delegates work, it also asks where the human boundary lies.
 
@@ -57,7 +55,7 @@ _Avoid_: job, automation, orchestrator, cron job
 
 **Pre-PR check**: A row of a repo's `docs/agents/commands.md` whose task ends with `(pre-PR check)`; execute, verify and ship run it locally, unlike the check runs that CI reports on a PR.
 
-**Finding**: Something that setup or an anneal reports about an existing repo, with the action it needs. Setup leaves its findings as they are and lists them in the conversion issue; an anneal routes each one to a fix sub-issue, a request or a drop.
+**Finding**: Something that setup or an anneal reports about an existing repo, with the action it needs. Setup turns each one into a sub-issue of the setup umbrella or a note in it; an anneal routes each one to a fix sub-issue, a request or a drop.
 _Avoid_: warning, conflict, conversion item
 
 **Rule**: One line in a file under `.claude/rules/` that says what code in this repo does or never does; Claude Code loads it into every session, or when a file matching the file's `paths` is read. Setup proposes rules, verify grades a PR against them, and execute's reflect step adds them.
@@ -92,3 +90,6 @@ _Avoid_: contributor, write access
 
 **Scenario test**: The test that proves one scenario: it fails when the code the scenario rests on is broken, takes its expected value from the scenario's THEN, and asserts a result rather than a call.
 _Avoid_: test case, unit test
+
+**Setup umbrella**: The umbrella issue that setup writes after a yes; each of its sub-issues is one step that the repo needs before the plugin can work in it, and its notes list the repo settings that you change yourself.
+_Avoid_: conversion issue
