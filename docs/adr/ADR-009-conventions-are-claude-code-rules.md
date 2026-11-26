@@ -6,24 +6,27 @@ status: active
 
 # ADR-009: Conventions are Claude Code rules in the repo
 
-- **Decision:** A repo's conventions live as one-line rules in `.claude/rules/`, which setup proposes from the repo, research agents and model knowledge, verify grades each PR against, and execute's reflect step extends from evidence in the work, with a rule or, for a lesson that one command can check, a check that a pre-PR check runs, seen failing on the defect and passing after the fix; nothing is kept in the memory directory. A rule has no code, passes the rule test, may end with a short reason clause, and ends with `(see skill: <name>)` when a skill in `.claude/skills/` holds what its line cannot; the plugin defines this once in `references/repo-rules.md`, which setup, execute, anneal and verify load.
-- **Source:** [#217](https://github.com/cstalhem/cargus-forge/issues/217), [#354](https://github.com/cstalhem/cargus-forge/issues/354)
+- **Decision:** A repo's conventions live as one-line rules in `.claude/rules/`, which setup proposes from the repo alone through an Opus agent, also when the repo already has rules, and which reach `.claude/rules/` through a sub-issue's PR that verify grades; verify grades each later PR against them, and execute's reflect step extends them from evidence in the work, with a rule or, for a lesson that one command can check, a check that a pre-PR check runs, seen failing on the defect and passing after the fix; nothing is kept in the memory directory. A rule has no code, passes the rule test, may end with a short reason clause, and ends with `(see skill: <name>)` when a skill in `.claude/skills/` holds what its line cannot; the plugin defines this once in `references/repo-rules.md`, which setup, execute, anneal and verify load.
+- **Source:** [#217](https://github.com/cstalhem/cargus-forge/issues/217), [#354](https://github.com/cstalhem/cargus-forge/issues/354), [#456](https://github.com/cstalhem/cargus-forge/issues/456)
 
 ## Details
 - A rule is one line with no code and no source tag that passes the rule test. It may end with a short reason clause when the reason tells a session when the rule bends. A rule file has `paths:` frontmatter where every rule in it applies to files under one folder.
 - A rule ends with `(see skill: <name>)` when a skill in `.claude/skills/` holds the steps or examples that its line cannot. Execute alone decides whether a rule gets one, and anneal writes no skills.
 - The plugin defines the rule, the rule test, when a rule goes and how to write a backing skill once, in `references/repo-rules.md`, which setup, execute, anneal and verify load.
-- A source shows only on setup's screen, never in the rule file.
-- Setup proposes no rule for what the repo's rule docs already say or a tool config enforces. A convention that one command can check becomes a pre-PR check row of `docs/agents/commands.md`.
+- A source shows only on setup's screen and in its sub-issue, never in the rule file.
+- Setup proposes no rule for what the repo's rule docs already say or a tool config enforces, except a guideline of one of those docs that the rule moves out of it. A convention that one command can check becomes a row of the repo profile sub-issue.
+- Setup reads the existing rules only so that it proposes no copy of one, judges none of them and writes no skill. An anneal judges existing rules.
 - Execute's reflect step turns a proposal with evidence that one command can check into a check, never a rule, because what must hold every time is a check. The check is a test or a linter or formatter rule that an existing pre-PR check runs, or a new `(pre-PR check)` row whose command already works in the repo. It is committed with the work, then proved: the defect is put back with an edit, the pre-PR check fails, the file is restored, and the check passes. When the check fits none of those forms, does not fit the PR, the repo has no `docs/agents/commands.md`, or no edit puts the defect back, reflect files a request instead.
 - Reflect never waits for the user: the user reviews each check in the PR and shapes each request in discuss.
-- The repo owns `.claude/rules/` once it holds a file: setup reports it as kept and asks nothing. Deleting the folder and running setup again redoes the proposal.
 
 ## Rejected alternatives
 - **A conventions file in the repo profile (`docs/agents/conventions.md`):** only the plugin's skills would read it, while Claude Code loads rules into every session.
 - **A staging tier in the memory directory:** it is not in the repo and vanishes with a cloud container.
 - **A PostToolUse hook on push that asks what is worth remembering:** it fires on every push in every session and cannot record its outcome, while a step in execute runs once, when the PR can name what it added.
 - **A retrieve skill at session start:** Claude Code loads rules itself.
+- **Rules from web research and model knowledge at setup:** the researched components were picked by file count and alphabet, and a page about a library does not know the repo.
+- **Setup evaluates existing rules:** anneal already does, and two skills that judge the same rules drift apart.
+- **The repo owns `.claude/rules/` against setup:** a PR is now the review.
 - **Skills written at setup:** a skill from research guesses which areas need depth, and one from a real miss has evidence.
 - **No rationale in a rule:** Claude needs the reason to judge when a guideline bends, and Claude Code's docs put a short reason in the line.
 - **A skill behind every rule:** each model-invocable skill costs context on every turn in the skill listing, and a line that passes the rule test needs none.
