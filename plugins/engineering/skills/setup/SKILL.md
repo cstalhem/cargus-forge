@@ -1,6 +1,6 @@
 ---
 name: setup
-description: Look at a repo and turn what it needs before the plugin works in it into a setup umbrella issue. Shows the facts from setup.sh and each proposed sub-issue on one screen, asks numbered questions, then writes the umbrella, its feature branch and one sub-issue for each accepted proposal to GitHub. In a repo with code it starts an Opus agent that proposes the repo profile's rows and runs each check,, in a repo with workflows of its own it starts one that finds a workflow that already closes issues on merge, and in a repo with code and no ADR it starts one that finds decisions with a written reason and a rejected alternative. It changes no file in the repo, commits and pushes nothing, and opens no PR. A sub-issue writes each file, through execute.
+description: Look at a repo and turn what it needs before the plugin works in it into a setup umbrella issue. Shows the facts from setup.sh and each proposed sub-issue on one screen, asks numbered questions, then writes the umbrella, its feature branch and one sub-issue for each accepted proposal to GitHub. In a repo with code it starts an Opus agent that proposes the repo profile's rows and runs each check, in a repo with workflows of its own it starts one that finds a workflow that already closes issues on merge, and in a repo with code and no ADR it starts one that finds decisions with a written reason and a rejected alternative. It changes no file in the repo, commits and pushes nothing, and opens no PR. A sub-issue writes each file, through execute.
 model: fable
 disable-model-invocation: true
 allowed-tools:
@@ -63,7 +63,7 @@ allowed-tools:
    - **ADR body:**
      - `## What it delivers` says that `docs/adr/` holds the repo's ADRs in the plugin's format, indexed in `docs/adr/README.md`: the ADRs that each moved folder holds, which are then gone from it, and one new ADR for each sourced decision. Under it, one line `- <title>: <source>` for each sourced decision.
      - `## Scenarios` holds `- WHEN docs/adr/ is read THEN it holds each ADR of <folder>/ in the plugin's format` for each moved folder, and `- WHEN docs/adr/README.md is read THEN it indexes an ADR titled <title>` for each sourced decision.
-     - `## Decisions` holds `- D<n> · ADR: new: <title> · <decision> · Rejected: <alternative>: <why>; <alternative>: <why>` for each sourced decision, as the agent returned it.
+     - `## Decisions` holds one `ADR` decision with `new: <title>` for each sourced decision, filled in from what the agent returned.
      - `## Files` holds each moved folder, `docs/adr/` and `docs/adr/README.md`.
      - `## Verify` holds `test -f docs/adr/README.md && test ! -e <folder>` for each moved folder, and `grep -qF -- '<title>' docs/adr/README.md` for each sourced decision, all joined with ` && `, the first part left out when the repo has no moved folder.
    - **Request body:** it has neither `## Scenarios` nor `## Goal`. It says in one sentence that each decision below has no written reason or no written rejected alternative, so setup proposed no ADR for it, and that it becomes an ADR once the missing part is written down. Then one line for each unsourced decision: `- <title>: <decision> (shown at <file:line>; missing: <reason | rejected alternative>)`. Its title is `Decisions in <repo> with no written reason or rejected alternative`.
