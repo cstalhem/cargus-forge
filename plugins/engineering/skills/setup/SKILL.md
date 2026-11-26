@@ -34,7 +34,7 @@ allowed-tools:
    - **Repo profile:** when the `docs/agents/commands.md` line under `### Files` says `missing`. The sub-issue is "Write the repo profile".
    - **Close-sub-issue workflow:** when its line under `### Optional behaviours` says `missing` or `differs`. The sub-issue is "Add the close-sub-issue workflow". It closes a sub-issue when its PR merges into the feature branch, so the issues that it blocks show as unblocked at once.
    - **Notes:** each line under `## Findings` other than `- none` is a note for the user.
-   If there is no proposal, the screen is the line `Everything is up to date. Setup writes nothing.`, and you end.
+   If there is no proposal and no note, the screen is the line `Everything is up to date. Setup writes nothing.`, and you end. If there is a note and no proposal, the one question is to write the umbrella with its notes and no sub-issue, and its `## Scenarios` is `- none`.
    Write each body in the issue format of `formats.md`, which you read in this step with `${CLAUDE_PLUGIN_ROOT}/references/formats.md`:
    - **Repo profile body:**
      - `## What it delivers` says that `docs/agents/commands.md` holds the repo profile of a repo that has no commands, and then holds the file in a code block: the heading `# Commands`, a blank line, and the sentence of form 2 of the Commands template at the end of this skill, with no second sentence.
