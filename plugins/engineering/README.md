@@ -20,18 +20,17 @@ Install the plugin from this repo's marketplace:
 
 Then run `/engineering:setup` once per repo, from its top folder. Plugin updates reach the repo without a re-run, because the plugin's own rules stay in the plugin.
 
-- It shows what it will write, then what it found but will not change, on one screen, then asks numbered questions, each with a recommended answer. In an interactive session you answer in a pop-up: `Apply everything recommended`, `Choose item by item` (a yes or no for each question) or `Write nothing`. Setup then writes in the same turn, so its pre-approved commands run without asking again. Where there is no pop-up, as in `claude -p`, answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all. You can also change a proposal, such as a row of the commands table, and setup shows it again before it writes anything.
-- After your yes, it writes the repo profile, which is only `docs/agents/commands.md`: the build, test and lint commands it detected. The plugin takes `main` as the default branch, so the profile does not record it.
-- When the repo has no `.claude/rules/` files, it proposes rules for `.claude/rules/` from the repo's docs, its tool configs and the stack, as one line each with its source, and writes the accepted ones as `.claude/rules/<area>.md`. For the stack it researches the web: one research agent for each component, at most four, in parallel, each returning findings with the URL of its docs, which show as `docs: <url>`. Without network access the agents return `no network`, and setup says so and proposes rules from what the model knows, as `proposed`. A candidate that one command can check becomes a pre-PR check row of the repo profile instead. A repo that already has rules keeps them: setup reports `.claude/rules/` as kept and asks nothing.
-- It offers each optional behaviour. Today that is the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch.
-- On an existing repo, it reports each finding, something that differs from the plugin's process, such as a repo setting that differs or docs that the plugin cannot see, and gives the action you can take. It leaves each finding as it is, and offers one issue that lists them all.
-- It commits, pushes and labels nothing. It lists the files it wrote, and you commit them on a branch and open a PR.
+- It shows each sub-issue it proposes, then what is for you to do, on one screen, then asks numbered questions, each with a recommended answer. In an interactive session you answer in a pop-up: `Apply everything recommended`, `Choose item by item` (a yes or no for each question) or `Write nothing`. Setup then writes in the same turn, so its pre-approved commands run without asking again. Where there is no pop-up, as in `claude -p`, answer `yes` to accept them all, `yes, except 2, 4` to decline some, or `no` to decline them all.
+- In a repo with no code, it starts no agent and proposes two sub-issues: the repo profile, `docs/agents/commands.md`, and the close-sub-issue workflow, which closes a sub-issue as soon as its PR merges into the feature branch. The plugin takes `main` as the default branch, so the profile does not record it.
+- After your yes, it writes one setup umbrella issue, its feature branch and one sub-issue for each proposal you accepted, all on GitHub. It changes no file in the repo: you or Autopilot build each sub-issue with execute, and its PR writes the file.
+- Where the repo differs from the plugin's process, such as a repo setting that is off, setup lists it under "For you to do" in the umbrella's Design and still writes the umbrella. It changes no setting.
+- While a setup umbrella is open, setup names it and writes nothing.
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `/engineering:setup` | Writes the repo profile and the rules in `.claude/rules/`, and turns on optional behaviours. Runs on Fable for the turn it is typed in, with its research agents on Sonnet. |
+| `/engineering:setup` | Writes a setup umbrella issue, its feature branch and one sub-issue for each step that the repo needs before the plugin works in it, after your yes, and changes no file in the repo. Runs on Fable for the turn it is typed in. |
 | `/engineering:discuss <request or #issue>` | Shapes a request into one issue through question rounds: a single issue if it passes the size test, or an umbrella issue if it does not. The turn discuss is typed in runs on Fable, and it covers loading, reading the code and the challenge round; later rounds run on the session's model, and starting the session with `/model fable` keeps all of discuss on Fable. |
 | `/engineering:execute <#issue>` | Builds one issue on its branch test-first, one scenario at a time: it writes each scenario test, sees it fail for the right reason, then writes the code, and its PR body records each scenario test's red run or the reason a scenario has no test. It builds until the issue's verify command passes, then runs a reflect step that adds the rules and the checks that the work proved, in a draft PR it opens after its first commit. |
 | `/engineering:next` | Compares the open issues' bodies, statuses and links for shared files, conflicting goals and dependencies, and recommends one next command and why, with the order of the issues that relate. |
@@ -49,7 +48,7 @@ A thread you start by hand fits Opus at its default effort, and Sonnet is enough
 
 discuss and execute read `references/domain-model.md` in their Load step. It holds the format and the gate for the repo's domain terms in `docs/glossary.md`; what each skill does with a term is in its own SKILL.md. They also read `references/adr.md`, which holds the definition of the repo's ADRs in `docs/adr/`: when a decision earns one, its format, and when to edit an existing ADR instead of writing a new one. discuss records each ADR as an `ADR` decision in the issue, execute writes it, and verify grades it, each from its own SKILL.md.
 
-execute, setup, anneal and verify inject `references/repo-rules.md`, which defines once what a rule is, the rule test, when a rule goes, and when and how a rule gets a backing skill in `.claude/skills/`. It works in a repo with no rules, skills or glossary yet.
+execute, anneal and verify inject `references/repo-rules.md`, which defines once what a rule is, the rule test, when a rule goes, and when and how a rule gets a backing skill in `.claude/skills/`. It works in a repo with no rules, skills or glossary yet.
 
 ## Process overview
 

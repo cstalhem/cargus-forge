@@ -282,6 +282,19 @@ ok=1; why=''; out=''
 awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$here/../SKILL.md" | grep -qx 'model: fable' || miss "the frontmatter lacks the line model: fable"
 done_check
 
+check "SKILL.md pre-approves each GitHub write of the setup umbrella: issues, sub-issue links, labels and the feature branch"
+ok=1; why=''; out=''
+frontmatter=$(awk 'NR > 1 && $0 == "---" { exit } NR > 1' "$here/../SKILL.md")
+for want in \
+  '  - Bash(gh api -X POST repos/{owner}/{repo}/issues -f title=* -F body=@*)' \
+  '  - Bash(gh api -X POST repos/{owner}/{repo}/issues/*/sub_issues -F sub_issue_id=*)' \
+  "  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:shaped')" \
+  "  - Bash(gh api -X POST repos/{owner}/{repo}/issues/* -f 'labels[]=engineering:umbrella')" \
+  '  - Bash(gh issue develop *)'; do
+  grep -qxF -- "$want" <<<"$frontmatter" || miss "the frontmatter lacks the line: $want"
+done
+done_check
+
 setup
 check "docs: ADR folders and glossaries the plugin cannot see give findings with the action to move them, rule docs are listed, and none is changed"
 mkdir -p docs/adr doc/decisions architecture/records wiki .github/PULL_REQUEST_TEMPLATE src/decisions notes vendor
