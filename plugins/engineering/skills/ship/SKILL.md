@@ -17,7 +17,7 @@ Umbrella issue: $ARGUMENTS
 - Do not merge the final PR. The user merges it.
 
 ## Steps
-1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/formats.md`, `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md` and `docs/agents/commands.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>` and `gh api --paginate 'repos/{owner}/{repo}/issues/<n>/sub_issues?per_page=100'`. Stop if the issue has no `## Goal` section. The feature branch is the one that `gh issue develop --list <n>` prints, as the rules say. Stop if it prints none, or more than one.
+1. **Load.** Read `${CLAUDE_PLUGIN_ROOT}/references/formats.md`, `${CLAUDE_PLUGIN_ROOT}/references/issue-tracker.md` and `docs/agents/commands.md`. Use the bare number, without `#`, in commands. Run `gh api repos/{owner}/{repo}/issues/<n>` and `gh api --paginate 'repos/{owner}/{repo}/issues/<n>/sub_issues?per_page=100'`. Stop if the issue has no `## Goal` section. The feature branch is the one that the command that the rules give for finding an issue's branch prints. Stop if it prints none, or more than one.
 2. **Sub-issues.** Run `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=open&per_page=100'` and `gh api --paginate 'repos/{owner}/{repo}/pulls?base=<branch>&state=closed&per_page=100' --jq '.[] | select(.merged_at) | {number, title, body}'`.
    - If a PR into the feature branch is still open, stop and name it.
    - Keep each merged PR's `## Deviations` section, with the sub-issue number from its first line, for the final PR body in step 6.

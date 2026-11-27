@@ -6,9 +6,9 @@ status: active
 
 # ADR-006: Engineering runs in T3 Code threads on one host
 
-- **Decision:** Every engineering skill runs in a T3 Code thread on one always-on host. Skills reach GitHub through `gh`, by the simplest command for each operation, create each issue branch and feature branch with `gh issue develop`, linked to its issue, and find a branch through that link.
+- **Decision:** Every engineering skill runs in a T3 Code thread on one always-on host. Skills reach GitHub through `gh`, by the simplest command for each operation, create each issue branch and feature branch with `gh issue develop`, linked to its issue, and find a branch through that link, or, when GitHub has dropped the link, as the head branch of each open PR from this repo, by a trusted author, that closes the issue and whose head branch starts with `<n>-`. One command in `references/rules.md` reads both, and `status.sh` applies the same check in its issues query.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md), [ADR-002](ADR-002-feature-branch-per-umbrella.md)
-- **Records:** #78 D1, D5, D7 and D9 to D16. D2, D3, D4, D6 and D10 are replaced (see Rejected alternatives). Also #144 D1, #181 D3, #185 D1 and D2, #233 D4, #265 D2, #292 D2 and #368 D2, D4 to D7, D9, D16 and D17.
+- **Records:** #78 D1, D5, D7 and D9 to D16. D2, D3, D4, D6 and D10 are replaced (see Rejected alternatives). Also #144 D1, #181 D3, #185 D1 and D2, #233 D4, #265 D2, #292 D2, #368 D2, D4 to D7, D9, D16 and D17, and #388 D1 to D3 and D5.
 
 ## Details
 - **One surface:** a T3 Code thread, started on an always-on host that the phone and the laptop both reach. A plain `claude` session still runs each skill. Only execute's PENDING resume and Autopilot stop there, when the `schedule_task` tool or a T3 tool cannot be loaded.
@@ -20,8 +20,9 @@ status: active
   - Every write is read back through REST, and a created branch through `gh issue develop --list`. If a required fact is missing (a sub-issue's parent, a blocked-by link, a PR's base and draft state, a posted comment, a created branch), the skill stops and names the gap.
 - **Marking a PR ready exists only in GraphQL**, so a skill runs `gh pr ready <pr>` and reads the PR back through REST, with no fallback (#368 D6). verify's `allowed-tools` pre-approves the command.
 - **Branches** are created with `gh issue develop <n> --name <n>-<slug> --base <base>`, which links the branch to issue `<n>` (#368 D9). The base is a branch on the remote. The `<n>-<slug>` name stays for people, and the issue page shows the branch under Development. A merged state comes from the PR only, because the repo deletes a merged branch, and its link with it.
-- **The feature branch** is found through its link. execute, verify, ship and slice take the one branch that `gh issue develop --list <umbrella>` prints, and stop if it prints none or more than one. A `<n>-*` branch with no link is not taken.
-- **The issue branch** is the issue's linked `<n>-<slug>` branch, in the session's worktree (#185 D1). execute needs a checkout with no changes and no commits that are not on a remote, and otherwise stops and asks. If `gh issue develop --list <n>` prints no issue branch, execute creates it from the base with `gh issue develop`. If it prints one, execute fetches it. Either way, execute switches to it with `git switch`. On resume, it syncs and reads `git log --oneline origin/<base>..HEAD`. The link keeps the branch findable for slice and a later execute run.
+- **An issue's branch** is found by one command in `references/rules.md`, a GraphQL query of the issue's `linkedBranches` and `closedByPullRequestsReferences` (#388 D1, D2). It prints the linked branches. When there are none, it prints the head branch of each open PR from this repo, by a trusted author, that closes the issue from a `<n>-` branch, because GitHub drops the link once an open PR closes the issue: a single issue's draft PR into `main`, and an umbrella's final PR. execute, verify, ship and slice take the one branch that it prints, and stop if it prints none or more than one. A `<n>-*` branch with no link and no such PR is not taken. A created branch is still read back with `gh issue develop --list`.
+- **The feature branch** is found that way for the umbrella's number, so verify and ship still find it on a re-run after the final PR opens.
+- **The issue branch** is the issue's linked `<n>-<slug>` branch, in the session's worktree (#185 D1). execute needs a checkout with no changes and no commits that are not on a remote, and otherwise stops and asks. If the rules' command prints no issue branch, execute creates it from the base with `gh issue develop`. If it prints one, execute fetches it. Either way, execute switches to it with `git switch`. On resume, it syncs and reads `git log --oneline origin/<base>..HEAD`. The link keeps the branch findable for slice and a later execute run.
 - **Blockers** are GitHub "blocked by" links (D11). slice sets each parent link with `POST issues/<umbrella>/sub_issues` and each blocked-by link with `POST issues/<n>/dependencies/blocked_by`, both with the other issue's `id`, and reads each one back. A sub-issue's body does not list its parent or its blockers, so slice writes no text that could disagree with a link (#181 D3). execute reads blockers from the links only.
 - **The work so far** is found on the current branch (D12). execute's size-test stop hands off to slice or discuss in the same session, so the current branch is the issue branch, `<n>-<slug>`. A re-split reads the work from there.
 - **The draft PR** is opened in one place, execute's step 3, after each push when the branch has no open PR, with a placeholder body (#292 D2). The PR step only rewrites the PR with `PATCH pulls/<pr>` and reads it back.
@@ -43,12 +44,16 @@ status: active
 - **A line in the umbrella body that names the feature branch:** it is hand-written state (ADR-001), and `formats.md` allows no extra section.
 - **Stop and ask the user to run execute again on a PENDING verdict:** a step with no decision in it, which an unattended Build cannot take.
 - **Wait for CI inside a T3 Code thread:** the thread stays working for the whole CI run, and Autopilot starts nothing meanwhile.
+- **A shared script that the skills and `status.sh` call to find an issue's branch** (#388): one command already gives the fact, and `status.sh` would need a call for each issue.
+- **Find a branch through its link only** (#388): GitHub drops the link once an open PR closes the issue, so verify and ship stop on every re-run after the final PR opens, and Autopilot cannot find the final PR.
+- **Skip the closing-PR fallback for an issue with a parent, instead of checking the `<n>-` prefix** (#388): it misses a PR that closes several single issues.
+- **A fix for sub-issue branches** (#388): GitHub records no closing PR for a PR into a feature branch, so a sub-issue's link holds.
 - **An interval scheduled task that the resumed run deletes, for the PENDING resume:** a missed delete fires it every 10 minutes forever, and the resume count cannot stop it.
 
 ## Consequences
 - discuss, slice, execute, verify and ship work the same from the desktop, the laptop and the phone, because each reaches the one host.
 - Skills need `gh`, installed and authenticated, and no GitHub MCP tools.
 - Every blocker is a GitHub link, so the Blocked icon shows for it.
-- Each issue branch and feature branch is linked to its issue, and the issue page shows it under Development. A `<n>-*` branch created with `git push` has no link, so no skill takes it.
+- Each issue branch and feature branch is linked to its issue, and the issue page shows it under Development. A `<n>-*` branch created with `git push` has no link, so no skill takes it unless an open PR from this repo, by a trusted author, closes the issue from it.
 - A deleted feature branch loses its link, so execute, verify and ship stop with a reason, because no branch is linked.
 - execute waits for CI by sleeping: it wakes up to three times, 10 minutes apart, and a CI run longer than that still ends in a stop.
