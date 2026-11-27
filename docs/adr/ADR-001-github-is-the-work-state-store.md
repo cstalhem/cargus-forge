@@ -45,6 +45,10 @@ status: active
 - **A GitHub Action that sets labels from events:** it is extra setup in each repo, to keep copies of facts that `status.sh` reads directly. The one workflow the plugin ships closes sub-issues and sets no label.
 - **Reads and writes through `gh api` REST only:** it served the cloud proxy, which the plugin no longer supports.
 - **One REST call for each issue's blockers and sub-issues in `status.sh`:** it made about 20 calls and took 12.6 s; one GraphQL query returns every open issue with its parent, sub-issues and blockers in 0.46 s.
+- **A shared script that the skills and `status.sh` call to find an issue's branch** (#388): one command already gives the fact, and `status.sh` would need a call for each issue.
+- **Find a branch through its link only** (#388): GitHub drops the link once an open PR closes the issue, so verify and ship stop on every re-run after the final PR opens, and Autopilot cannot find the final PR.
+- **Skip the closing-PR fallback for an issue with a parent, instead of checking the `<n>-` prefix** (#388): it misses a PR that closes several single issues.
+- **A fix for sub-issue branches** (#388): GitHub records no closing PR for a PR into a feature branch, so a sub-issue's link holds.
 
 ## Consequences
 - Each repo must be on GitHub. Skills reach issues, PRs, parent, sub-issue and dependency data through `gh`, by the simplest command for each operation ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).

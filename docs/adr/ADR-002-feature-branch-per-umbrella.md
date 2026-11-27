@@ -6,7 +6,7 @@ status: active
 
 # ADR-002: One feature branch for each umbrella issue
 
-- **Decision:** Each umbrella issue gets a feature branch, and the feature branch and each sub-issue branch are created linked to their issue and found through that link. Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. Autopilot squash-merges a sub-issue PR once verify marks it ready; the user merges single-issue PRs and final PRs. One final PR merges the feature into `main` and closes the umbrella issue.
+- **Decision:** Each umbrella issue gets a feature branch, and the feature branch and each sub-issue branch are created linked to their issue and found through that link, or, once GitHub drops the link because an open PR closes the issue, as that PR's head branch ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)). Sub-issue PRs merge into that branch, and a workflow closes each sub-issue when its PR merges. Autopilot squash-merges a sub-issue PR once verify marks it ready; the user merges single-issue PRs and final PRs. One final PR merges the feature into `main` and closes the umbrella issue.
 - **Builds on:** [ADR-001](ADR-001-github-is-the-work-state-store.md)
 
 ## Details
@@ -33,6 +33,10 @@ status: active
 - **Match the sub-issue from the head branch name:** the PR's first line is the tie, and a branch name is not a fact that GitHub records.
 - **A version-bump check against `main`:** every PR built from the same `main` wrote the same or a clashing version, so the PRs waiting for review conflicted after each merge.
 - **The user merges every sub-issue PR:** a step with no decision in it between verify and ship, which needs an interactive session for each sub-issue.
+- **A shared script that the skills and `status.sh` call to find an issue's branch** (#388): one command already gives the fact, and `status.sh` would need a call for each issue.
+- **Find a branch through its link only** (#388): GitHub drops the link once an open PR closes the issue, so verify and ship stop on every re-run after the final PR opens, and Autopilot cannot find the final PR.
+- **Skip the closing-PR fallback for an issue with a parent, instead of checking the `<n>-` prefix** (#388): it misses a PR that closes several single issues.
+- **A fix for sub-issue branches** (#388): GitHub records no closing PR for a PR into a feature branch, so a sub-issue's link holds.
 
 ## Consequences
 - A feature branch can drift from `main` while a feature is in progress.
