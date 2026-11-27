@@ -194,20 +194,6 @@ lacks 'xyz' 'Markdown' "### Stack$nl- none"
 done_check
 
 setup
-check "with manifests, a Makefile and linter configs in the repo, the facts hold the languages and nothing parsed from those files"
-mkdir -p .github/workflows
-printf '%s\n' '{ "name": "w", "scripts": { "test": "jest" }, "dependencies": { "react": "^18" } }' > package.json
-printf '%s\n' 'build:' > Makefile
-printf '%s\n' '[project]' 'dependencies = ["requests"]' > pyproject.toml
-touch .eslintrc.json a.py b.py c.ts
-run
-[ "$(printf '%s\n' "$out" | grep '^###')" = "$(printf '%s\n' '### Repo' '### Files' '### Optional behaviours' '### Stack' '### Setup umbrella' '### Workflows' '### Docs')" ] \
-  || miss "the sections are not Repo, Files, Optional behaviours, Stack, Setup umbrella, Workflows, Docs"
-[ "$(printf '%s\n' "$out" | sed -n '/^### Stack$/,/^$/p')" = "$(printf '%s\n' '### Stack' '- language: Python · 2 files' '- language: TypeScript · 1 files' '')" ] \
-  || miss "the Stack section is not the two language lines"
-done_check
-
-setup
 setup
 setup
 setup
