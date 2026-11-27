@@ -174,7 +174,7 @@ JSON
 
 gtrust() {
   jq '[.[] | {authorAssociation: "OWNER", author: {login: "owner"}, labels: {nodes: [{name: "engineering:shaped"}]},
-    blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
+    blockedBy: {nodes: []}, subIssues: {nodes: []}, linkedBranches: {nodes: []}, closedByPullRequestsReferences: {nodes: []}} + .]' "$1" > "$1.tmp" && mv "$1.tmp" "$1"
 }
 for f in "$full/issues.json" "$full/pulls_open.json" \
   "$over/issues.json" "$over/pulls_open.json" "$merged/issues.json" "$labelled/issues.json"; do gtrust "$f"; done
@@ -347,6 +347,28 @@ EXPECTED
 run_status "$blocked_umbrella" | sed '/^## Cleanup$/,$d' > "$tmp/blocked_umbrella.out"
 same "WHEN an umbrella issue has an open \"blocked by\" link THEN the report prints no blocked-by line under it" \
   "$tmp/blocked_umbrella.expected" "$tmp/blocked_umbrella.out"
+
+echo "# closing PRs"
+closing=$tmp/closing
+mkdir "$closing"
+cat > "$closing/issues.json" <<'JSON'
+[
+  {"number":80,"title":"Umbrella whose final PR is open","body":"## Goal\nx\n","closedByPullRequestsReferences":{"nodes":[{"state":"OPEN","headRefName":"80-final","isCrossRepository":false,"authorAssociation":"OWNER"}]}},
+  {"number":81,"title":"Umbrella whose closing PR merged","body":"## Goal\nx\n","closedByPullRequestsReferences":{"nodes":[{"state":"MERGED","headRefName":"81-final","isCrossRepository":false,"authorAssociation":"OWNER"}]}},
+  {"number":82,"title":"Umbrella closed from a fork","body":"## Goal\nx\n","closedByPullRequestsReferences":{"nodes":[{"state":"OPEN","headRefName":"82-final","isCrossRepository":true,"authorAssociation":"OWNER"}]}},
+  {"number":83,"title":"Umbrella closed by an outside author","body":"## Goal\nx\n","closedByPullRequestsReferences":{"nodes":[{"state":"OPEN","headRefName":"83-final","isCrossRepository":false,"authorAssociation":"NONE"}]}},
+  {"number":84,"title":"Umbrella closed from another issue's branch","body":"## Goal\nx\n","closedByPullRequestsReferences":{"nodes":[{"state":"OPEN","headRefName":"840-other","isCrossRepository":false,"authorAssociation":"OWNER"}]}},
+  {"number":85,"title":"Umbrella with a link and a closing PR","body":"## Goal\nx\n","linkedBranches":{"nodes":[{"ref":{"name":"85-feature"}}]},"closedByPullRequestsReferences":{"nodes":[{"state":"OPEN","headRefName":"85-other","isCrossRepository":false,"authorAssociation":"OWNER"}]}}
+]
+JSON
+gtrust "$closing/issues.json"
+umbrellas=$(run_status "$closing" | awk '/^### Umbrellas$/ { s = 1; next } /^##/ { s = 0 } s')
+expect "WHEN an umbrella issue has no linked branch and an open PR from this repo, by a trusted author, closes it from <u>-<slug> THEN status.sh lists the umbrella with feature branch <u>-<slug>" \
+  grep -qxF "**#80** Umbrella whose final PR is open · not sliced · feature branch 80-final" <<<"$umbrellas"
+expect "WHEN the only PR that closes an umbrella issue with no linked branch is merged, comes from a fork, has an author who is not a trusted author, or has a head branch that does not start with <u>- THEN status.sh lists the umbrella with no feature branch" \
+  bash -c 'for t in "81** Umbrella whose closing PR merged" "82** Umbrella closed from a fork" "83** Umbrella closed by an outside author" "84** Umbrella closed from another issue'"'"'s branch"; do grep -qxF "**#$t · not sliced · no feature branch" <<<"$1" || exit 1; done' _ "$umbrellas"
+expect "WHEN an issue has a linked branch and an open PR that closes it from another <n>- branch THEN status.sh takes only the linked branch" \
+  grep -qxF "**#85** Umbrella with a link and a closing PR · not sliced · feature branch 85-feature" <<<"$umbrellas"
 
 run_status "$none" > "$tmp/none.out"
 expect "WHEN status.sh runs and no issue is open THEN the Report part is empty and the Cleanup part follows" \

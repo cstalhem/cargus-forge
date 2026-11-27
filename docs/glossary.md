@@ -46,7 +46,7 @@ _Avoid_: feature flag, option
 
 **Gap**: A scenario, `Term` row or `ADR` row that verify grades as failing, with the check that failed (exists, substantive, wired or tested) and why.
 
-**Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, created linked to its issue, which is how skills find it.
+**Issue branch**: The branch that holds one issue's work and is the head of its PR: `<n>-<slug>`, created linked to its issue. Skills find it through that link, or, once GitHub drops the link because a PR that closes the issue is open, as that PR's head branch.
 
 **ADR decision**: A line in an issue's `## Decisions` that tells execute to write a new ADR or edit an existing one in `docs/adr/`, holding the decision and its rejected alternatives.
 

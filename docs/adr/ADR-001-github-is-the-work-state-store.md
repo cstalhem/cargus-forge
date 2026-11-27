@@ -6,7 +6,7 @@ status: active
 
 # ADR-001: GitHub is the only store of work state
 
-- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. An issue is shaped only while it carries `engineering:shaped`, which discuss, slice and anneal add in their write step and `status.sh` reads; `engineering:needs-discussion` marks a shaped issue that was sent back, `engineering:umbrella` is a display label, and build states stay derived from links, branches and PRs. It derives each build status from facts that GitHub and git record: an issue's links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). Skills reach GitHub through `gh`, by the simplest command for each operation, and work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)). `status.sh` reads each open issue's labels, parent, sub-issues, blockers and linked branches, and the PRs, through GraphQL queries that page with the query's cursor, so it makes no REST call for each issue.
+- **Decision:** The engineering plugin keeps work state only in GitHub issues, PRs and git. An issue is shaped only while it carries `engineering:shaped`, which discuss, slice and anneal add in their write step and `status.sh` reads; `engineering:needs-discussion` marks a shaped issue that was sent back, `engineering:umbrella` is a display label, and build states stay derived from links, branches and PRs. It derives each build status from facts that GitHub and git record: an issue's links, branches and PRs, and the author of each issue and PR, which must be a trusted author for the item to count ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md)). Skills reach GitHub through `gh`, by the simplest command for each operation, and work resumes from any device that reaches the T3 Code host ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)). `status.sh` reads each open issue's labels, parent, sub-issues, blockers, linked branches and closing PRs, and the PRs, through GraphQL queries that page with the query's cursor, so it makes no REST call for each issue.
 - **Source:** [#390](https://github.com/cstalhem/cargus-forge/issues/390)
 
 ## Details
@@ -14,9 +14,9 @@ status: active
 - A **sub-issue** is one session of work. A GitHub parent link holds its place under the umbrella. Its blockers are GitHub "blocked by" links, which slice sets through REST. Its body lists neither its parent nor its blockers, so no text copies a link ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
 - **Facts decide the status.** A script (`status.sh`) works out the status of each open issue for `next`, the first of these that applies:
   - request, first: the issue's author is not a trusted author, whatever its body says, or the issue does not carry `engineering:shaped`. A PR whose author is not a trusted author names no issue, so it gives no fact ([ADR-011](ADR-011-build-acts-only-on-trusted-authors.md));
-  - umbrella: the body has a `## Goal` section. Its feature branch is a branch linked to it, so this comes before the branch fact;
+  - umbrella: the body has a `## Goal` section. Its feature branch is a branch of the issue, so this comes before the branch fact;
   - needs review: an open ready PR whose first line names the issue;
-  - in progress: an open draft PR that names the issue, or a branch linked to the issue with no merged PR. A branch whose PR has merged is finished work, and a `<n>-*` branch with no link is no issue's branch, so neither gives anything;
+  - in progress: an open draft PR that names the issue, or a branch of the issue with no merged PR. A branch whose PR has merged is finished work, and a `<n>-*` branch with no link and no open closing PR is no issue's branch, so neither gives anything;
   - merged: a merged PR into the feature branch of its umbrella names the issue on its first line. A repo without the close-sub-issue workflow leaves a merged sub-issue open until the final PR, and GitHub may delete its branch, so this fact rests on the PR alone. No group lists a merged issue, it counts as done for its umbrella, and it blocks nothing;
   - ready, or blocked when it has an open "blocked by" link: any other shaped issue.
 - **A finished worktree is a fact too.** `status.sh` lists a worktree for removal only when its issue branch has a merged PR and no open one, or its issue is closed, it has no uncommitted work by the check that `git worktree remove` makes without `--force`, and every commit is on a remote branch or in the merged PR's head, which a squash merge keeps after GitHub deletes the remote branch. The main, bare, detached, locked and prunable worktrees and the one the session runs in are never listed, and `next` removes one only after the user's yes.
@@ -45,6 +45,10 @@ status: active
 - **A GitHub Action that sets labels from events:** it is extra setup in each repo, to keep copies of facts that `status.sh` reads directly. The one workflow the plugin ships closes sub-issues and sets no label.
 - **Reads and writes through `gh api` REST only:** it served the cloud proxy, which the plugin no longer supports.
 - **One REST call for each issue's blockers and sub-issues in `status.sh`:** it made about 20 calls and took 12.6 s; one GraphQL query returns every open issue with its parent, sub-issues and blockers in 0.46 s.
+- **A shared script that the skills and `status.sh` call to find an issue's branch** (#388): one command already gives the fact, and `status.sh` would need a call for each issue.
+- **Find a branch through its link only** (#388): GitHub drops the link once an open PR closes the issue, so verify and ship stop on every re-run after the final PR opens, and Autopilot cannot find the final PR.
+- **Skip the closing-PR fallback for an issue with a parent, instead of checking the `<n>-` prefix** (#388): it misses a PR that closes several single issues.
+- **A fix for sub-issue branches** (#388): GitHub records no closing PR for a PR into a feature branch, so a sub-issue's link holds.
 
 ## Consequences
 - Each repo must be on GitHub. Skills reach issues, PRs, parent, sub-issue and dependency data through `gh`, by the simplest command for each operation ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)).
@@ -53,4 +57,4 @@ status: active
 - An open issue that is not labelled `engineering:shaped` is a request, so an issue shaped before the label existed needs the label added by hand or a new discuss run.
 - Work can resume from any device that reaches the T3 Code host, including a phone.
 - The Blocked icon shows in the GitHub web issue list, but not in the GitHub mobile app.
-- `status.sh` reads blockers from each issue's `blockedBy` connection and its branches from the `linkedBranches` connection, in the one query that reads the open issues. GitHub's search API did not return `is:blocked` results. Its list of merged remote branches, which the user reads to clean up, is still read by the `<n>-` name.
+- `status.sh` reads blockers from each issue's `blockedBy` connection and its branches from the `linkedBranches` connection, and from the `closedByPullRequestsReferences` connection when there is no link ([ADR-006](ADR-006-engineering-runs-in-t3-code-threads.md)), in the one query that reads the open issues. GitHub's search API did not return `is:blocked` results. Its list of merged remote branches, which the user reads to clean up, is still read by the `<n>-` name.

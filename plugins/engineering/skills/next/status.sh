@@ -36,6 +36,7 @@ read_gql issues 'query($owner: String!, $name: String!, $endCursor: String) {
         blockedBy(first: 100) { nodes { number state repository { nameWithOwner } } }
         subIssues(first: 100) { nodes { number state } }
         linkedBranches(first: 100) { nodes { ref { name } } }
+        closedByPullRequestsReferences(first: 100) { nodes { state headRefName isCrossRepository authorAssociation } }
       }
       pageInfo { hasNextPage endCursor }
     }
@@ -50,7 +51,15 @@ issues=$(printf '%s' "$items" | jq --arg repo "$repo" "$JQ_HAS_SECTION$JQ_TRUSTE
     sent_back: (.labels.nodes | any(.name == "engineering:needs-discussion")),
     goal: has_section("Goal"),
     scenarios: has_section("Scenarios"),
-    branches: ([.linkedBranches.nodes[].ref.name // empty] | unique),
+    branches: ("\(.number)-" as $prefix
+      | [.linkedBranches.nodes[].ref.name // empty] as $linked
+      | if ($linked | length) > 0 then $linked
+        else [.closedByPullRequestsReferences.nodes[]
+              | select(.state == "OPEN" and (.isCrossRepository | not)
+                       and ({author_association: .authorAssociation} | trusted)
+                       and (.headRefName | startswith($prefix)))
+              | .headRefName] end
+      | unique),
     parent: (.parent | if . then ref(.repository.nameWithOwner; .number) else null end),
     blockers: (if has_section("Scenarios") and (has_section("Goal") | not) then
                  [.blockedBy.nodes[] | select(.state == "OPEN") | {number, ref: ref(.repository.nameWithOwner; .number)}]

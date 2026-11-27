@@ -4,7 +4,7 @@ The plugin's contract for branches, merging and PRs. It is the same in every rep
 
 ## Branches
 - **Branch pattern:** `<n>-<slug>`. It is fixed, and a repo cannot set its own.
-  - Each branch is linked to its issue when it is created, and skills find the branch of issue `#<n>` through that link. The `<n>-<slug>` name is for people.
+  - Each branch is linked to its issue when it is created, and skills find the branch of issue `#<n>` through that link. GitHub drops the link once an open PR closes the issue, and skills then take that PR's head branch when it starts with `<n>-`; otherwise the `<n>-<slug>` name is for people.
   - Feature branch of an umbrella issue: base `main`.
   - Sub-issue branch: base the umbrella's feature branch.
   - Single issue: base `main`.
