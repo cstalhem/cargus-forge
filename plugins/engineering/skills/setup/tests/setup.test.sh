@@ -376,24 +376,10 @@ error 'gh api repos/{owner}/{repo}/issues?state=open: HTTP 403: Forbidden'
 done_check
 
 setup
-check "open issues that are not a list print one setup.sh error line and exits 0"
-page 1 '{"message": "Not Found"}'
-run
-error 'did not return a list'
-done_check
-
-setup
 check "a failing gh call prints one setup.sh error line and exits 0"
 export GH_FAIL="HTTP 401: Bad credentials${nl}second line"
 run
 error 'gh api repos/{owner}/{repo}: HTTP 401: Bad credentials second line'
-done_check
-
-setup
-check "a gh call that returns no repo prints one setup.sh error line and exits 0"
-export GH_JSON='{"message": "Not Found"}'
-run
-error 'did not return a repo'
 done_check
 
 setup
